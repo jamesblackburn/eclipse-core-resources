@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2008, 2009 IBM Corporation and others.
+ * Copyright (c) 2008, 2010 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,14 +11,11 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.runtime.CoreException;
-
 import java.util.regex.*;
 import org.eclipse.core.filesystem.IFileInfo;
-import org.eclipse.core.internal.utils.Policy;
-import org.eclipse.core.resources.IContainer;
-import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.*;
 import org.eclipse.core.resources.filtermatchers.AbstractFileInfoMatcher;
+import org.eclipse.core.runtime.*;
 
 /**
  * A Filter provider for Java Regular expression supported by 
@@ -40,12 +37,12 @@ public class RegexFileInfoMatcher extends AbstractFileInfoMatcher {
 		return false;
 	}
 
-	public void initialize(IProject project, Object arguments) {
+	public void initialize(IProject project, Object arguments) throws CoreException {
 		if (arguments != null) {
 			try {
 				pattern = Pattern.compile((String) arguments);
 			} catch (PatternSyntaxException e) {
-				Policy.log(e);
+				throw new CoreException(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, Platform.PLUGIN_ERROR, e.getMessage(), e));
 			}
 		}
 	}
