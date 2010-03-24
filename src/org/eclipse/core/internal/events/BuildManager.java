@@ -137,15 +137,24 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			// Figure out want kind of build is needed
 			boolean clean = trigger == IncrementalProjectBuilder.CLEAN_BUILD;
 			currentLastBuiltTree = currentBuilder.getLastBuiltTree();
+
+			//don't build if this builder doesn't respond to the given trigger
+			if (!builder.getCommand().isBuilding(trigger)) {
+				if (trigger == IncrementalProjectBuilder.AUTO_BUILD) {
+					return;
+				} else if (clean) {
+					currentBuilder.setLastBuiltTree(null);
+					return;
+				}
+				// Only return if the this wouldn't be a FULL_BUILD
+				else if (currentLastBuiltTree != null || 
+						!builder.getCommand().isBuilding(IncrementalProjectBuilder.FULL_BUILD))
+					return;
+			}
 			// If no tree is available we have to do a full build
 			if (!clean && currentLastBuiltTree == null)
 				trigger = IncrementalProjectBuilder.FULL_BUILD;
-			//don't build if this builder doesn't respond to the given trigger
-			if (!builder.getCommand().isBuilding(trigger)) {
-				if (clean)
-					currentBuilder.setLastBuiltTree(null);
-				return;
-			}
+
 			// For incremental builds, grab a pointer to the current state before computing the delta
 			currentTree = ((trigger == IncrementalProjectBuilder.FULL_BUILD) || clean) ? null : workspace.getElementTree();
 			int depth = -1;
@@ -991,14 +1000,17 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			if (project.isAccessible()) {
 				Set rules = new HashSet();
 				commands = ((Project) project).internalGetDescription().getBuildSpec(false);
+				boolean hasNullBuildRule = false;
 				for (int i = 0; i < commands.length; i++) {
 					BuildCommand command = (BuildCommand) commands[i];
 					try {
 						IncrementalProjectBuilder builder = getBuilder(project, command, i, status);
 						if (builder != null) {
-							ISchedulingRule builderRule = builder.getRule();
+							ISchedulingRule builderRule = builder.getRule(trigger, args);
 							if (builderRule != null)
 								rules.add(builderRule);
+							else 
+								hasNullBuildRule = true;
 						}
 					} catch (CoreException e) {
 						status.add(e.getStatus());
@@ -1006,7 +1018,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				}
 				if (rules.isEmpty())
 					return null;
-				return new MultiRule((ISchedulingRule[]) rules.toArray(new ISchedulingRule[rules.size()]));
+				// Bug 306824 - Builders returning a null rule can't work safely if other builders require a non-null rule
+				// Be pessimistic and fall back to the default build rule (workspace root) in this case.
+				if (!hasNullBuildRule)
+					return new MultiRule((ISchedulingRule[]) rules.toArray(new ISchedulingRule[rules.size()]));
 			}
 		} else {
 			// Returns the derived resources for the specified builderName
@@ -1014,7 +1029,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			try {
 				IncrementalProjectBuilder builder = getBuilder(project, command, -1, status);
 				if (builder != null)
-					return builder.getRule();
+					return builder.getRule(trigger, args);
 
 			} catch (CoreException e) {
 				status.add(e.getStatus());
