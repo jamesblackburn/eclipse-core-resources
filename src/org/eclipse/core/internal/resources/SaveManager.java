@@ -8,6 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  * Francis Lynch (Wind River) - [301563] Save and load tree snapshots
+ * Francis Lynch (Wind River) - [305718] Allow reading snapshot into renamed project
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -238,8 +239,16 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 * Collects the set of ElementTrees we are still interested in,
 	 * and removes references to any other trees.
 	 */
-	protected void collapseTrees() throws CoreException {
+	protected void collapseTrees(Map contexts) throws CoreException {
 		//collect trees we're interested in
+		
+		//forget saved trees, if they are not used by registered participants
+		synchronized (savedStates) {
+			for (Iterator i = contexts.values().iterator(); i.hasNext();) {
+				SaveContext context = (SaveContext) i.next();
+				forgetSavedTree(context.getPluginId());
+			}
+		}
 
 		//trees for plugin saved states
 		ArrayList trees = new ArrayList();
@@ -1039,7 +1048,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			}
 			DataInputStream input = new DataInputStream(zip);
 			try {
-				WorkspaceTreeReader reader = WorkspaceTreeReader.getReader(workspace, input.readInt());
+				WorkspaceTreeReader reader = WorkspaceTreeReader.getReader(workspace, input.readInt(), true);
 				reader.readTree(project, input, Policy.subMonitorFor(monitor, Policy.totalWork));
 			} finally {
 				input.close();
@@ -1139,7 +1148,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 								Policy.debug("Total Snap Markers: " + persistMarkers + "ms"); //$NON-NLS-1$ //$NON-NLS-2$
 								Policy.debug("Total Snap Sync Info: " + persistSyncInfo + "ms"); //$NON-NLS-1$	 //$NON-NLS-2$
 							}
-							collapseTrees();
+							collapseTrees(contexts);
 							clearSavedDelta();
 							// write out all metainfo (e.g., workspace/project descriptions) 
 							saveMetaInfo(warnings, Policy.subMonitorFor(monitor, 1));
