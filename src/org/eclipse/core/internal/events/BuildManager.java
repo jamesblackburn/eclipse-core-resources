@@ -9,6 +9,7 @@
  *     IBM Corporation - initial API and implementation
  *     Isaac Pacht (isaacp3@gmail.com) - fix for bug 206540
  * Anton Leherbauer (Wind River) - [305858] Allow Builder to return null rule
+ * James Blackburn (Broadcom) - [306822] Provide Context for Builder getRule()
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 

@@ -9,6 +9,7 @@
  *     IBM Corporation - initial API and implementation
  * Anton Leherbauer (Wind River) - [198591] Allow Builder to specify scheduling rule
  * Anton Leherbauer (Wind River) - [305858] Allow Builder to return null rule
+ * James Blackburn (Broadcom) - [306822] Provide Context for Builder getRule()
  *******************************************************************************/
 package org.eclipse.core.resources;
 
@@ -231,7 +232,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * </p>
 	 * <p>
 	 * The delta does not include changes made while this builder is running.
-	 * If {@link #getRule()} is overridden to return a scheduling rule other than 
+	 * If {@link #getRule(int, Map)} is overridden to return a scheduling rule other than 
 	 * the workspace root, changes performed in other threads during the build
 	 * will not appear in the resource delta.
 	 * </p>
@@ -355,6 +356,21 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * the project for which this builder is defined. The default 
 	 * is the workspace root rule.
 	 * 
+	 * @return a scheduling rule which is contained in the workspace root rule or <code>null</code>
+	 * @since 3.5
+	 * @see #getRule(int, Map)
+	 * @deprecated clients should call and override {@link #getRule(int, Map)} instead.
+	 */
+	public ISchedulingRule getRule() {
+		return ResourcesPlugin.getWorkspace().getRoot();
+	}
+
+	/**
+	 * Returns the scheduling rule that is required for building 
+	 * the project for which this builder is defined. The default 
+	 * is {@link #getRule()}, which returns the workspace root 
+	 * rule unless overridden.
+	 * <p>
 	 * The scheduling rule determines which resources in the workspace are 
 	 * protected from being modified by other threads while the builder is running. Up until
 	 * Eclipse 3.5, the entire workspace was always locked during a build;
@@ -376,17 +392,34 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * If this method returns any rule other than the workspace root,
 	 * resources outside of the rule scope can be modified concurrently with the build. 
 	 * The delta returned by {@link #getDelta(IProject)} for any project
-	 * outside the scope of the builder's rule will not contain changes that occurred 
+	 * outside the scope of the builder's rule may not contain changes that occurred 
 	 * concurrently with the build.
 	 * </ul>
 	 * </p>
+	 * <p>
+	 * Subclasses may override this method.
+	 * </p>
+	 * @noreference This method is not intended to be referenced by clients.
 	 * 
-	 * @return a scheduling rule which is contained in the workspace root rule or <code>null</code>
+	 * @param kind the kind of build being requested. Valid values include:
+	 * <ul>
+	 * <li>{@link #FULL_BUILD} - indicates a full build.</li>
+	 * <li>{@link #INCREMENTAL_BUILD} - indicates an incremental build.</li>
+	 * <li>{@link #AUTO_BUILD} - indicates an automatically triggered
+	 * incremental build (autobuilding on).</li>
+	 * <li>{@link #CLEAN_BUILD} - indicates a clean request.</li>
+	 * </ul>
+	 * @param args a table of builder-specific arguments keyed by argument name
+	 * (key type: <code>String</code>, value type: <code>String</code>);
+	 * <code>null</code> is equivalent to an empty map.
+	 * @return a scheduling rule which is contained in the workspace root rule 
+	 *   or <code>null</code> to indicate that no protection against resource
+	 *   modification during the build is needed.
 	 * 
-	 * @since 3.5
+	 * @since 3.6
 	 */
-	public ISchedulingRule getRule() {
-		return ResourcesPlugin.getWorkspace().getRoot();
+	public ISchedulingRule getRule(int kind, Map args) {
+		return getRule();
 	}
 	
 	/**
