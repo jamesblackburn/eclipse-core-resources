@@ -283,10 +283,6 @@ public class ResourceInfo implements IElementTreeData, ICoreConstants, IStringPo
 	 * distinguish two arbitrary resource generations.
 	 */
 	public void incrementModificationStamp() {
-		// Resource modification stamp starts from currentTime
-		// so future generations are distinguishable (bug 312430)
-		if (modStamp <= 0)
-			modStamp = System.currentTimeMillis();
 		modStamp++;
 	}
 
