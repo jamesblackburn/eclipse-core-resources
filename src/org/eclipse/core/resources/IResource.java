@@ -2457,7 +2457,7 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	 * specified depth) are expected to have their contents (and properties)
 	 * available locally.  The workspace root and projects are always local and 
 	 * attempting to set either to non-local (i.e., passing <code>false</code>) 
-	 * has no affect on the resource.
+	 * has no effect on the resource.
 	 * <p>
 	 * When a resource is not local, its content and properties are
 	 * unavailable for both reading and writing.
@@ -2475,7 +2475,7 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
 	 * <li> Resource changes are disallowed during certain types of resource change 
-	 *       event notification. See <code>IResourceChangeEvent</code> for more details.</li>
+	 *       event notification. See {@link IResourceChangeEvent} for more details.</li>
 	 * </ul>
 	 * @exception OperationCanceledException if the operation is canceled. 
 	 * Cancelation can occur even if no progress monitor is provided.
