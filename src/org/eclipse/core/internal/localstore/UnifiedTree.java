@@ -480,7 +480,7 @@ public class UnifiedTree {
 				//child points into a different portion of the tree that we visited already before, or will certainly visit.
 				//This does not introduce a loop yet, but introduces duplicate resources.
 				//TODO Ideally, such duplicates should be modelled as linked resources. See bug 105534
-				return false;
+				return true;
 			} else {
 				//child neither introduces a loop nor points to a known tree.
 				//It probably spans up a new tree of potential prefixes.
