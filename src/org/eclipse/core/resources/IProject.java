@@ -30,7 +30,8 @@ import org.eclipse.core.runtime.content.IContentTypeMatcher;
  * <li>A project can carry session and persistent properties.</li>
  * <li>A project can be open or closed; a closed project is
  * 		passive and has a minimal in-memory footprint.</li>
- * <li>A project can carry references to other projects.</li>
+ * <li>A project can have one or more project variants.</li>
+ * <li>A project can carry references to other project variants.</li>
  * <li>A project can have one or more project natures.</li>
  * </ul>
  * </p>
@@ -523,6 +524,34 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @return a list of open projects referencing this project
 	 */
 	public IProject[] getReferencingProjects();
+
+	/**
+	 * Returns the project variants referenced by this project. This includes
+	 * both the static and dynamic references of this project.
+	 * The returned projects and variants need not exist in the workspace.
+	 * The result will not contain duplicates. Returns an empty
+	 * array if there are no referenced project variants.
+	 *
+	 * @return a list of project variants
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * </ul>
+	 * @see IProjectDescription#getReferencedVariants()
+	 * @see IProjectDescription#getDynamicVariantReferences()
+	 */
+	public IProjectVariant[] getReferencedVariants() throws CoreException;
+
+	/**
+	 * Returns the list of all open projects existing variants which reference
+	 * this project and the specified variant. This project and variant may
+	 * or may not exist. Returns an empty array if there are no
+	 * referencing project variants.
+	 *
+	 * @return a list of open projects and their existing variant referencing this project
+	 */
+	public IProjectVariant[] getReferencingProjectVariants(String variant);
 
 	/** 
 	 * Returns whether the project nature specified by the given
