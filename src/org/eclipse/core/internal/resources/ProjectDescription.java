@@ -32,6 +32,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	private static final IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];
 	private static final IProjectVariant[] EMPTY_PROJECT_VARIANT_ARRAY = new IProjectVariant[0];
 	private static final String[] EMPTY_STRING_ARRAY = new String[0];
+	private static final String EMPTY_STR = ""; //$NON-NLS-1$
 	protected static boolean isReading = false;
 
 	//flags to indicate when we are in the middle of reading or writing a
@@ -48,7 +49,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 	protected IProjectVariant[] dynamicRefs = EMPTY_PROJECT_VARIANT_ARRAY;
 
-	protected String comment = ""; //$NON-NLS-1$
+	protected String comment = EMPTY_STR;
 	
 	/**
 	 * Map of (IPath -> LinkDescription) pairs for each linked resource
@@ -77,6 +78,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 	public ProjectDescription() {
 		super();
+		//TODO: Create a default variant name
 	}
 
 	public Object clone() {
@@ -709,8 +711,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	public String[] getVariants(boolean makeCopy) {
-		if (variants == null)
-			return EMPTY_STRING_ARRAY;
+		Assert.isNotNull(variants);
+		Assert.isTrue(variants.length > 0);
 		return makeCopy ? (String[]) variants.clone() : variants;
 	}
 
@@ -718,6 +720,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#setVariants(String[])
 	 */
 	public void setVariants(String[] variants) {
+		Assert.isLegal(variants != null && variants.length > 0 && !variants[0].equals(EMPTY_STR));
 		variants = (String[]) variants.clone();
 	}
 }
