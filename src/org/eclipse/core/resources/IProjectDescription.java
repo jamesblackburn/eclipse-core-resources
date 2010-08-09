@@ -355,8 +355,8 @@ public interface IProjectDescription {
 	/**
 	 * Gets the variants for the described project.
 	 * <p>
-	 * The result will not contain duplicates. Returns an empty
-	 * array if there are no variants on this description.
+	 * The result will not contain duplicates. There is
+	 * always at least one variant.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
@@ -368,6 +368,7 @@ public interface IProjectDescription {
 
 	/**
 	 * Sets the variants for the described project.
+	 * Must be at least one variant with a non-empty name.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
