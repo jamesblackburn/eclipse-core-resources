@@ -336,7 +336,7 @@ public interface IProjectDescription {
 	 * @see #setDynamicVariantReferences(IProjectVariant[])
 	 * @return a list of project variants
 	 */
-	public IProject[] getDynamicVariantReferences();
+	public IProjectVariant[] getDynamicVariantReferences();
 
 	/**
 	 * Sets the dynamic project variant references for the described project.
