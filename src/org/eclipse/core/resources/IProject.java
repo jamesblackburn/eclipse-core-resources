@@ -538,10 +538,10 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
 	 * </ul>
-	 * @see IProjectDescription#getReferencedVariants()
+	 * @see IProjectDescription#getReferencedProjectVariants()
 	 * @see IProjectDescription#getDynamicVariantReferences()
 	 */
-	public IProjectVariant[] getReferencedVariants() throws CoreException;
+	public IProjectVariant[] getReferencedProjectVariants() throws CoreException;
 
 	/**
 	 * Returns the list of all open projects existing variants which reference
