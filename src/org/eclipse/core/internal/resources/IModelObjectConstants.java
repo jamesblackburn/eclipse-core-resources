@@ -10,6 +10,7 @@
  *     Serge Beauchamp (Freescale Semiconductor) - [252996] add resource filtering
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
+ * Alex Collins (Broadcom Corp.) - project variants
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -43,7 +44,9 @@ public interface IModelObjectConstants {
 	public static final String SNAPSHOT_INTERVAL = "snapshotInterval"; //$NON-NLS-1$
 	public static final String PROJECT = "project"; //$NON-NLS-1$
 	public static final String PROJECT_DESCRIPTION = "projectDescription"; //$NON-NLS-1$
-	public static final String PROJECTS = "projects"; //$NON-NLS-1$
+	public static final String REFERENCE = "reference"; //$NON-NLS-1$
+	public static final String REFERENCES = "references"; //$NON-NLS-1$
+	public static final String VARIANT = "variant"; //$NON-NLS-1$
 	public static final String TYPE = "type"; //$NON-NLS-1$
 	public static final String VALUE = "value"; //$NON-NLS-1$
 	public static final String WORKSPACE_DESCRIPTION = "workspaceDescription"; //$NON-NLS-1$
