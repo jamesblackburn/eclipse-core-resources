@@ -351,7 +351,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		//don't bother optimizing if the order has changed
 		if (!Arrays.equals(buildSpec, description.getBuildSpec(false)))
 			return true;
-		if (!Arrays.equals(staticRefs, description.getReferencedVariants(false)))
+		if (!Arrays.equals(staticRefs, description.getReferencedProjectVariants(false)))
 			return true;
 		if (!Arrays.equals(natures, description.getNatureIds(false)))
 			return true;
@@ -660,7 +660,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setReferencedVariants(IProjectVariant[])
 	 */
-	public void setReferencedVariants(IProjectVariant[] value) {
+	public void setReferencedProjectVariants(IProjectVariant[] value) {
 		Assert.isLegal(value != null);
 		staticRefs = copyAndRemoveDuplicates(value);
 		cachedRefs = null;
@@ -670,11 +670,11 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#getReferencedVariants()
 	 */
-	public IProjectVariant[] getReferencedVariants() {
-		return getReferencedVariants(true);
+	public IProjectVariant[] getReferencedProjectVariants() {
+		return getReferencedProjectVariants(true);
 	}
 
-	public IProjectVariant[] getReferencedVariants(boolean makeCopy) {
+	public IProjectVariant[] getReferencedProjectVariants(boolean makeCopy) {
 		if (staticRefs == null)
 			return EMPTY_PROJECT_VARIANT_ARRAY;
 		return makeCopy ? (IProjectVariant[]) staticRefs.clone() : staticRefs;
