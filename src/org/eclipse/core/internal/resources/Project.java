@@ -14,6 +14,9 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import org.eclipse.core.resources.IProjectVariant;
+import org.eclipse.core.runtime.CoreException;
+
 import java.net.URI;
 import java.util.*;
 import org.eclipse.core.filesystem.*;
@@ -82,18 +85,20 @@ public class Project extends Container implements IProject {
 		// set the build order before setting the references or the natures
 		current.setBuildSpec(description.getBuildSpec(true));
 
+		current.setVariants(description.getVariants());
+
 		// set the references before the natures 
 		boolean flushOrder = false;
-		IProject[] oldReferences = current.getReferencedProjects();
-		IProject[] newReferences = description.getReferencedProjects();
+		IProjectVariant[] oldReferences = current.getReferencedVariants();
+		IProjectVariant[] newReferences = description.getReferencedVariants();
 		if (!Arrays.equals(oldReferences, newReferences)) {
-			current.setReferencedProjects(newReferences);
+			current.setReferencedVariants(newReferences);
 			flushOrder = true;
 		}
-		oldReferences = current.getDynamicReferences();
-		newReferences = description.getDynamicReferences();
+		oldReferences = current.getDynamicVariantReferences();
+		newReferences = description.getDynamicVariantReferences();
 		if (!Arrays.equals(oldReferences, newReferences)) {
-			current.setDynamicReferences(newReferences);
+			current.setDynamicVariantReferences(newReferences);
 			flushOrder = true;
 		}
 
@@ -1326,5 +1331,41 @@ public class Project extends Container implements IProject {
 		} finally {
 			ProjectDescription.isWriting = false;
 		}
+	}
+
+	/* (non-Javadoc)
+	 * @see IProject#getReferencedVariants()
+	 */
+	public IProjectVariant[] getReferencedVariants() throws CoreException {
+		ResourceInfo info = getResourceInfo(false, false);
+		checkAccessible(getFlags(info));
+		ProjectDescription description = ((ProjectInfo) info).getDescription();
+		//if the project is currently in the middle of being created, the description might not be available yet
+		if (description == null)
+			checkAccessible(NULL_FLAG);
+		return description.getAllVariantReferences(true);
+	}
+
+	/* (non-Javadoc)
+	 * @see IProject#getReferencingVariants()
+	 */
+	public IProjectVariant[] getReferencingProjectVariants(String variant) {
+		IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
+		List result = new ArrayList(projects.length);
+		for (int i = 0; i < projects.length; i++) {
+			Project project = (Project) projects[i];
+			if (!project.isAccessible())
+				continue;
+			ProjectDescription description = project.internalGetDescription();
+			if (description == null)
+				continue;
+			IProjectVariant[] references = description.getAllVariantReferences(false);
+			for (int j = 0; j < references.length; j++)
+				if (references[j].getProject().equals(this) && references[j].getVariant().equals(variant)) {
+					result.add(references[j]);
+					break;
+				}
+		}
+		return (IProjectVariant[]) result.toArray(new IProjectVariant[result.size()]);
 	}
 }
