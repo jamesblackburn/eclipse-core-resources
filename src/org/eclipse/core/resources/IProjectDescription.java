@@ -300,9 +300,9 @@ public interface IProjectDescription {
 	 * array if there are not references project variants on this description.
 	 *
 	 * @return a list of project variants
-	 * @see #setReferencedProjectVariants(IProjectVariant[])
+	 * @see #setVariants(String[])
 	 */
-	public IProjectVariant[] getReferencedProjectVariants();
+	public IProjectVariant[] getReferencedVariants();
 
 	/**
 	 * Sets the referenced project variants, ignoring any duplicates.
@@ -314,9 +314,9 @@ public interface IProjectDescription {
 	 * </p>
 	 *
 	 * @param variants a list of project variants
-	 * @see #getReferencedProjectVariants()
+	 * @see #getReferencedVariants()
 	 */
-	public void setReferencedProjectVariants(IProjectVariant[] variants);
+	public void setReferencedVariants(IProjectVariant[] variants);
 
 	/**
 	 * Returns the dynamic project variant references for the described project. Dynamic
@@ -332,7 +332,7 @@ public interface IProjectDescription {
 	 * contain duplicates. Returns an empty array if there are no dynamic project variant
 	 * references on this description.
 	 *
-	 * @see #getReferencedProjectVariants()
+	 * @see #getReferencedVariants()
 	 * @see #setDynamicVariantReferences(IProjectVariant[])
 	 * @return a list of project variants
 	 */

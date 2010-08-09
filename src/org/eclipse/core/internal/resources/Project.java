@@ -89,10 +89,10 @@ public class Project extends Container implements IProject {
 
 		// set the references before the natures 
 		boolean flushOrder = false;
-		IProjectVariant[] oldReferences = current.getReferencedProjectVariants();
-		IProjectVariant[] newReferences = description.getReferencedProjectVariants();
+		IProjectVariant[] oldReferences = current.getReferencedVariants();
+		IProjectVariant[] newReferences = description.getReferencedVariants();
 		if (!Arrays.equals(oldReferences, newReferences)) {
-			current.setReferencedProjectVariants(newReferences);
+			current.setReferencedVariants(newReferences);
 			flushOrder = true;
 		}
 		oldReferences = current.getDynamicVariantReferences();
@@ -1334,9 +1334,9 @@ public class Project extends Container implements IProject {
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#getReferencedProjectVariants()
+	 * @see IProject#getReferencedVariants()
 	 */
-	public IProjectVariant[] getReferencedProjectVariants() throws CoreException {
+	public IProjectVariant[] getReferencedVariants() throws CoreException {
 		ResourceInfo info = getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		ProjectDescription description = ((ProjectInfo) info).getDescription();
@@ -1347,7 +1347,7 @@ public class Project extends Container implements IProject {
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#getReferencingProjectVariants()
+	 * @see IProject#getReferencingVariants()
 	 */
 	public IProjectVariant[] getReferencingProjectVariants(String variant) {
 		IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
