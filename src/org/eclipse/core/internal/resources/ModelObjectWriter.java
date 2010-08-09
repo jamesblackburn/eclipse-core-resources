@@ -47,14 +47,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		super();
 	}
 
-	protected String[] getReferencedProjects(ProjectDescription description) {
-		IProject[] projects = description.getReferencedProjects();
-		String[] result = new String[projects.length];
-		for (int i = 0; i < projects.length; i++)
-			result[i] = projects[i].getName();
-		return result;
-	}
-
 	protected void write(BuildCommand command, XMLWriter writer) {
 		writer.startTag(BUILD_COMMAND, null);
 		if (command != null) {
@@ -128,6 +120,15 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			writer.printSimpleTag(VALUE, description.getValue());
 		}
 		writer.endTag(VARIABLE);
+	}
+
+	protected void write(IProjectVariant projectVariant, XMLWriter writer) {
+		writer.startTag(REFERENCE, null);
+		if (projectVariant != null) {
+			writer.printSimpleTag(PROJECT, projectVariant.getProject().getName());
+			writer.printSimpleTag(VARIANT, projectVariant.getVariant());
+		}
+		writer.endTag(REFERENCE);
 	}
 
 	/**
@@ -214,7 +215,7 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			if (snapshotLocation != null) {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
-			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
+			write(REFERENCES, Arrays.asList(description.getReferencedProjectVariants(false)), writer);
 			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);
 			HashMap links = description.getLinks();

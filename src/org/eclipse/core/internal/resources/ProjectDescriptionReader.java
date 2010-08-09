@@ -9,6 +9,7 @@
  *     IBM Corporation - initial API and implementation
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
+ * Alex Collins (Broadcom Corp.) - project variants
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -51,8 +52,8 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	protected static final int S_PROJECT_COMMENT = 17;
 	protected static final int S_PROJECT_DESC = 18;
 	protected static final int S_PROJECT_NAME = 19;
-	protected static final int S_PROJECTS = 20;
-	protected static final int S_REFERENCED_PROJECT_NAME = 21;
+	protected static final int S_REFERENCES = 20;
+	protected static final int S_REFERENCE = 21;
 	
 	protected static final int S_FILTERED_RESOURCES = 23;
 	protected static final int S_FILTER = 24;
@@ -282,9 +283,9 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_PROJECT_DESC;
 				}
 				break;
-			case S_PROJECTS :
-				if (elementName.equals(PROJECTS)) {
-					endProjectsElement(elementName);
+			case S_REFERENCES :
+				if (elementName.equals(REFERENCES)) {
+					endReferencesElement(elementName);
 					state = S_PROJECT_DESC;
 				}
 				break;
@@ -339,14 +340,13 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_PROJECT_DESC;
 				}
 				break;
-			case S_REFERENCED_PROJECT_NAME :
-				if (elementName.equals(PROJECT)) {
-					//top of stack is list of project references
-					// Referenced projects are just project names and, therefore,
-					// are also IResource names and cannot have leading/trailing 
-					// whitespace.
+			case S_REFERENCE :
+				if (elementName.equals(REFERENCE)) {
+					//top of stack is list of project variant references
+					// Referenced project variants are <project name>#<variant name>
+					// Does not have leading or trailing whitespace.
 					((ArrayList) objectStack.peek()).add(charBuffer.toString().trim());
-					state = S_PROJECTS;
+					state = S_REFERENCES;
 				}
 				break;
 			case S_BUILD_COMMAND_NAME :
@@ -792,21 +792,25 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	}
 
 	/**
-	 * End of an element that is part of a project references list
+	 * End of an element that is part of a project variant references list
 	 */
-	private void endProjectsElement(String elementName) {
+	private void endReferencesElement(String elementName) {
 		// Pop the array list that contains all the referenced project names
-		ArrayList referencedProjects = (ArrayList) objectStack.pop();
-		if (referencedProjects.size() == 0)
-			// Don't bother adding an empty group of referenced projects to the
+		ArrayList references = (ArrayList) objectStack.pop();
+		if (references.size() == 0)
+			// Don't bother adding an empty group of references to the
 			// project descriptor.
 			return;
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-		IProject[] projects = new IProject[referencedProjects.size()];
-		for (int i = 0; i < projects.length; i++) {
-			projects[i] = root.getProject((String) referencedProjects.get(i));
+		IProjectVariant[] projectVariants = new IProjectVariant[references.size()];
+		for (int i = 0; i < projectVariants.length; i++) {
+			//FIXME: Need to do some input checking
+			String[] parts = ((String)references.get(i)).split("#"); //$NON-NLS-1$
+			String projectName = parts[0];
+			String variantName = parts[1];
+			projectVariants[i] = new ProjectVariant(root.getProject(projectName), variantName);
 		}
-		projectDescription.setReferencedProjects(projects);
+		projectDescription.setReferencedProjectVariants(projectVariants);
 	}
 
 	private void endSnapshotLocation(String elementName) {
@@ -862,10 +866,10 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			state = S_PROJECT_COMMENT;
 			return;
 		}
-		if (elementName.equals(PROJECTS)) {
-			state = S_PROJECTS;
+		if (elementName.equals(REFERENCES)) {
+			state = S_REFERENCES;
 			// Push an array list on the object stack to hold the name
-			// of all the referenced projects.  This array list will be
+			// of all the referenced projects and variants. This array list will be
 			// popped off the stack, massaged into the right format
 			// and added to the project description when we hit the
 			// end element for PROJECTS.
@@ -982,9 +986,9 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_PROJECT_DESC :
 				parseProjectDescription(elementName);
 				break;
-			case S_PROJECTS :
+			case S_REFERENCES :
 				if (elementName.equals(PROJECT)) {
-					state = S_REFERENCED_PROJECT_NAME;
+					state = S_REFERENCE;
 				}
 				break;
 			case S_BUILD_SPEC :
