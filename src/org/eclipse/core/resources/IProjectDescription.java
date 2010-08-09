@@ -289,20 +289,6 @@ public interface IProjectDescription {
 	public void setReferencedProjects(IProject[] projects);
 
 	/**
-	 * Sets the referenced project variants, ignoring any duplicates.
-	 * The order of the project variants is preserved.
-	 * The projects and variants need not exist in the workspace.
-	 * <p>
-	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
-	 * before changes made to this description take effect.
-	 * </p>
-	 *
-	 * @param variants a list of project variants
-	 * @see #getReferencedVariants()
-	 */
-	public void setReferencedVariants(IProjectVariant[] variants);
-
-	/**
 	 * Returns the project variants referenced by the described project. These references
 	 * are persisted in the project description file (&quot;.project&quot;) and as such
 	 * will be shared whenever the project is exported to another workspace. For
@@ -317,6 +303,20 @@ public interface IProjectDescription {
 	 * @see #setVariants(String[])
 	 */
 	public IProjectVariant[] getReferencedVariants();
+
+	/**
+	 * Sets the referenced project variants, ignoring any duplicates.
+	 * The order of the project variants is preserved.
+	 * The projects and variants need not exist in the workspace.
+	 * <p>
+	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
+	 * before changes made to this description take effect.
+	 * </p>
+	 *
+	 * @param variants a list of project variants
+	 * @see #getReferencedVariants()
+	 */
+	public void setReferencedVariants(IProjectVariant[] variants);
 
 	/**
 	 * Returns the dynamic project variant references for the described project. Dynamic
