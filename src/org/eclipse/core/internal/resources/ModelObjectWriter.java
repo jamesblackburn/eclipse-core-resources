@@ -47,11 +47,11 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		super();
 	}
 
-	protected String[] getReferences(ProjectDescription description) {
-		IProjectVariant[] references = description.getReferencedProjectVariants();
-		String[] result = new String[references.length];
-		for (int i = 0; i < references.length; i++)
-			result[i] = references[i].getProject().getName() + "#" + references[i].getVariant(); //$NON-NLS-1$
+	protected String[] getReferencedProjects(ProjectDescription description) {
+		IProject[] projects = description.getReferencedProjects();
+		String[] result = new String[projects.length];
+		for (int i = 0; i < projects.length; i++)
+			result[i] = projects[i].getName();
 		return result;
 	}
 
@@ -214,7 +214,7 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			if (snapshotLocation != null) {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
-			write(REFERENCES, REFERENCE, getReferences(description), writer);
+			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
 			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);
 			HashMap links = description.getLinks();
