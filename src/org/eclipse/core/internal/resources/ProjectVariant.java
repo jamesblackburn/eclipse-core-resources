@@ -38,4 +38,39 @@ public class ProjectVariant implements IProjectVariant {
 	public String getVariant() {
 		return variant;
 	}
+
+	/* (non-Javadoc)
+	 * @see Object#hashCode()
+	 */
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((project == null) ? 0 : project.hashCode());
+		result = prime * result + ((variant == null) ? 0 : variant.hashCode());
+		return result;
+	}
+
+	/* (non-Javadoc)
+	 * @see Object#equals(Object)
+	 */
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ProjectVariant other = (ProjectVariant) obj;
+		if (project == null) {
+			if (other.project != null)
+				return false;
+		} else if (!project.equals(other.project))
+			return false;
+		if (variant == null) {
+			if (other.variant != null)
+				return false;
+		} else if (!variant.equals(other.variant))
+			return false;
+		return true;
+	}
 }
