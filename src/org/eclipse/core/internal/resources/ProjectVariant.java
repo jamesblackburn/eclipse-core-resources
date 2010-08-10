@@ -16,12 +16,25 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectVariant;
 
 public class ProjectVariant implements IProjectVariant {
-	private final IProject project;
-	private final String variant;
+	private IProject project;
+	private String variant;
 
 	ProjectVariant(IProject project, String variant) {
-		Assert.isLegal(variant != null && !variant.equals("")); //$NON-NLS-1$
+		Assert.isLegal(project != null && variant != null);
 		this.project = project;
+		this.variant = variant;
+	}
+
+	ProjectVariant() {
+		project = null;
+		variant = null;
+	}
+
+	void setProject(IProject project) {
+		this.project = project;
+	}
+
+	void setVariant(String variant) {
 		this.variant = variant;
 	}
 
