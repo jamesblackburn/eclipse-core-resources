@@ -864,11 +864,11 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			// Pop off the reference
 			ProjectVariant reference = (ProjectVariant) objectStack.pop();
 			// Make sure that you have something reasonable
-			if (reference.getProject() != null) {
+			if (reference.getProject() != null && project != null) {
 				parseProblem(NLS.bind(Messages.projRead_missingReferenceProject, project.getName()));
 				return;
 			}
-			if (reference.getVariant() != null) {
+			if (reference.getVariant() != null && project != null) {
 				parseProblem(NLS.bind(Messages.projRead_missingReferenceVariantName, project.getName()));
 				return;
 			}
