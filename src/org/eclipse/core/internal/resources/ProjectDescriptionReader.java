@@ -832,7 +832,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		}
 		// If no project variant references were loaded, they weren't specified in the
 		// config file. For backwards compatibility, load the project references.
-		if (projectDescription.getReferencedProjectVariants().length == 0)
+		if (projectDescription.getReferencedProjectVariants(false).length == 0)
 			projectDescription.setReferencedProjects(projects);
 	}
 
