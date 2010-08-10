@@ -86,14 +86,13 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	// fields
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
-	protected String[] variants = EMPTY_STRING_ARRAY;
+	protected String[] variants = new String[]{EMPTY_STR};
 	protected IProjectVariant[] staticRefs = EMPTY_PROJECT_VARIANT_ARRAY;
 	protected IProjectVariant[] dynamicRefs = EMPTY_PROJECT_VARIANT_ARRAY;
 	protected URI snapshotLocation= null;
 
 	public ProjectDescription() {
 		super();
-		//TODO: ALEX Create a default variant name
 	}
 
 	public Object clone() {
