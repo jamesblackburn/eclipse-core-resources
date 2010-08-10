@@ -44,6 +44,8 @@ public interface IModelObjectConstants {
 	public static final String SNAPSHOT_INTERVAL = "snapshotInterval"; //$NON-NLS-1$
 	public static final String PROJECT = "project"; //$NON-NLS-1$
 	public static final String PROJECT_DESCRIPTION = "projectDescription"; //$NON-NLS-1$
+	/** @deprecated */
+	public static final String PROJECTS = "projects"; //$NON-NLS-1$
 	public static final String REFERENCE = "reference"; //$NON-NLS-1$
 	public static final String REFERENCES = "references"; //$NON-NLS-1$
 	public static final String VARIANT = "variant"; //$NON-NLS-1$
