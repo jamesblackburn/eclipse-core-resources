@@ -234,6 +234,7 @@ public interface IProjectDescription {
 	 *
 	 * @see #getDynamicReferences()
 	 * @return a list of projects
+	 * @see #getReferencedProjectVariants(String)
 	 * @deprecated
 	 */
 	public IProject[] getReferencedProjects();
@@ -249,7 +250,7 @@ public interface IProjectDescription {
 	 *
 	 * @param projects a list of projects
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @see #getReferencedProjects()
+	 * @see #setReferencedProjectVariants(String, IProjectVariant[])
 	 * @deprecated
 	 */
 	public void setReferencedProjects(IProject[] projects);
@@ -272,6 +273,7 @@ public interface IProjectDescription {
 	 * @see #setDynamicReferences(IProject[])
 	 * @return a list of projects
 	 * @since 3.0
+	 * @see #getDynamicVariantReferences(String)
 	 * @deprecated
 	 */
 	public IProject[] getDynamicReferences();
@@ -288,6 +290,7 @@ public interface IProjectDescription {
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
 	 * @param projects list of projects
 	 * @since 3.0
+	 * @see #setDynamicVariantReferences(String, IProjectVariant[])
 	 * @deprecated
 	 */
 	public void setDynamicReferences(IProject[] projects);
@@ -303,10 +306,11 @@ public interface IProjectDescription {
 	 * The result will not contain duplicates. Returns an empty
 	 * array if there are not references project variants on this description.
 	 *
+	 * @param variant the variant in the described project to get the references for
 	 * @return a list of project variants
-	 * @see #setReferencedProjectVariants(IProjectVariant[])
+	 * @see #setReferencedProjectVariants(String, IProjectVariant[])
 	 */
-	public IProjectVariant[] getReferencedProjectVariants();
+	public IProjectVariant[] getReferencedProjectVariants(String variant);
 
 	/**
 	 * Sets the referenced project variants, ignoring any duplicates.
@@ -317,13 +321,14 @@ public interface IProjectDescription {
 	 * before changes made to this description take effect.
 	 * </p>
 	 *
+	 * @param variant the variant in the described project to add the references for
 	 * @param variants a list of project variants
-	 * @see #getReferencedProjectVariants()
+	 * @see #getReferencedProjectVariants(String)
 	 */
-	public void setReferencedProjectVariants(IProjectVariant[] variants);
+	public void setReferencedProjectVariants(String variant, IProjectVariant[] variants);
 
 	/**
-	 * Returns the dynamic project variant references for the described project. Dynamic
+	 * Returns the dynamic project variant references for the described project variant. Dynamic
 	 * project variant references can be used instead of simple project variant references in cases
 	 * where the reference information is computed dynamically be a third party.
 	 * These references are persisted by the workspace in a private location outside
@@ -336,25 +341,27 @@ public interface IProjectDescription {
 	 * contain duplicates. Returns an empty array if there are no dynamic project variant
 	 * references on this description.
 	 *
-	 * @see #getReferencedProjectVariants()
-	 * @see #setDynamicVariantReferences(IProjectVariant[])
+	 * @param variant the variant in the described project to get the references for
+	 * @see #getReferencedProjectVariants(String)
+	 * @see #setDynamicVariantReferences(String, IProjectVariant[])
 	 * @return a list of project variants
 	 */
-	public IProjectVariant[] getDynamicVariantReferences();
+	public IProjectVariant[] getDynamicVariantReferences(String variant);
 
 	/**
-	 * Sets the dynamic project variant references for the described project.
+	 * Sets the dynamic project variant references for the described project variant.
 	 * The projects and variants need not exist in the workspace. Duplicates will be
 	 * removed.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
 	 * </p>
-	 * @see #getDynamicVariantReferences()
+	 * @see #getDynamicVariantReferences(String)
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
+	 * @param variant the variant in the described project to add the references to
 	 * @param variants list of project variants
 	 */
-	public void setDynamicVariantReferences(IProjectVariant[] variants);
+	public void setDynamicVariantReferences(String variant, IProjectVariant[] variants);
 
 	/**
 	 * Gets the variants for the described project.

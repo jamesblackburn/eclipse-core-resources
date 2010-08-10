@@ -85,21 +85,24 @@ public class Project extends Container implements IProject {
 		// set the build order before setting the references or the natures
 		current.setBuildSpec(description.getBuildSpec(true));
 
-		current.setVariants(description.getVariants());
+		String[] variants = description.getVariants();
+		current.setVariants(variants);
 
 		// set the references before the natures 
 		boolean flushOrder = false;
-		IProjectVariant[] oldReferences = current.getReferencedProjectVariants();
-		IProjectVariant[] newReferences = description.getReferencedProjectVariants();
-		if (!Arrays.equals(oldReferences, newReferences)) {
-			current.setReferencedProjectVariants(newReferences);
-			flushOrder = true;
-		}
-		oldReferences = current.getDynamicVariantReferences();
-		newReferences = description.getDynamicVariantReferences();
-		if (!Arrays.equals(oldReferences, newReferences)) {
-			current.setDynamicVariantReferences(newReferences);
-			flushOrder = true;
+		for (int i = 0; i < variants.length; i++) {
+			IProjectVariant[] oldReferences = current.getReferencedProjectVariants(variants[i]);
+			IProjectVariant[] newReferences = description.getReferencedProjectVariants(variants[i]);
+			if (!Arrays.equals(oldReferences, newReferences)) {
+				current.setReferencedProjectVariants(variants[i], newReferences);
+				flushOrder = true;
+			}
+			oldReferences = current.getDynamicVariantReferences(variants[i]);
+			newReferences = description.getDynamicVariantReferences(variants[i]);
+			if (!Arrays.equals(oldReferences, newReferences)) {
+				current.setDynamicVariantReferences(variants[i], newReferences);
+				flushOrder = true;
+			}
 		}
 
 		if (flushOrder)
@@ -457,6 +460,10 @@ public class Project extends Container implements IProject {
 	/* (non-Javadoc)
 	 * @see IProject#getReferencedProjects()
 	 */
+	/**
+	 * @see #getReferencedProjectVariants(String)
+	 * @deprecated
+	 */
 	public IProject[] getReferencedProjects() throws CoreException {
 		ResourceInfo info = getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
@@ -469,6 +476,10 @@ public class Project extends Container implements IProject {
 
 	/* (non-Javadoc)
 	 * @see IProject#getReferencingProjects()
+	 */
+	/**
+	 * @see #getReferencingProjectVariants(String)
+	 * @deprecated
 	 */
 	public IProject[] getReferencingProjects() {
 		IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
@@ -1334,20 +1345,20 @@ public class Project extends Container implements IProject {
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#getReferencedProjectVariants()
+	 * @see IProject#getReferencedProjectVariants(String)
 	 */
-	public IProjectVariant[] getReferencedProjectVariants() throws CoreException {
+	public IProjectVariant[] getReferencedProjectVariants(String variant) throws CoreException {
 		ResourceInfo info = getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		ProjectDescription description = ((ProjectInfo) info).getDescription();
 		//if the project is currently in the middle of being created, the description might not be available yet
 		if (description == null)
 			checkAccessible(NULL_FLAG);
-		return description.getAllVariantReferences(true);
+		return description.getAllVariantReferences(variant, true);
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#getReferencingProjectVariants()
+	 * @see IProject#getReferencingProjectVariants(String)
 	 */
 	public IProjectVariant[] getReferencingProjectVariants(String variant) {
 		IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
@@ -1359,12 +1370,16 @@ public class Project extends Container implements IProject {
 			ProjectDescription description = project.internalGetDescription();
 			if (description == null)
 				continue;
-			IProjectVariant[] references = description.getAllVariantReferences(false);
-			for (int j = 0; j < references.length; j++)
-				if (references[j].getProject().equals(this) && references[j].getVariant().equals(variant)) {
-					result.add(references[j]);
-					break;
+			String[] variants = description.getVariants();
+			for (int j = 0; j < variants.length; j++) {
+				IProjectVariant[] references = description.getAllVariantReferences(variants[j], false);
+				for (int k = 0; k < references.length; k++) {
+					if (references[k].getProject().equals(this) && references[k].getVariant().equals(variant)) {
+						result.add(references[k]);
+						break;
+					}
 				}
+			}
 		}
 		return (IProjectVariant[]) result.toArray(new IProjectVariant[result.size()]);
 	}
