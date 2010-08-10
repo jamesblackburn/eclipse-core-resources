@@ -19,7 +19,7 @@ public class ProjectVariant implements IProjectVariant {
 	private IProject project;
 	private String variant;
 
-	ProjectVariant(IProject project, String variant) {
+	public ProjectVariant(IProject project, String variant) {
 		Assert.isLegal(project != null && variant != null);
 		this.project = project;
 		this.variant = variant;
