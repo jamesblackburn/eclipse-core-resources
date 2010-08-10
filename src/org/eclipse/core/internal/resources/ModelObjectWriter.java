@@ -56,13 +56,13 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		return result;
 	}
 
-	protected void write(BuildCommand command, XMLWriter writer) {
+	protected void write(BuildCommand command, XMLWriter writer) throws IOException {
 		writer.startTag(BUILD_COMMAND, null);
 		if (command != null) {
 			writer.printSimpleTag(NAME, command.getName());
 			if (shouldWriteTriggers(command))
 				writer.printSimpleTag(BUILD_TRIGGERS, triggerString(command));
-			write(ARGUMENTS, command.getArguments(false), writer);
+			write(ARGUMENTS, DICTIONARY, KEY, VALUE, command.getArguments(false), writer);
 		}
 		writer.endTag(BUILD_COMMAND);
 	}
@@ -210,6 +210,12 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			write((VariableDescription) obj, writer);
 			return;
 		}
+		if (obj instanceof IProjectVariant[]) {
+			IProjectVariant[] array = (IProjectVariant[]) obj;
+			for (int i = 0; i < array.length; i++)
+				write(array[i], writer);
+			return;
+		}
 		if (obj instanceof IProjectVariant) {
 			write((IProjectVariant) obj, writer);
 			return;
@@ -228,7 +234,7 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			if (snapshotLocation != null) {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
-			write(REFERENCES, Arrays.asList(description.getReferencedProjectVariants(false)), writer);
+			write(REFERENCES, VARIANT, NAME, null, description.staticRefs, writer);
 			// Store project references for backwards compatibility
 			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
 			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
@@ -269,9 +275,20 @@ public class ModelObjectWriter implements IModelObjectConstants {
 	}
 
 	/**
-	 * Write maps of (String, String).
+	 * Write maps of (String, Object) as
+	 * <name>
+	 *     <entryname>
+	 *         <keyName>key</keyName>
+	 *         <valueName>Object</valueName>
+	 *     </entryname>
+	 *     ...
+	 * </name>
+	 * where Object is written with a call to:
+	 *  - {@link XMLWriter#printSimpleTag(String, Object)} if it is a String
+	 *  - {@link #write(Object, XMLWriter)} otherwise
+	 * If valueName is null, Object is not surrounded in valueName tags
 	 */
-	protected void write(String name, Map table, XMLWriter writer) {
+	protected void write(String name, String entryName, String keyName, String valueName, Map table, XMLWriter writer) throws IOException {
 		writer.startTag(name, null);
 		if (table != null) {
 			// ensure consistent order of map elements
@@ -281,12 +298,20 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			for (Iterator it = sorted.iterator(); it.hasNext();) {
 				String key = (String) it.next();
 				Object value = table.get(key);
-				writer.startTag(DICTIONARY, null);
+				writer.startTag(entryName, null);
 				{
-					writer.printSimpleTag(KEY, key);
-					writer.printSimpleTag(VALUE, value);
+					writer.printSimpleTag(keyName, key);
+					if (value instanceof String)
+						writer.printSimpleTag(valueName, value);
+					else if (value != null) {
+						if (valueName != null)
+							writer.startTag(valueName, null);
+						write(value, writer);
+						if (valueName != null)
+							writer.endTag(valueName);
+					}
 				}
-				writer.endTag(DICTIONARY);
+				writer.endTag(entryName);
 			}
 		}
 		writer.endTag(name);

@@ -513,6 +513,8 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @see IProjectDescription#getReferencedProjects()
 	 * @see IProjectDescription#getDynamicReferences()
+	 * @see #getReferencedProjectVariants(String)
+	 * @deprecated
 	 */
 	public IProject[] getReferencedProjects() throws CoreException;
 
@@ -522,26 +524,29 @@ public interface IProject extends IContainer, IAdaptable {
 	 * an empty array if there are no referencing projects.
 	 *
 	 * @return a list of open projects referencing this project
+	 * @see #getReferencingProjectVariants(String)
+	 * @deprecated
 	 */
 	public IProject[] getReferencingProjects();
 
 	/**
-	 * Returns the project variants referenced by this project. This includes
-	 * both the static and dynamic references of this project.
+	 * Returns the project variants referenced by this project and the given variant.
+	 * This includes both the static and dynamic references of this project.
 	 * The returned projects and variants need not exist in the workspace.
 	 * The result will not contain duplicates. Returns an empty
 	 * array if there are no referenced project variants.
 	 *
+	 * @param variant the variant to get the references for
 	 * @return a list of project variants
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
 	 * </ul>
-	 * @see IProjectDescription#getReferencedProjectVariants()
-	 * @see IProjectDescription#getDynamicVariantReferences()
+	 * @see IProjectDescription#getReferencedProjectVariants(String)
+	 * @see IProjectDescription#getDynamicVariantReferences(String)
 	 */
-	public IProjectVariant[] getReferencedProjectVariants() throws CoreException;
+	public IProjectVariant[] getReferencedProjectVariants(String variant) throws CoreException;
 
 	/**
 	 * Returns the list of all open projects existing variants which reference
@@ -549,6 +554,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * or may not exist. Returns an empty array if there are no
 	 * referencing project variants.
 	 *
+	 * @param variant the variant to get the references to
 	 * @return a list of open projects and their existing variant referencing this project
 	 */
 	public IProjectVariant[] getReferencingProjectVariants(String variant);

@@ -13,6 +13,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import java.util.Map;
+
 import org.eclipse.core.runtime.CoreException;
 
 import org.eclipse.core.runtime.IPath;
@@ -46,7 +48,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Cached union of static and dynamic project references (duplicates omitted).
 	 * This cache is not persisted.
 	 */
-	protected IProjectVariant[] cachedRefs = null;
+	protected Map/*<String, IProjectVariant[]>*/ cachedRefs = new HashMap();
 	/*
 	 * Cached union of static and dynamic project variant references (duplicates omitted).
 	 * This cache is not persisted.
@@ -56,12 +58,12 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Cached dynamic project references, generated from project variant references (duplicates omitted).
 	 * This cache is not persisted.
 	 */
-	protected IProject[] cachedDynamicProjectRefs = EMPTY_PROJECT_ARRAY;
+	protected  IProject[] cachedDynamicProjectRefs = null;
 	/*
 	 * Cached static project references, generated from project variant references (duplicates omitted).
 	 * This cache is not persisted.
 	 */
-	protected IProject[] cachedStaticProjectRefs = EMPTY_PROJECT_ARRAY;
+	protected IProject[] cachedStaticProjectRefs = null;
 
 	protected String comment = EMPTY_STR;
 	
@@ -87,8 +89,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
 	protected String[] variants = new String[]{EMPTY_STR};
-	protected IProjectVariant[] staticRefs = EMPTY_PROJECT_VARIANT_ARRAY;
-	protected IProjectVariant[] dynamicRefs = EMPTY_PROJECT_VARIANT_ARRAY;
+	protected Map/*<String, IProjectVariant[]>*/ staticRefs = new HashMap();
+	protected Map/*<String, IProjectVariant[]>*/ dynamicRefs = new HashMap();
 	protected URI snapshotLocation= null;
 
 	public ProjectDescription() {
@@ -247,7 +249,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * file (.project).
 	 */
 	public boolean hasPrivateChanges(ProjectDescription description) {
-		if (!Arrays.equals(dynamicRefs, description.getDynamicVariantReferences(false)))
+		if (!dynamicRefs.equals(description.dynamicRefs))
 			return true;
 		IPath otherLocation = description.getLocation();
 		if (location == null)
@@ -268,7 +270,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		//don't bother optimizing if the order has changed
 		if (!Arrays.equals(buildSpec, description.getBuildSpec(false)))
 			return true;
-		if (!Arrays.equals(staticRefs, description.getReferencedProjectVariants(false)))
+		if (!staticRefs.equals(description.staticRefs))
 			return true;
 		if (!Arrays.equals(natures, description.getNatureIds(false)))
 			return true;
@@ -559,68 +561,71 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Returns the union of the description's static and dynamic project variant references,
 	 * with duplicates omitted. The calculation is optimized by caching the result
 	 */
-	public IProjectVariant[] getAllVariantReferences(boolean makeCopy) {
-		if (cachedRefs == null) {
-			IProjectVariant[] statik = getReferencedProjectVariants(false);
-			IProjectVariant[] dynamic = getDynamicVariantReferences(false);
+	public IProjectVariant[] getAllVariantReferences(String variant, boolean makeCopy) {
+		if (!cachedRefs.containsKey(variant)) {
+			IProjectVariant[] statik = getReferencedProjectVariants(variant, false);
+			IProjectVariant[] dynamic = getDynamicVariantReferences(variant, false);
 			if (dynamic.length == 0) {
-				cachedRefs = statik;
+				cachedRefs.put(variant, statik);
 			} else if (statik.length == 0) {
-				cachedRefs = dynamic;
+				cachedRefs.put(variant, dynamic);
 			} else {
 				//combine all references
 				IProjectVariant[] result = new IProjectVariant[dynamic.length + statik.length];
 				System.arraycopy(statik, 0, result, 0, statik.length);
 				System.arraycopy(dynamic, 0, result, statik.length, dynamic.length);
-				cachedRefs = copyAndRemoveDuplicates(result);
+				cachedRefs.put(variant, copyAndRemoveDuplicates(result));
 			}
 		}
 		//still need to copy the result to prevent tampering with the cache
-		return makeCopy ? (IProjectVariant[]) cachedRefs.clone() : cachedRefs;
+		IProjectVariant[] result = (IProjectVariant[]) cachedRefs.get(variant);
+		return makeCopy ? (IProjectVariant[]) result.clone() : result;
 	}
 
 	/* (non-Javadoc)
 	 * @see IProjectDescription#getReferencedVariants()
 	 */
-	public IProjectVariant[] getReferencedProjectVariants() {
-		return getReferencedProjectVariants(true);
+	public IProjectVariant[] getReferencedProjectVariants(String variant) {
+		return getReferencedProjectVariants(variant, true);
 	}
 
-	public IProjectVariant[] getReferencedProjectVariants(boolean makeCopy) {
-		if (staticRefs == null)
+	public IProjectVariant[] getReferencedProjectVariants(String variant, boolean makeCopy) {
+		if (!staticRefs.containsKey(variant))
 			return EMPTY_PROJECT_VARIANT_ARRAY;
-		return makeCopy ? (IProjectVariant[]) staticRefs.clone() : staticRefs;
+		IProjectVariant[] result = (IProjectVariant[]) staticRefs.get(variant);
+		return makeCopy ? (IProjectVariant[]) result.clone() : result;
 	}
 
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setReferencedVariants(IProjectVariant[])
 	 */
-	public void setReferencedProjectVariants(IProjectVariant[] value) {
+	public void setReferencedProjectVariants(String variant, IProjectVariant[] value) {
 		Assert.isLegal(value != null);
-		staticRefs = copyAndRemoveDuplicates(value);
-		clearCachedReferences();
+		staticRefs.put(variant, copyAndRemoveDuplicates(value));
+		clearCachedReferences(variant);
 	}
 
 	/* (non-Javadoc)
-	 * @see IProjectDescription#getDynamicVariantReferences()
+	 * @see IProjectDescription#getDynamicVariantReferences(String)
 	 */
-	public IProjectVariant[] getDynamicVariantReferences() {
-		return getDynamicVariantReferences(true);
+	public IProjectVariant[] getDynamicVariantReferences(String variant) {
+		return getDynamicVariantReferences(variant, true);
 	}
 
-	public IProjectVariant[] getDynamicVariantReferences(boolean makeCopy) {
-		if (dynamicRefs == null)
+	public IProjectVariant[] getDynamicVariantReferences(String variant, boolean makeCopy) {
+		if (!dynamicRefs.containsKey(variant))
 			return EMPTY_PROJECT_VARIANT_ARRAY;
-		return makeCopy ? (IProjectVariant[]) dynamicRefs.clone() : dynamicRefs;
+		IProjectVariant[] result = (IProjectVariant[]) dynamicRefs.get(variant);
+		return makeCopy ? (IProjectVariant[]) result.clone() : result;
 	}
 
 	/* (non-Javadoc)
-	 * @see IProjectDescription#setDynamicVariantReferences()
+	 * @see IProjectDescription#setDynamicVariantReferences(String, IProjectVariant[])
 	 */
-	public void setDynamicVariantReferences(IProjectVariant[] value) {
+	public void setDynamicVariantReferences(String variant, IProjectVariant[] value) {
 		Assert.isLegal(value != null);
-		dynamicRefs = copyAndRemoveDuplicates(value);
-		clearCachedReferences();
+		dynamicRefs.put(variant, copyAndRemoveDuplicates(value));
+		clearCachedReferences(variant);
 	}
 
 	/* (non-Javadoc)
@@ -645,9 +650,13 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		variants = (String[]) variants.clone();
 	}
 
-	private void clearCachedReferences()
+	/**
+	 * Clear all cached references for the given variant
+	 * @param variant the variant to clear cached references for
+	 */
+	private void clearCachedReferences(String variant)
 	{
-		cachedRefs = null;
+		cachedRefs.remove(variant);
 		cachedProjectRefs = null;
 		cachedStaticProjectRefs = null;
 		cachedDynamicProjectRefs = null;
@@ -665,7 +674,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/**
 	 * Returns the union of the description's static and dynamic project references,
 	 * with duplicates omitted. The calculation is optimized by caching the result
-	 * @see #getAllVariantReferences(boolean)
+	 * @see #getAllVariantReferences(String, boolean)
 	 * @deprecated
 	 */
 	public IProject[] getAllReferences(boolean makeCopy) {
@@ -693,7 +702,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	/**
 	 * @deprecated
-	 * @see #getReferencedProjectVariants()
+	 * @see #getReferencedProjectVariants(String)
 	 */
 	public IProject[] getReferencedProjects() {
 		return getReferencedProjects(true);
@@ -701,7 +710,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 	/**
 	 * @deprecated
-	 * @see #getReferencedProjectVariants(boolean)
+	 * @see #getReferencedProjectVariants(String, boolean)
 	 */
 	public IProject[] getReferencedProjects(boolean makeCopy) {
 		if (staticRefs == null)
@@ -718,13 +727,15 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#setReferencedProjects(IProject[])
 	 */
 	/**
-	 * @see #setReferencedProjectVariants(IProjectVariant[])
+	 * @see #setReferencedProjectVariants(String, IProjectVariant[])
 	 * @deprecated
 	 */
 	public void setReferencedProjects(IProject[] projects) {
 		Assert.isLegal(projects != null);
 		// Add all variants in each of the projects as a reference
-		setReferencedProjectVariants(getProjectVariantsFromProjects(projects));
+		for (int i = 0; i < variants.length; i++) {
+			setReferencedProjectVariants(variants[i], getProjectVariantsFromProjects(projects));
+		}
 	}
 
 	/* (non-Javadoc)
@@ -732,7 +743,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	/**
 	 * @deprecated
-	 * @see #getDynamicVariantReferences()
+	 * @see #getDynamicVariantReferences(String)
 	 */
 	public IProject[] getDynamicReferences() {
 		return getDynamicReferences(true);
@@ -740,7 +751,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 	/**
 	 * @deprecated
-	 * @see #getDynamicVariantReferences(boolean)
+	 * @see #getDynamicVariantReferences(String, boolean)
 	 */
 	public IProject[] getDynamicReferences(boolean makeCopy) {
 		if (dynamicRefs == null)
@@ -757,11 +768,13 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	/**
 	 * @deprecated
-	 * @see #setDynamicVariantReferences(IProjectVariant[])
+	 * @see #setDynamicVariantReferences(String, IProjectVariant[])
 	 */
 	public void setDynamicReferences(IProject[] projects) {
 		Assert.isLegal(projects != null);
-		setDynamicVariantReferences(getProjectVariantsFromProjects(projects));
+		for (int i = 0; i < variants.length; i++) {
+			setDynamicVariantReferences(variants[i], getProjectVariantsFromProjects(projects));
+		}
 	}
 
 	/**
@@ -778,14 +791,18 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Get a list of projects, without duplicates, from a list of project variants.
 	 * Order is preserved, and is according to the first occurence of a project in the
 	 * array of project variants.
-	 * @param projectVariants project variants to get the projects from
+	 * @param variantsMap map containing the project variants to get the projects from
 	 * @return list of projects
 	 * @deprecated
 	 */
-	private IProject[] getProjectsFromProjectVariants(IProjectVariant[] projectVariants) {
+	private IProject[] getProjectsFromProjectVariants(Map/*<String, IProjectVariant[]>*/ variantsMap) {
 		Set projects = new LinkedHashSet();
-		for (int i = 0; i < projectVariants.length; i++) {
-			projects.add(projectVariants[i].getProject());
+		Iterator i = variantsMap.values().iterator();
+		while (i.hasNext()) {
+			IProjectVariant[] projectVariants = (IProjectVariant[]) i.next();
+			for (int j = 0; j < projectVariants.length; j++) {
+				projects.add(projectVariants[j].getProject());
+			}
 		}
 		return (IProject[]) projects.toArray(new Project[projects.size()]);
 	}
