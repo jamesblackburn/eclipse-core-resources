@@ -785,8 +785,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	private IProject[] getProjectsFromProjectVariants(IProjectVariant[] projectVariants) {
 		Set projects = new LinkedHashSet();
-		for (int i = 0; i < dynamicRefs.length; i++) {
-			projects.add(dynamicRefs[i].getProject());
+		for (int i = 0; i < projectVariants.length; i++) {
+			projects.add(projectVariants[i].getProject());
 		}
 		return (IProject[]) projects.toArray(new Project[projects.size()]);
 	}
