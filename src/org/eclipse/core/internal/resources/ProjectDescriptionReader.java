@@ -76,10 +76,13 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 
 	protected static final int S_SNAPSHOT_LOCATION = 35;
 
-	protected static final int S_REFERENCES = 36;
-	protected static final int S_REFERENCE = 37;
-	protected static final int S_REFERENCE_PROJECT_NAME = 38;
-	protected static final int S_REFERENCE_VARIANT_NAME = 39;
+	protected static final int S_VARIANTS = 36;
+	protected static final int S_VARIANT_NAME = 37;
+
+	protected static final int S_REFERENCES = 38;
+	protected static final int S_REFERENCE = 39;
+	protected static final int S_REFERENCE_PROJECT_NAME = 40;
+	protected static final int S_REFERENCE_VARIANT_NAME = 41;
 	
 	/**
 	 * Singleton sax parser factory
@@ -424,6 +427,17 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_SNAPSHOT_LOCATION :
 				endSnapshotLocation(elementName);
 				break;
+			case S_VARIANTS :
+				endVariantsElement(elementName);
+				break;
+			case S_VARIANT_NAME :
+				if (elementName.equals(VARIANT)) {
+					//top of stack is list of variant names
+					// A variant name is cannot
+					// have leading/trailing whitespace.
+					((ArrayList) objectStack.peek()).add(charBuffer.toString().trim());
+					state = S_VARIANTS;
+				}
 			case S_REFERENCES :
 				endReferencesElement(elementName);
 				break;
@@ -846,6 +860,22 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				problems.add(new Status(IStatus.WARNING, ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_READ_METADATA, msg, e));
 			}
 			state = S_PROJECT_DESC;
+		}
+	}
+
+	/** End of a variants list */
+	private void endVariantsElement(String elementName) {
+		if (elementName.equals(VARIANTS)) {
+			// Pop the array list of variant names off the stack
+			List variants = (List) objectStack.pop();
+			state = S_PROJECT_DESC;
+			if (variants.size() == 0)
+				// A project should have more than one variant name,
+				// so leave the project with the default variant if none
+				// are specified in the project description file
+				return;
+			String[] variantNames = (String[]) variants.toArray(new String[variants.size()]);
+			projectDescription.setVariants(variantNames);
 		}
 	}
 
