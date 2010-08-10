@@ -807,6 +807,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			try {
 				desc = projects[i].getDescription();
 			} catch (CoreException e) {
+				// Project not accessible - add default variant
+				projectVariants.add(new ProjectVariant(projects[i], "")); //$NON-NLS-1$
 				continue;
 			}
 			if (desc == null)
