@@ -210,6 +210,10 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			write((VariableDescription) obj, writer);
 			return;
 		}
+		if (obj instanceof IProjectVariant) {
+			write((IProjectVariant) obj, writer);
+			return;
+		}
 		writer.printTabulation();
 		writer.println(obj.toString());
 	}
