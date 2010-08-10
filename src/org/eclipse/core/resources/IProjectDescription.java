@@ -50,27 +50,6 @@ public interface IProjectDescription {
 	public String getComment();
 
 	/**
-	 * Returns the dynamic project references for the described project. Dynamic
-	 * project references can be used instead of simple project references in cases
-	 * where the reference information is computed dynamically be a third party.
-	 * These references are persisted by the workspace in a private location outside
-	 * the project description file, and as such will not be shared when a project is
-	 * exported or persisted in a repository.  A client using project references
-	 * is always responsible for setting these references when a project is created
-	 * or recreated.
-	 * <p>
-	 * The returned projects need not exist in the workspace. The result will not 
-	 * contain duplicates. Returns an empty array if there are no dynamic project 
-	 * references on this description.
-	 *
-	 * @see #getReferencedProjects()
-	 * @see #setDynamicReferences(IProject[])
-	 * @return a list of projects
-	 * @since 3.0
-	 */
-	public IProject[] getDynamicReferences();
-
-	/**
 	 * Returns the  local file system location for the described project.  The path
 	 * will be either an absolute file system path, or a relative path whose first
 	 * segment is the name of a workspace path variable. <code>null</code> is
@@ -108,22 +87,6 @@ public interface IProjectDescription {
 	 * @see #setNatureIds(String[])
 	 */
 	public String[] getNatureIds();
-
-	/**
-	 * Returns the projects referenced by the described project. These references
-	 * are persisted in the project description file (&quot;.project&quot;) and as such
-	 * will be shared whenever the project is exported to another workspace. For
-	 * references that are likely to change from one workspace to another, dynamic
-	 * references should be used instead.
-	 * <p>
-	 * The projects need not exist in the workspace.
-	 * The result will not contain duplicates. Returns an empty
-	 * array if there are no referenced projects on this description.
-	 *
-	 *@see #getDynamicReferences()
-	 * @return a list of projects
-	 */
-	public IProject[] getReferencedProjects();
 
 	/** 
 	 * Returns whether the project nature specified by the given
@@ -173,21 +136,6 @@ public interface IProjectDescription {
 	 * @see #getComment()
 	 */
 	public void setComment(String comment);
-
-	/**
-	 * Sets the dynamic project references for the described project. 
-	 * The projects need not exist in the workspace. Duplicates will be
-	 * removed.  
-	 * <p>
-	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)} 
-	 * before changes made to this description take effect.
-	 * </p>
-	 * @see #getDynamicReferences()
-	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @param projects list of projects
-	 * @since 3.0
-	 */
-	public void setDynamicReferences(IProject[] projects);
 
 	/**
 	 * Sets the local file system location for the described project.  The path must
@@ -274,6 +222,23 @@ public interface IProjectDescription {
 	public void setNatureIds(String[] natures);
 
 	/**
+	 * Returns the projects referenced by the described project. These references
+	 * are persisted in the project description file (&quot;.project&quot;) and as such
+	 * will be shared whenever the project is exported to another workspace. For
+	 * references that are likely to change from one workspace to another, dynamic
+	 * references should be used instead.
+	 * <p>
+	 * The projects need not exist in the workspace.
+	 * The result will not contain duplicates. Returns an empty
+	 * array if there are no referenced projects on this description.
+	 *
+	 * @see #getDynamicReferences()
+	 * @return a list of projects
+	 * @deprecated
+	 */
+	public IProject[] getReferencedProjects();
+
+	/**
 	 * Sets the referenced projects, ignoring any duplicates.
 	 * The order of projects is preserved.
 	 * The projects need not exist in the workspace.
@@ -285,8 +250,47 @@ public interface IProjectDescription {
 	 * @param projects a list of projects
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
 	 * @see #getReferencedProjects()
+	 * @deprecated
 	 */
 	public void setReferencedProjects(IProject[] projects);
+
+	/**
+	 * Returns the dynamic project references for the described project. Dynamic
+	 * project references can be used instead of simple project references in cases
+	 * where the reference information is computed dynamically be a third party.
+	 * These references are persisted by the workspace in a private location outside
+	 * the project description file, and as such will not be shared when a project is
+	 * exported or persisted in a repository.  A client using project references
+	 * is always responsible for setting these references when a project is created
+	 * or recreated.
+	 * <p>
+	 * The returned projects need not exist in the workspace. The result will not
+	 * contain duplicates. Returns an empty array if there are no dynamic project
+	 * references on this description.
+	 *
+	 * @see #getReferencedProjects()
+	 * @see #setDynamicReferences(IProject[])
+	 * @return a list of projects
+	 * @since 3.0
+	 * @deprecated
+	 */
+	public IProject[] getDynamicReferences();
+
+	/**
+	 * Sets the dynamic project references for the described project.
+	 * The projects need not exist in the workspace. Duplicates will be
+	 * removed.
+	 * <p>
+	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
+	 * before changes made to this description take effect.
+	 * </p>
+	 * @see #getDynamicReferences()
+	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
+	 * @param projects list of projects
+	 * @since 3.0
+	 * @deprecated
+	 */
+	public void setDynamicReferences(IProject[] projects);
 
 	/**
 	 * Returns the project variants referenced by the described project. These references
@@ -368,7 +372,7 @@ public interface IProjectDescription {
 
 	/**
 	 * Sets the variants for the described project.
-	 * Must be at least one variant with a non-empty name.
+	 * Must be at least one variant name.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
