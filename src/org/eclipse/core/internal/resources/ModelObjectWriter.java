@@ -47,6 +47,15 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		super();
 	}
 
+	/** @deprecated */
+	protected String[] getReferencedProjects(ProjectDescription description) {
+		IProject[] projects = description.getReferencedProjects();
+		String[] result = new String[projects.length];
+		for (int i = 0; i < projects.length; i++)
+			result[i] = projects[i].getName();
+		return result;
+	}
+
 	protected void write(BuildCommand command, XMLWriter writer) {
 		writer.startTag(BUILD_COMMAND, null);
 		if (command != null) {
@@ -216,6 +225,8 @@ public class ModelObjectWriter implements IModelObjectConstants {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
 			write(REFERENCES, Arrays.asList(description.getReferencedProjectVariants(false)), writer);
+			// Store project references for backwards compatibility
+			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
 			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);
 			HashMap links = description.getLinks();
