@@ -239,38 +239,38 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * 
 	 * @return the resource delta for the project or <code>null</code>
 	 */
-	public final IResourceDelta getDelta(IProject project) {
-		return super.getDelta(project);
+	public final IResourceDelta getDelta(IProjectVariant projectVariant) {
+		return super.getDelta(projectVariant);
 	}
 
 	/**
-	 * Returns the project for which this builder is defined.
+	 * Returns the project variant for which this builder is defined.
 	 * 
-	 * @return the project
+	 * @return the project variant
 	 */
-	public final IProject getProject() {
-		return super.getProject();
+	public final IProjectVariant getProjectVariant() {
+		return super.getProjectVariant();
 	}
 
 	/**
-	 * Returns whether the given project has already been built during this
+	 * Returns whether the given project variant has already been built during this
 	 * build iteration.
 	 * <p>
-	 * When the entire workspace is being built, the projects are built in
-	 * linear sequence. This method can be used to determine if another project
+	 * When the entire workspace is being built, the project variants are built in
+	 * linear sequence. This method can be used to determine if another project variant
 	 * precedes this builder's project in that build sequence. If only a single
 	 * project is being built, then there is no build order and this method will
 	 * always return <code>false</code>.
 	 * </p>
 	 * 
-	 * @param project the project to check against in the current build order
-	 * @return <code>true</code> if the given project has been built in this
+	 * @param projectVariant the project to check against in the current build order
+	 * @return <code>true</code> if the given project variant has been built in this
 	 * iteration, and <code>false</code> otherwise.
 	 * @see #needRebuild()
 	 * @since 2.1
 	 */
-	public final boolean hasBeenBuilt(IProject project) {
-		return super.hasBeenBuilt(project);
+	public final boolean hasBeenBuilt(IProjectVariant projectVariant) {
+		return super.hasBeenBuilt(projectVariant);
 	}
 
 	/**
@@ -292,8 +292,8 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	}
 
 	/**
-	 * Indicates that this builder made changes that affect a project that
-	 * precedes this project in the currently executing build order, and thus a
+	 * Indicates that this builder made changes that affect a project variant that
+	 * precedes this project variant in the currently executing build order, and thus a
 	 * rebuild will be necessary.
 	 * <p>
 	 * This is an advanced feature that builders should use with caution. This
@@ -301,7 +301,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * rebuilds.
 	 * </p>
 	 * 
-	 * @see #hasBeenBuilt(IProject)
+	 * @see #hasBeenBuilt(IProjectVariant)
 	 * @since 2.1
 	 */
 	public final void needRebuild() {
@@ -367,7 +367,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 
 	/**
 	 * Returns the scheduling rule that is required for building 
-	 * the project for which this builder is defined. The default 
+	 * the project variant for which this builder is defined. The default 
 	 * is {@link #getRule()}, which returns the workspace root 
 	 * rule unless overridden.
 	 * <p>
@@ -391,7 +391,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
      * <li>
 	 * If this method returns any rule other than the workspace root,
 	 * resources outside of the rule scope can be modified concurrently with the build. 
-	 * The delta returned by {@link #getDelta(IProject)} for any project
+	 * The delta returned by {@link #getDelta(IProjectVariant)} for any project variant
 	 * outside the scope of the builder's rule may not contain changes that occurred 
 	 * concurrently with the build.
 	 * </ul>

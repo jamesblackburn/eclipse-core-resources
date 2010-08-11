@@ -380,6 +380,8 @@ public interface IProjectDescription {
 	/**
 	 * Sets the variants for the described project.
 	 * Must be at least one variant name.
+	 * If this removes the currently active variant, the active variant
+	 * is set to the first variant in the supplied list of variants.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
@@ -388,4 +390,20 @@ public interface IProjectDescription {
 	 * @see #getVariants()
 	 */
 	public void setVariants(String[] variants);
+
+	/**
+	 * Returns the active variant for the project.
+	 * This does not persist.
+	 *
+	 * @return the active variant
+	 */
+	public String getActiveVariant();
+
+	/**
+	 * Sets the active variant for the project.
+	 * This does not persist.
+	 *
+	 * @param variant the variant to make the active variant
+	 */
+	public void setActiveVariant(String variant);
 }

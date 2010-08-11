@@ -30,7 +30,7 @@ public abstract class InternalBuilder {
 	static BuildManager buildManager;
 	private ICommand command;
 	private boolean forgetStateRequested = false;
-	private IProject[] interestingProjects = ICoreConstants.EMPTY_PROJECT_ARRAY;
+	private IProjectVariant[] interestingProjectVariants = ICoreConstants.EMPTY_PROJECT_VARIANT_ARRAY;
 	/**
 	 * Human readable builder name for progress reporting.
 	 */
@@ -41,7 +41,7 @@ public abstract class InternalBuilder {
 	 * The symbolic name of the plugin that defines this builder
 	 */
 	private String pluginId;
-	private IProject project;
+	private IProjectVariant projectVariant;
 	
 	/**
 	 * The value of the callOnEmptyDelta builder extension attribute.
@@ -51,6 +51,7 @@ public abstract class InternalBuilder {
 	/*
 	 *  @see IncrementalProjectBuilder#build
 	 */
+	//TODO: ALEX Should this return IProjectVariant[]?
 	protected abstract IProject[] build(int kind, Map args, IProgressMonitor monitor) throws CoreException;
 
 	/**
@@ -89,12 +90,12 @@ public abstract class InternalBuilder {
 	/*
 	 * @see IncrementalProjectBuilder#forgetLastBuiltState
 	 */
-	protected IResourceDelta getDelta(IProject aProject) {
-		return buildManager.getDelta(aProject);
+	protected IResourceDelta getDelta(IProjectVariant aProjectVariant) {
+		return buildManager.getDelta(aProjectVariant);
 	}
 
-	final IProject[] getInterestingProjects() {
-		return interestingProjects;
+	final IProjectVariant[] getInterestingProjectVariants() {
+		return interestingProjectVariants;
 	}
 
 	final String getLabel() {
@@ -118,17 +119,17 @@ public abstract class InternalBuilder {
 	}
 
 	/**
-	 * Returns the project for this builder
+	 * Returns the project variant for this builder
 	 */
-	protected IProject getProject() {
-		return project;
+	protected IProjectVariant getProjectVariant() {
+		return projectVariant;
 	}
 
 	/*
 	 * @see IncrementalProjectBuilder#hasBeenBuilt
 	 */
-	protected boolean hasBeenBuilt(IProject aProject) {
-		return buildManager.hasBeenBuilt(aProject);
+	protected boolean hasBeenBuilt(IProjectVariant aProjectVariant) {
+		return buildManager.hasBeenBuilt(aProjectVariant);
 	}
 
 	/*
@@ -152,9 +153,9 @@ public abstract class InternalBuilder {
 	final void setCommand(ICommand value) {
 		this.command = value;
 	}
-	
-	final void setInterestingProjects(IProject[] value) {
-		interestingProjects = value;
+
+	final void setInterestingProjectVariants(IProjectVariant[] value) {
+		interestingProjectVariants = value;
 	}
 
 	final void setLabel(String value) {
@@ -174,12 +175,12 @@ public abstract class InternalBuilder {
 	}
 
 	/**
-	 * Sets the project for which this builder operates.
-	 * @see #getProject()
+	 * Sets the project variant for which this builder operates.
+	 * @see #getProjectVariant()
 	 */
-	final void setProject(IProject value) {
-		Assert.isTrue(project == null);
-		project = value;
+	final void setProjectVariant(IProjectVariant value) {
+		Assert.isTrue(projectVariant == null);
+		projectVariant = value;
 	}
 
 	/*
