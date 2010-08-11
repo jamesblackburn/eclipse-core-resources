@@ -267,7 +267,8 @@ public interface IWorkspace extends IAdaptable {
 
 	/**
 	 * Returns the prerequisite ordering of the given projects. The computation
-	 * is done by interpreting project references as dependency relationships.
+	 * is done by interpreting their active variants project variant references
+	 * as dependency relationships.
 	 * For example if A references B and C, and C references B, this method,
 	 * given the list A, B, C will return the order B, C, A. That is, projects
 	 * with no dependencies are listed first.
@@ -291,7 +292,61 @@ public interface IWorkspace extends IAdaptable {
 	 * which produces a more usable result when there are cycles in project
 	 * reference graph.
 	 */
-	public IProjectVariant[][] computePrerequisiteOrder(IProjectVariant[] projects);
+	public IProject[][] computePrerequisiteOrder(IProject[] projects);
+
+	/**
+	 * Data structure for holding the multi-part outcome of
+	 * <code>IWorkspace.computeProjectOrder</code>.
+	 * <p>
+	 * This class is not intended to be instantiated by clients.
+	 * </p>
+	 * 
+	 * @see IWorkspace#computeProjectOrder(IProject[])
+	 * @since 2.1
+	 */
+	public final class ProjectOrder {
+		/**
+		 * Creates an instance with the given values.
+		 * <p>
+		 * This class is not intended to be instantiated by clients.
+		 * </p>
+		 * 
+		 * @param projects initial value of <code>projects</code> field
+		 * @param hasCycles initial value of <code>hasCycles</code> field
+		 * @param knots initial value of <code>knots</code> field
+		 */
+		public ProjectOrder(IProject[] projects, boolean hasCycles, IProject[][] knots) {
+			this.projects = projects;
+			this.hasCycles = hasCycles;
+			this.knots = knots;
+		}
+
+		/**
+		 * A list of projects ordered so as to honor the project variant reference
+		 * relationships between these projects' variants wherever possible.
+		 * The elements are a subset of the ones passed as the <code>projects</code>
+		 * parameter to <code>IWorkspace.computeProjectOrder</code>, where
+		 * inaccessible (closed or non-existent) projects have been omitted.
+		 */
+		public IProject[] projects;
+		/**
+		 * Indicates whether any of the accessible projects in
+		 * <code>projects</code> are involved in non-trivial cycles.
+		 * <code>true</code> if the project variant reference graph contains at least
+		 * one cycle involving two or more of the projects in
+		 * <code>projects</code>, and <code>false</code> if none of the
+		 * projects in <code>projects</code> are involved in cycles.
+		 */
+		public boolean hasCycles;
+		/**
+		 * A list of knots in the project reference graph. This list is empty if
+		 * the project reference graph does not contain cycles. If the project
+		 * variant reference graph contains cycles, each element is a knot of two or
+		 * more accessible projects from <code>projects</code> that are
+		 * involved in a cycle of mutually dependent references.
+		 */
+		public IProject[][] knots;
+	}
 
 	/**
 	 * Data structure for holding the multi-part outcome of
@@ -346,6 +401,42 @@ public interface IWorkspace extends IAdaptable {
 		 */
 		public IProjectVariant[][] knots;
 	}
+
+	/**
+	 * Computes a total ordering of the given projects based on both static and
+	 * dynamic project references. If an existing and open project P references
+	 * another existing and open project Q also included in the list, then Q
+	 * should come before P in the resulting ordering. Closed and non-existent
+	 * projects are ignored, and will not appear in the result. References to
+	 * non-existent or closed projects are also ignored, as are any
+	 * self-references. The total ordering is always consistent with the global
+	 * total ordering of all open projects in the workspace.
+	 * <p>
+	 * When there are choices, the choice is made in a reasonably stable way.
+	 * For example, given an arbitrary choice between two projects, the one with
+	 * the lower collating project name is usually selected.
+	 * </p>
+	 * <p>
+	 * When the project reference graph contains cyclic references, it is
+	 * impossible to honor all of the relationships. In this case, the result
+	 * ignores as few relationships as possible. For example, if P2 references
+	 * P1, P4 references P3, and P2 and P3 reference each other, then exactly
+	 * one of the relationships between P2 and P3 will have to be ignored. The
+	 * outcome will be either [P1, P2, P3, P4] or [P1, P3, P2, P4]. The result
+	 * also contains complete details of any cycles present.
+	 * </p>
+	 * <p>
+	 * This method is time-consuming and should not be called unnecessarily.
+	 * There are a very limited set of changes to a workspace that could affect
+	 * the outcome: creating, renaming, or deleting a project; opening or
+	 * closing a project; adding or removing a project reference.
+	 * </p>
+	 *
+	 * @param projects the projects to order
+	 * @return result describing the project order
+	 * @since 2.1
+	 */
+	public ProjectOrder computeProjectOrder(IProject[] projects);
 
 	/**
 	 * Computes a total ordering of the given projects variants based on both static and
@@ -675,8 +766,24 @@ public interface IWorkspace extends IAdaptable {
 	 * 
 	 * @return a map (key type: <code>IProject</code>, value type:
 	 * <code>IProject[]</code>) from project to dangling project references
+	 * @deprecated Use {@link #getDanglingVariantReferences()} instead as it
+	 * provides more detailed project reference information.
 	 */
 	public Map getDanglingReferences();
+
+	/**
+	 * Finds all dangling project variant references in this workspace. Projects
+	 * which are not open are ignored. Returns a map with one entry for each open
+	 * project's variant in the workspace that has at least one dangling project
+	 * variant reference; the value of the entry is an array of project variants
+	 * which are referenced by that project variant but do not exist in the workspace.
+	 * Returns an empty Map if there are no projects in the workspace.
+	 * 
+	 * @return a map (key type: <code>IProjectVariant</code>, value type:
+	 * <code>IProjectVariant[]</code>) from project variant to dangling
+	 * project variant references
+	 */
+	public Map getDanglingVariantReferences();
 
 	/**
 	 * Returns the workspace description. This object is responsible for
