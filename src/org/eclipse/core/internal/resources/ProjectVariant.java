@@ -17,10 +17,11 @@ import org.eclipse.core.resources.IProjectVariant;
 
 public class ProjectVariant implements IProjectVariant {
 	private IProject project;
+	/** if null, the variant is the projects active variant */
 	private String variant;
 
 	public ProjectVariant(IProject project, String variant) {
-		Assert.isLegal(project != null && variant != null);
+		Assert.isLegal(project != null);
 		this.project = project;
 		this.variant = variant;
 	}
