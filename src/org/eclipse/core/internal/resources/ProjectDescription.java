@@ -656,6 +656,19 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/* (non-Javadoc)
+	 * @see IProjectDescription#hasVariant(String)
+	 */
+	public boolean hasVariant(String variant) {
+		if (variant == null)
+			return false;
+		for (int i = 0; i < variants.length; i++) {
+			if (variants[i].equals(variant))
+				return true;
+		}
+		return false;
+	}
+
+	/* (non-Javadoc)
 	 * @see IProjectDescription#getActiveVariant()
 	 */
 	public String getActiveVariant() {

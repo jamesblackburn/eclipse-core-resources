@@ -392,6 +392,13 @@ public interface IProjectDescription {
 	public void setVariants(String[] variants);
 
 	/**
+	 * Check if the described project has the specified variant.
+	 * @param variant the variant to check for
+	 * @return true if the described project has the variant
+	 */
+	public boolean hasVariant(String variant);
+
+	/**
 	 * Returns the active variant for the project.
 	 * This does not persist.
 	 *
