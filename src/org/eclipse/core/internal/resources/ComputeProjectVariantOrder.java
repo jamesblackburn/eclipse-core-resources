@@ -12,21 +12,21 @@
 package org.eclipse.core.internal.resources;
 
 import java.util.*;
-import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IProjectVariant;
 import org.eclipse.core.resources.IWorkspace;
 
 /**
- * Implementation of a sort algorithm for computing the project order. This
- * algorithm handles cycles in the project reference graph in a reasonable way.
+ * Implementation of a sort algorithm for computing the project variant order. This
+ * algorithm handles cycles in the project variant reference graph in a reasonable way.
  * 
  * @since 2.1
  */
-class ComputeProjectOrder {
+class ComputeProjectVariantOrder {
 
 	/*
 	 * Prevent class from being instantiated.
 	 */
-	private ComputeProjectOrder() {
+	private ComputeProjectVariantOrder() {
 		// not allowed
 	}
 
@@ -445,10 +445,10 @@ class ComputeProjectOrder {
 	}
 
 	/**
-	 * Sorts the given list of project in a manner that honors the given
-	 * project reference relationships. That is, if project A references project
-	 * B, then the resulting order will list B before A if possible. For graphs
-	 * that do not contain cycles, the result is the same as a conventional
+	 * Sorts the given list of project variants in a manner that honors the given
+	 * project variant reference relationships. That is, if project variant A references
+	 * project variant B, then the resulting order will list B before A if possible.
+	 * For graphs that do not contain cycles, the result is the same as a conventional
 	 * topological sort. For graphs containing cycles, the order is based on
 	 * ordering the strongly connected components of the graph. This has the
 	 * effect of keeping each knot of projects together without otherwise
@@ -456,7 +456,7 @@ class ComputeProjectOrder {
 	 * the algorithm performs in O(|G|) space and time.
 	 * <p>
 	 * When there is an arbitrary choice, vertexes are ordered as supplied.
-	 * Arranged projects in descending alphabetical order generally results in
+	 * Arranged projects/variants in descending alphabetical order generally results in
 	 * an order that builds "A" before "Z" when there are no other constraints.
 	 * </p>
 	 * <p> Ref: Cormen, Leiserson, and Rivest <it>Introduction to
@@ -464,27 +464,27 @@ class ComputeProjectOrder {
 	 * algorithm is in section 23.5.
 	 * </p>
 	 * 
-	 * @param projects a list of projects (element type:
-	 * <code>IProject</code>)
-	 * @param references a list of project references [A,B] meaning that A
-	 * references B (element type: <code>IProject[]</code>)
+	 * @param projectVariants a list of project variants (element type:
+	 * <code>IProjectVariant</code>)
+	 * @param references a list of project variant pairs [A,B] meaning that A
+	 * references B (element type: <code>IProjectVariant[]</code>)
 	 * @return an object describing the resulting project order
 	 */
-	static IWorkspace.ProjectOrder computeProjectOrder(SortedSet projects, List references) {
+	static IWorkspace.ProjectVariantOrder computeProjectVariantOrder(SortedSet projectVariants, List references) {
 
 		// Step 1: Create the graph object.
 		final Digraph g1 = new Digraph();
 		// add vertexes
-		for (Iterator it = projects.iterator(); it.hasNext();) {
-			IProject project = (IProject) it.next();
+		for (Iterator it = projectVariants.iterator(); it.hasNext();) {
+			IProjectVariant project = (IProjectVariant) it.next();
 			g1.addVertex(project);
 		}
 		// add edges
 		for (Iterator it = references.iterator(); it.hasNext();) {
-			IProject[] ref = (IProject[]) it.next();
-			IProject p = ref[0];
-			IProject q = ref[1];
-			// p has a project reference to q
+			IProjectVariant[] ref = (IProjectVariant[]) it.next();
+			IProjectVariant p = ref[0];
+			IProjectVariant q = ref[1];
+			// p has a reference to q
 			// therefore create an edge from q to p
 			// to cause q to come before p in eventual result
 			g1.addEdge(q, p);
@@ -498,15 +498,15 @@ class ComputeProjectOrder {
 		// add vertexes
 		List resortedVertexes = g1.idsByDFSFinishTime(false);
 		for (Iterator it = resortedVertexes.iterator(); it.hasNext();) {
-			final IProject project = (IProject) it.next();
+			final IProjectVariant project = (IProjectVariant) it.next();
 			g2.addVertex(project);
 		}
 		// add edges
 		for (Iterator it = references.iterator(); it.hasNext();) {
-			IProject[] ref = (IProject[]) it.next();
-			IProject p = ref[0];
-			IProject q = ref[1];
-			// p has a project reference to q
+			IProjectVariant[] ref = (IProjectVariant[]) it.next();
+			IProjectVariant p = ref[0];
+			IProjectVariant q = ref[1];
+			// p has a reference to q
 			// therefore create an edge from p to q
 			// N.B. this is the reverse of step 1
 			g2.addEdge(p, q);
@@ -515,29 +515,29 @@ class ComputeProjectOrder {
 
 		// Step 3: Return the vertexes in increasing order of depth-first finish
 		// time in g2
-		List sortedProjectList = g2.idsByDFSFinishTime(true);
-		IProject[] orderedProjects = new IProject[sortedProjectList.size()];
-		sortedProjectList.toArray(orderedProjects);
-		IProject[][] knots;
+		List sortedProjectVariantList = g2.idsByDFSFinishTime(true);
+		IProjectVariant[] orderedProjectVariants = new IProjectVariant[sortedProjectVariantList.size()];
+		sortedProjectVariantList.toArray(orderedProjectVariants);
+		IProjectVariant[][] knots;
 		boolean hasCycles = g2.containsCycles();
 		if (hasCycles) {
 			List knotList = g2.nonTrivialComponents();
-			knots = new IProject[knotList.size()][];
+			knots = new IProjectVariant[knotList.size()][];
 			// cannot use knotList.toArray(knots) because each knot is Object[]
-			// and we need each to be an IProject[]
+			// and we need each to be an IProjectVariant[]
 			int k = 0;
 			for (Iterator it = knotList.iterator(); it.hasNext();) {
 				Object[] knot = (Object[]) it.next();
-				IProject[] knotCopy = new IProject[knot.length];
+				IProjectVariant[] knotCopy = new IProjectVariant[knot.length];
 				for (int i = 0; i < knot.length; i++) {
-					knotCopy[i] = (IProject) knot[i];
+					knotCopy[i] = (IProjectVariant) knot[i];
 				}
 				knots[k] = knotCopy;
 				k++;
 			}
 		} else {
-			knots = new IProject[][] {};
+			knots = new IProjectVariant[][] {};
 		}
-		return new IWorkspace.ProjectOrder(orderedProjects, hasCycles, knots);
+		return new IWorkspace.ProjectVariantOrder(orderedProjectVariants, hasCycles, knots);
 	}
 }

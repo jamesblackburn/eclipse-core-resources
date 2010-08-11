@@ -229,7 +229,7 @@ public interface IWorkspace extends IAdaptable {
 	 * Cancelation can occur even if no progress monitor is provided.
 	 * 
 	 * @see IProject#build(int, IProgressMonitor)
-	 * @see #computeProjectOrder(IProject[])
+	 * @see #computeProjectVariantOrder(IProjectVariant[])
 	 * @see IncrementalProjectBuilder#FULL_BUILD
 	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
 	 * @see IncrementalProjectBuilder#CLEAN_BUILD
@@ -291,75 +291,75 @@ public interface IWorkspace extends IAdaptable {
 	 * which produces a more usable result when there are cycles in project
 	 * reference graph.
 	 */
-	public IProject[][] computePrerequisiteOrder(IProject[] projects);
+	public IProjectVariant[][] computePrerequisiteOrder(IProjectVariant[] projects);
 
 	/**
 	 * Data structure for holding the multi-part outcome of
-	 * <code>IWorkspace.computeProjectOrder</code>.
+	 * <code>IWorkspace.computeProjectVariantOrder</code>.
 	 * <p>
 	 * This class is not intended to be instantiated by clients.
 	 * </p>
 	 * 
-	 * @see IWorkspace#computeProjectOrder(IProject[])
+	 * @see IWorkspace#computeProjectVariantOrder(IProjectVariant[])
 	 * @since 2.1
 	 */
-	public final class ProjectOrder {
+	public final class ProjectVariantOrder {
 		/**
 		 * Creates an instance with the given values.
 		 * <p>
 		 * This class is not intended to be instantiated by clients.
 		 * </p>
 		 * 
-		 * @param projects initial value of <code>projects</code> field
+		 * @param projectVariants initial value of <code>projectVariants</code> field
 		 * @param hasCycles initial value of <code>hasCycles</code> field
 		 * @param knots initial value of <code>knots</code> field
 		 */
-		public ProjectOrder(IProject[] projects, boolean hasCycles, IProject[][] knots) {
-			this.projects = projects;
+		public ProjectVariantOrder(IProjectVariant[] projectVariants, boolean hasCycles, IProjectVariant[][] knots) {
+			this.projectVariants = projectVariants;
 			this.hasCycles = hasCycles;
 			this.knots = knots;
 		}
 
 		/**
-		 * A list of projects ordered so as to honor the project reference
-		 * relationships between these projects wherever possible. The elements
-		 * are a subset of the ones passed as the <code>projects</code>
+		 * A list of project variants ordered so as to honor the project variant reference
+		 * relationships between these project variants wherever possible. The elements
+		 * are a subset of the ones passed as the <code>projectVariants</code>
 		 * parameter to <code>IWorkspace.computeProjectOrder</code>, where
 		 * inaccessible (closed or non-existent) projects have been omitted.
 		 */
-		public IProject[] projects;
+		public IProjectVariant[] projectVariants;
 		/**
-		 * Indicates whether any of the accessible projects in
-		 * <code>projects</code> are involved in non-trivial cycles.
-		 * <code>true</code> if the project reference graph contains at least
-		 * one cycle involving two or more of the projects in
-		 * <code>projects</code>, and <code>false</code> if none of the
-		 * projects in <code>projects</code> are involved in cycles.
+		 * Indicates whether any of the accessible project variants in
+		 * <code>projectVariants</code> are involved in non-trivial cycles.
+		 * <code>true</code> if the project variant reference graph contains at least
+		 * one cycle involving two or more of the project variants in
+		 * <code>projectVariants</code>, and <code>false</code> if none of the
+		 * project variants in <code>projectVariants</code> are involved in cycles.
 		 */
 		public boolean hasCycles;
 		/**
-		 * A list of knots in the project reference graph. This list is empty if
-		 * the project reference graph does not contain cycles. If the project
-		 * reference graph contains cycles, each element is a knot of two or
-		 * more accessible projects from <code>projects</code> that are
+		 * A list of knots in the project variant reference graph. This list is empty if
+		 * the project variant reference graph does not contain cycles. If the project
+		 * variant reference graph contains cycles, each element is a knot of two or
+		 * more accessible project variants from <code>projectVariants</code> that are
 		 * involved in a cycle of mutually dependent references.
 		 */
-		public IProject[][] knots;
+		public IProjectVariant[][] knots;
 	}
 
 	/**
-	 * Computes a total ordering of the given projects based on both static and
-	 * dynamic project references. If an existing and open project P references
-	 * another existing and open project Q also included in the list, then Q
+	 * Computes a total ordering of the given projects variants based on both static and
+	 * dynamic project references. If an existing and open project variant P references
+	 * another existing and open project variant Q also included in the list, then Q
 	 * should come before P in the resulting ordering. Closed and non-existent
 	 * projects are ignored, and will not appear in the result. References to
-	 * non-existent or closed projects are also ignored, as are any
+	 * non-existent or closed projects/variants are also ignored, as are any
 	 * self-references. The total ordering is always consistent with the global
-	 * total ordering of all open projects in the workspace.
+	 * total ordering of all open projects' variants in the workspace.
 	 * <p>
 	 * When there are choices, the choice is made in a reasonably stable way.
-	 * For example, given an arbitrary choice between two projects, the one with
-	 * the lower collating project name is usually selected.
+	 * For example, given an arbitrary choice between two project variants, the one with
+	 * the lower collating project name then variant name is usually selected.
 	 * </p>
 	 * <p>
 	 * When the project reference graph contains cyclic references, it is
@@ -374,14 +374,14 @@ public interface IWorkspace extends IAdaptable {
 	 * This method is time-consuming and should not be called unnecessarily.
 	 * There are a very limited set of changes to a workspace that could affect
 	 * the outcome: creating, renaming, or deleting a project; opening or
-	 * closing a project; adding or removing a project reference.
+	 * closing a project; deleting a project variant; adding or removing a project variant reference.
 	 * </p>
 	 * 
-	 * @param projects the projects to order
-	 * @return result describing the project order
+	 * @param projectVariants the project variants to order
+	 * @return result describing the project variant order
 	 * @since 2.1
 	 */
-	public ProjectOrder computeProjectOrder(IProject[] projects);
+	public ProjectVariantOrder computeProjectVariantOrder(IProjectVariant[] projectVariants);
 
 	/**
 	 * Copies the given sibling resources so that they are located as members of

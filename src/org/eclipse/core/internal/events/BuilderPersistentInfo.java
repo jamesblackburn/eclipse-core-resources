@@ -10,9 +10,10 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
+import org.eclipse.core.resources.IProjectVariant;
+
 import org.eclipse.core.internal.resources.ICoreConstants;
 import org.eclipse.core.internal.watson.ElementTree;
-import org.eclipse.core.resources.IProject;
 
 public class BuilderPersistentInfo {
 	protected String builderName;
@@ -21,12 +22,14 @@ public class BuilderPersistentInfo {
 	 * that this index is unknown (it was not serialized in older workspace versions).
 	 */
 	private int buildSpecIndex = -1;
-	protected IProject[] interestingProjects = ICoreConstants.EMPTY_PROJECT_ARRAY;
+	protected IProjectVariant[] interestingProjectVariants = ICoreConstants.EMPTY_PROJECT_VARIANT_ARRAY;
 	protected ElementTree lastBuildTree;
 	protected String projectName;
+	protected String variantName;
 
-	public BuilderPersistentInfo(String projectName, String builderName, int buildSpecIndex) {
+	public BuilderPersistentInfo(String projectName, String variantName, String builderName, int buildSpecIndex) {
 		this.projectName = projectName;
+		this.variantName = variantName;
 		this.builderName = builderName;
 		this.buildSpecIndex = buildSpecIndex;
 	}
@@ -38,8 +41,8 @@ public class BuilderPersistentInfo {
 		return buildSpecIndex;
 	}
 
-	public IProject[] getInterestingProjects() {
-		return interestingProjects;
+	public IProjectVariant[] getInterestingProjectVariants() {
+		return interestingProjectVariants;
 	}
 
 	public ElementTree getLastBuiltTree() {
@@ -50,8 +53,12 @@ public class BuilderPersistentInfo {
 		return projectName;
 	}
 
-	public void setInterestingProjects(IProject[] projects) {
-		interestingProjects = projects;
+	public String getVariantName() {
+		return variantName;
+	}
+
+	public void setInterestingProjectVariants(IProjectVariant[] projectVariants) {
+		interestingProjectVariants = projectVariants;
 	}
 
 	public void setLastBuildTree(ElementTree tree) {

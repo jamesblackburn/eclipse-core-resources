@@ -89,6 +89,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
 	protected String[] variants = new String[]{EMPTY_STR};
+	protected int activeVariant = 0;
 	protected Map/*<String, IProjectVariant[]>*/ staticRefs = new HashMap();
 	protected Map/*<String, IProjectVariant[]>*/ dynamicRefs = new HashMap();
 	protected URI snapshotLocation= null;
@@ -645,9 +646,35 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setVariants(String[])
 	 */
-	public void setVariants(String[] variants) {
-		Assert.isLegal(variants != null && variants.length > 0 && variants[0] != null);
-		variants = (String[]) variants.clone();
+	public void setVariants(String[] value) {
+		Assert.isLegal(value != null && value.length > 0 && value[0] != null);
+		String oldActiveVariant = null;
+		if (activeVariant < value.length)
+			oldActiveVariant = value[activeVariant];
+		variants = (String[]) value.clone();
+		setActiveVariant(oldActiveVariant);
+	}
+
+	/* (non-Javadoc)
+	 * @see IProjectDescription#getActiveVariant()
+	 */
+	public String getActiveVariant() {
+		return variants[activeVariant];
+	}
+
+	/* (non-Javadoc)
+	 * @see IProjectDescription#setActiveVariant(String)
+	 */
+	public void setActiveVariant(String variant) {
+		if (variant != null) {
+			for (int i = 0; i < variants.length; i++) {
+				if (variants[i].equals(variant)) {
+					activeVariant = i;
+					return;
+				}
+			}
+		}
+		activeVariant = 0;
 	}
 
 	/**
