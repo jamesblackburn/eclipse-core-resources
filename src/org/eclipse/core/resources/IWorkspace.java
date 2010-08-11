@@ -766,8 +766,6 @@ public interface IWorkspace extends IAdaptable {
 	 * 
 	 * @return a map (key type: <code>IProject</code>, value type:
 	 * <code>IProject[]</code>) from project to dangling project references
-	 * @deprecated Use {@link #getDanglingVariantReferences()} instead as it
-	 * provides more detailed project reference information.
 	 */
 	public Map getDanglingReferences();
 

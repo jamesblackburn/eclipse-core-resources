@@ -12,21 +12,19 @@
 package org.eclipse.core.internal.resources;
 
 import java.util.*;
-import org.eclipse.core.resources.IProjectVariant;
-import org.eclipse.core.resources.IWorkspace;
 
 /**
- * Implementation of a sort algorithm for computing the project variant order. This
- * algorithm handles cycles in the project variant reference graph in a reasonable way.
+ * Implementation of a sort algorithm for computing the order of vertexes that are part
+ * of a reference graph. This algorithm handles cycles in the graph in a reasonable way.
  * 
  * @since 2.1
  */
-class ComputeProjectVariantOrder {
+class ComputeVertexOrder {
 
 	/*
 	 * Prevent class from being instantiated.
 	 */
-	private ComputeProjectVariantOrder() {
+	private ComputeVertexOrder() {
 		// not allowed
 	}
 
@@ -445,45 +443,78 @@ class ComputeProjectVariantOrder {
 	}
 
 	/**
-	 * Sorts the given list of project variants in a manner that honors the given
-	 * project variant reference relationships. That is, if project variant A references
-	 * project variant B, then the resulting order will list B before A if possible.
+	 * Data structure for holding the multi-part outcome of
+	 * <code>ComputeVertexOrder.computeVertexOrder</code>.
+	 */
+	static final class VertexOrder {
+		/**
+		 * Creates an instance with the given values.
+		 * @param vertexes initial value of <code>vertexes</code> field
+		 * @param hasCycles initial value of <code>hasCycles</code> field
+		 * @param knots initial value of <code>knots</code> field
+		 */
+		public VertexOrder(Object[] vertexes, boolean hasCycles, Object[][] knots) {
+			this.vertexes = vertexes;
+			this.hasCycles = hasCycles;
+			this.knots = knots;
+		}
+
+		/**
+		 * A list of vertexes ordered so as to honor the reference
+		 * relationships between them wherever possible.
+		 */
+		public Object[] vertexes;
+		/**
+		 * <code>true</code> if any of the vertexes in <code>vertexes</code>
+		 * are involved in non-trivial cycles in the reference graph.
+		 */
+		public boolean hasCycles;
+		/**
+		 * A list of knots in the reference graph. This list is empty if
+		 * the reference graph does not contain cycles. If the reference graph
+		 * contains cycles, each element is a knot of two or more vertexes that
+		 * are involved in a cycle of mutually dependent references.
+		 */
+		public Object[][] knots;
+	}
+
+	/**
+	 * Sorts the given list of vertexes in a manner that honors the given
+	 * reference relationships between them. That is, if A references
+	 * B, then the resulting order will list B before A if possible.
 	 * For graphs that do not contain cycles, the result is the same as a conventional
 	 * topological sort. For graphs containing cycles, the order is based on
 	 * ordering the strongly connected components of the graph. This has the
-	 * effect of keeping each knot of projects together without otherwise
-	 * affecting the order of projects not involved in a cycle. For a graph G,
+	 * effect of keeping each knot of vertexes together without otherwise
+	 * affecting the order of vertexes not involved in a cycle. For a graph G,
 	 * the algorithm performs in O(|G|) space and time.
 	 * <p>
 	 * When there is an arbitrary choice, vertexes are ordered as supplied.
-	 * Arranged projects/variants in descending alphabetical order generally results in
-	 * an order that builds "A" before "Z" when there are no other constraints.
+	 * If there are no constraints on the order of the vertexes, they are returned
+	 * in the reverse order of how they are supplied.
 	 * </p>
 	 * <p> Ref: Cormen, Leiserson, and Rivest <it>Introduction to
 	 * Algorithms</it>, McGraw-Hill, 1990. The strongly-connected-components
 	 * algorithm is in section 23.5.
 	 * </p>
 	 * 
-	 * @param projectVariants a list of project variants (element type:
-	 * <code>IProjectVariant</code>)
-	 * @param references a list of project variant pairs [A,B] meaning that A
-	 * references B (element type: <code>IProjectVariant[]</code>)
-	 * @return an object describing the resulting project order
+	 * @param vertexes a list of vertexes
+	 * @param references a list of pairs [A,B] meaning that A references B
+	 * @return an object describing the resulting order
 	 */
-	static IWorkspace.ProjectVariantOrder computeProjectVariantOrder(SortedSet projectVariants, List references) {
+	static VertexOrder computeVertexOrder(SortedSet vertexes, List references) {
 
 		// Step 1: Create the graph object.
 		final Digraph g1 = new Digraph();
 		// add vertexes
-		for (Iterator it = projectVariants.iterator(); it.hasNext();) {
-			IProjectVariant project = (IProjectVariant) it.next();
-			g1.addVertex(project);
+		for (Iterator it = vertexes.iterator(); it.hasNext();) {
+			g1.addVertex(it.next());
 		}
 		// add edges
 		for (Iterator it = references.iterator(); it.hasNext();) {
-			IProjectVariant[] ref = (IProjectVariant[]) it.next();
-			IProjectVariant p = ref[0];
-			IProjectVariant q = ref[1];
+			Object[] ref = (Object[]) it.next();
+			Object p = ref[0];
+			Object q = ref[1];
 			// p has a reference to q
 			// therefore create an edge from q to p
 			// to cause q to come before p in eventual result
@@ -498,14 +529,13 @@ class ComputeProjectVariantOrder {
 		// add vertexes
 		List resortedVertexes = g1.idsByDFSFinishTime(false);
 		for (Iterator it = resortedVertexes.iterator(); it.hasNext();) {
-			final IProjectVariant project = (IProjectVariant) it.next();
-			g2.addVertex(project);
+			g2.addVertex(it.next());
 		}
 		// add edges
 		for (Iterator it = references.iterator(); it.hasNext();) {
-			IProjectVariant[] ref = (IProjectVariant[]) it.next();
-			IProjectVariant p = ref[0];
-			IProjectVariant q = ref[1];
+			Object[] ref = (Object[]) it.next();
+			Object p = ref[0];
+			Object q = ref[1];
 			// p has a reference to q
 			// therefore create an edge from p to q
 			// N.B. this is the reverse of step 1
@@ -515,29 +545,73 @@ class ComputeProjectVariantOrder {
 
 		// Step 3: Return the vertexes in increasing order of depth-first finish
 		// time in g2
-		List sortedProjectVariantList = g2.idsByDFSFinishTime(true);
-		IProjectVariant[] orderedProjectVariants = new IProjectVariant[sortedProjectVariantList.size()];
-		sortedProjectVariantList.toArray(orderedProjectVariants);
-		IProjectVariant[][] knots;
+		List sortedVertexList = g2.idsByDFSFinishTime(true);
+		Object[] orderedVertexes = new Object[sortedVertexList.size()];
+		sortedVertexList.toArray(orderedVertexes);
+		Object[][] knots;
 		boolean hasCycles = g2.containsCycles();
 		if (hasCycles) {
 			List knotList = g2.nonTrivialComponents();
-			knots = new IProjectVariant[knotList.size()][];
-			// cannot use knotList.toArray(knots) because each knot is Object[]
-			// and we need each to be an IProjectVariant[]
-			int k = 0;
-			for (Iterator it = knotList.iterator(); it.hasNext();) {
-				Object[] knot = (Object[]) it.next();
-				IProjectVariant[] knotCopy = new IProjectVariant[knot.length];
-				for (int i = 0; i < knot.length; i++) {
-					knotCopy[i] = (IProjectVariant) knot[i];
-				}
-				knots[k] = knotCopy;
-				k++;
-			}
+			knots = new Object[knotList.size()][];
+			knotList.toArray(knots);
 		} else {
-			knots = new IProjectVariant[][] {};
+			knots = new Object[][] {};
 		}
-		return new IWorkspace.ProjectVariantOrder(orderedProjectVariants, hasCycles, knots);
+		return new VertexOrder(orderedVertexes, hasCycles, knots);
+	}
+
+	static interface VertexFilter {
+		boolean matches(Object vertex);
+	}
+
+	/**
+	 * Given a VertexOrder and a VertexFilter, remove all vertexes
+	 * matching the filter from the ordering.
+	 */
+	static VertexOrder filterVertexOrder(VertexOrder order, VertexFilter filter) {
+		// Optimize common case where nothing is to be filtered
+		// and cache the results of applying the filter
+		int filteredCount = 0;
+		boolean[] filterMatches = new boolean[order.vertexes.length];
+		for (int i = 0; i < order.vertexes.length; i++) {
+			filterMatches[i] = filter.matches(order.vertexes[i]);
+			if (filterMatches[i])
+				filteredCount++;
+		}
+
+		// No vertexes match the filter, so return the order unmodified
+		if (filteredCount == 0) {
+			return order;
+		}
+
+		// Otherwise we need to eliminate mention of vertexes matching the filter
+		// from the list of vertexes
+		Object[] reducedVertexes = new Object[order.vertexes.length - filteredCount];
+		for (int i = 0, j = 0; i < order.vertexes.length; i++) {
+			if (!filterMatches[i]) {
+				reducedVertexes[j] = order.vertexes[i];
+				j++;
+			}
+		}
+
+		// and from the knots list
+		List reducedKnots = new ArrayList(order.knots.length);
+		for (int i = 0; i < order.knots.length; i++) {
+			Object[] knot = order.knots[i];
+			List knotList = new ArrayList(knot.length);
+			for (int j = 0; j < knot.length; j++) {
+				Object vertex = knot[j];
+				if (!filter.matches(vertex)) {
+					knotList.add(vertex);
+				}
+			}
+			// Keep knots containing 2 or more vertexes in the specified subset
+			if (knotList.size() > 1) {
+				reducedKnots.add(knotList.toArray());
+			}
+		}
+
+		return new VertexOrder(reducedVertexes, reducedKnots.size() > 0,
+						(Object[][]) reducedKnots.toArray(new Object[reducedKnots.size()][]));
 	}
 }
