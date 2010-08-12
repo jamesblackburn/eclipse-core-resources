@@ -10,8 +10,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
-import org.eclipse.core.resources.IProjectVariant;
-
 import java.util.Map;
 import org.eclipse.core.internal.resources.ICoreConstants;
 import org.eclipse.core.internal.watson.ElementTree;
@@ -51,7 +49,7 @@ public abstract class InternalBuilder {
 	private boolean callOnEmptyDelta = false;
 
 	/*
-	 * @see IncrementalProjectBuilder#build
+	 *  @see IncrementalProjectBuilder#build
 	 */
 	protected abstract IProject[] build(int kind, Map args, IProgressMonitor monitor) throws CoreException;
 
@@ -87,12 +85,19 @@ public abstract class InternalBuilder {
 	protected ICommand getCommand() {
 		return (ICommand)((BuildCommand)command).clone();
 	}
-	
+
 	/*
 	 * @see IncrementalProjectBuilder#forgetLastBuiltState
 	 */
 	protected IResourceDelta getDelta(IProject aProject) {
 		return buildManager.getDelta(aProject);
+	}
+	
+	/*
+	 * @see IncrementalProjectBuilder#forgetLastBuiltState
+	 */
+	protected IResourceDelta getDelta(IProjectVariant aProjectVariant) {
+		return buildManager.getDelta(aProjectVariant);
 	}
 
 	final IProject[] getInterestingProjects() {
@@ -124,6 +129,13 @@ public abstract class InternalBuilder {
 	 */
 	protected IProject getProject() {
 		return projectVariant.getProject();
+	}
+
+	/**
+	 * Returns the variant for this builder
+	 */
+	protected String getVariant() {
+		return projectVariant.getVariant();
 	}
 
 	/**

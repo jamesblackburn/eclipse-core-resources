@@ -10,8 +10,7 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import java.io.DataInputStream;
-import java.io.IOException;
+import java.io.*;
 import org.eclipse.core.internal.events.BuilderPersistentInfo;
 import org.eclipse.core.resources.IProject;
 

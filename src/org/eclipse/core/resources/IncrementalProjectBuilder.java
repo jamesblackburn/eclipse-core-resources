@@ -243,6 +243,11 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 		return super.getDelta(project);
 	}
 
+	//TODO: ALEX Add comments
+	public final IResourceDelta getDelta(IProjectVariant projectVariant) {
+		return super.getDelta(projectVariant);
+	}
+
 	/**
 	 * Returns the project for which this builder is defined.
 	 * 
@@ -250,6 +255,15 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 */
 	public final IProject getProject() {
 		return super.getProject();
+	}
+
+	/**
+	 * Returns the variant for which this builder is defined.
+	 * 
+	 * @return the variant
+	 */
+	public final String getVariant() {
+		return super.getVariant();
 	}
 
 	/**

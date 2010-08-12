@@ -10,7 +10,6 @@
  *     Serge Beauchamp (Freescale Semiconductor) - [252996] add resource filtering
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
- * Alex Collins (Broadcom Corp.) - project variants
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
