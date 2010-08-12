@@ -581,7 +581,6 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	IResourceDelta getDelta(IProjectVariant projectVariant) {
-		//TODO: ALEX Need to store deltas per variant, not project
 		IProject project = projectVariant.getProject();
 		try {
 			lock.acquire();
