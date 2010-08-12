@@ -1281,7 +1281,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			FileOutputStream fis = new FileOutputStream(tmpTree);
 			DataOutputStream output = new DataOutputStream(fis);
 			try {
-				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
+				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
 				writeTree(project, output, monitor);
 			} finally {
 				output.close();
@@ -1325,7 +1325,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			IPath tempLocation = workspace.getMetaArea().getBackupLocationFor(treeLocation);
 			DataOutputStream output = new DataOutputStream(new SafeFileOutputStream(treeLocation.toOSString(), tempLocation.toOSString()));
 			try {
-				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
+				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
 				writeTree(computeStatesToSave(contexts, workspace.getElementTree()), output, monitor);
 			} finally {
 				output.close();
@@ -1423,7 +1423,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				SafeChunkyOutputStream safeStream = new SafeChunkyOutputStream(localFile);
 				DataOutputStream out = new DataOutputStream(safeStream);
 				try {
-					out.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
+					out.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
 					writeWorkspaceFields(out, monitor);
 					writer.writeDelta(tree, lastSnap, Path.ROOT, ElementTreeWriter.D_INFINITE, out, ResourceComparator.getSaveComparator());
 					safeStream.succeed();
@@ -1763,6 +1763,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				BuilderPersistentInfo info = (BuilderPersistentInfo) builders.get(i);
 				output.writeUTF(info.getProjectName());
 				output.writeUTF(info.getBuilderName());
+				output.writeUTF(info.getVariantName());
 				// write interesting projects
 				IProject[] interestingProjects = info.getInterestingProjects();
 				output.writeInt(interestingProjects.length);
@@ -1904,7 +1905,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			SafeFileOutputStream safe = new SafeFileOutputStream(treeLocation.toOSString(), tempLocation.toOSString());
 			try {
 				DataOutputStream output = new DataOutputStream(safe);
-				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
+				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
 				writeTree(project, output, null);
 			} finally {
 				safe.close();
