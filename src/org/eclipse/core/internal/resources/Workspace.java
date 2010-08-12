@@ -594,19 +594,27 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	}
 
 	private static ProjectOrder vertexOrderToProjectOrder(VertexOrder order) {
+		IProject[] projects = new IProject[order.vertexes.length];
+		for (int i = 0; i < order.vertexes.length; i++) {
+			projects[i] = (IProject) order.vertexes[i];
+		}
 		IProject[][] knots = new IProject[order.knots.length][];
 		for (int i = 0; i < order.knots.length; i++) {
 			knots[i] = (IProject[]) order.knots[i];
 		}
-		return new ProjectOrder((IProject[]) order.vertexes, order.hasCycles, knots);
+		return new ProjectOrder(projects, order.hasCycles, knots);
 	}
 
 	private static ProjectVariantOrder vertexOrderToProjectVariantOrder(VertexOrder order) {
+		IProjectVariant[] projectVariants = new IProjectVariant[order.vertexes.length];
+		for (int i = 0; i < order.vertexes.length; i++) {
+			projectVariants[i] = (IProjectVariant) order.vertexes[i];
+		}
 		IProjectVariant[][] knots = new IProjectVariant[order.knots.length][];
 		for (int i = 0; i < order.knots.length; i++) {
 			knots[i] = (IProjectVariant[]) order.knots[i];
 		}
-		return new ProjectVariantOrder((IProjectVariant[]) order.vertexes, order.hasCycles, knots);
+		return new ProjectVariantOrder(projectVariants, order.hasCycles, knots);
 	}
 
 	/**

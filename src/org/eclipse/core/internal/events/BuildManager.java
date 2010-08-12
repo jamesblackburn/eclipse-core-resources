@@ -239,7 +239,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		try {
 			final ICommand[] commands;
 			if (projectVariant.getProject().isAccessible())
-				commands = ((Project) projectVariant).internalGetDescription().getBuildSpec(false);
+				commands = ((Project) projectVariant.getProject()).internalGetDescription().getBuildSpec(false);
 			else
 				commands = null;
 			int work = commands == null ? 0 : commands.length;
