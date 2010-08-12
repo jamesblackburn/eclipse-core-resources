@@ -40,8 +40,8 @@ public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 		//use the name of the project handle if available
 		if (project != null)
 			projectName = project.getName();
-		String builderName = input.readUTF();
 		String variantName = input.readUTF();
-		return new BuilderPersistentInfo(projectName, builderName, variantName, index);
+		String builderName = input.readUTF();
+		return new BuilderPersistentInfo(projectName, variantName, builderName, index);
 	}
 }

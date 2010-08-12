@@ -420,7 +420,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			for (int j = 0; j < variants.length; j++) {
 				String variant = variants[j];
 				BuilderPersistentInfo info = null;
-				IncrementalProjectBuilder builder = ((BuildCommand) commands[i]).getBuilder();
+				IncrementalProjectBuilder builder = ((BuildCommand) commands[i]).getBuilder(variant);
 				if (builder == null) {
 					// if the builder was not instantiated, use the old info if any.
 					if (oldInfos != null)
@@ -496,10 +496,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * @param status MultiStatus for collecting errors
 	 */
 	private IncrementalProjectBuilder getBuilder(IProjectVariant projectVariant, ICommand command, int buildSpecIndex, MultiStatus status) throws CoreException {
-		InternalBuilder result = ((BuildCommand) command).getBuilder();
+		InternalBuilder result = ((BuildCommand) command).getBuilder(projectVariant.getVariant());
 		if (result == null) {
 			result = initializeBuilder(command.getBuilderName(), projectVariant, buildSpecIndex, status);
-			((BuildCommand) command).setBuilder((IncrementalProjectBuilder) result);
+			((BuildCommand) command).addBuilder(projectVariant.getVariant(), (IncrementalProjectBuilder) result);
 			result.setCommand(command);
 			result.setProjectVariant(projectVariant);
 			result.startupOnInitialize();

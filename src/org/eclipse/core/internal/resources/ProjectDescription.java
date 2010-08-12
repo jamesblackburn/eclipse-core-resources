@@ -318,7 +318,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			//to preserve builder states if possible.
 			for (int j = 0; j < buildSpec.length; j++) {
 				if (result[i].equals(buildSpec[j])) {
-					((BuildCommand) result[i]).setBuilder(((BuildCommand) buildSpec[j]).getBuilder());
+					((BuildCommand) result[i]).setBuilders(((BuildCommand) buildSpec[j]).getBuilders());
 					break;
 				}
 			}

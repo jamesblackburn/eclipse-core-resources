@@ -18,8 +18,8 @@ import org.eclipse.core.runtime.*;
 
 /**
  * The concrete implementation of <tt>ICommand</tt>.  This object
- * stores information about a particular builder, including a reference
- * to the builder instance itself if it has been instantiated.
+ * stores information about a particular type of builder, including a reference
+ * to the instance of the builder for each of a project variants if it has been instantiated.
  */
 public class BuildCommand extends ModelObject implements ICommand {
 	/**
@@ -49,7 +49,7 @@ public class BuildCommand extends ModelObject implements ICommand {
 	 * The builder instance for this command. Null if the builder has
 	 * not yet been instantiated.
 	 */
-	protected IncrementalProjectBuilder builder;
+	protected HashMap/*<String, IncrementalProjectBuilder>*/ builders;
 
 	/**
 	 * The triggers that this builder will respond to.  Since build triggers are not 
@@ -78,6 +78,7 @@ public class BuildCommand extends ModelObject implements ICommand {
 
 	public BuildCommand() {
 		super(""); //$NON-NLS-1$
+		this.builders = new HashMap(1);
 		this.arguments = new HashMap(0);
 	}
 
@@ -88,7 +89,7 @@ public class BuildCommand extends ModelObject implements ICommand {
 			return null;
 		result.setArguments(getArguments());
 		//don't let references to builder instances leak out because they reference trees
-		result.setBuilder(null);
+		result.setBuilders(null);
 		return result;
 	}
 
@@ -132,8 +133,16 @@ public class BuildCommand extends ModelObject implements ICommand {
 		return arguments == null ? null : (makeCopy ? (Map) arguments.clone() : arguments);
 	}
 
-	public IncrementalProjectBuilder getBuilder() {
-		return builder;
+	public Map getBuilders() {
+		return builders;
+	}
+
+	public Map getBuilders(boolean makeCopy) {
+		return builders == null ? null : (makeCopy ? (Map) builders.clone() : builders);
+	}
+
+	public IncrementalProjectBuilder getBuilder(String variant) {
+		return (IncrementalProjectBuilder) builders.get(variant);
 	}
 
 	/**
@@ -172,8 +181,13 @@ public class BuildCommand extends ModelObject implements ICommand {
 		arguments = value == null ? null : new HashMap(value);
 	}
 
-	public void setBuilder(IncrementalProjectBuilder builder) {
-		this.builder = builder;
+	public void setBuilders(Map value) {
+		// copy parameter for safety's sake
+		builders = value == null ? new HashMap(1) : new HashMap(value);
+	}
+
+	public void addBuilder(String variant, IncrementalProjectBuilder builder) {
+		this.builders.put(variant, builder);
 	}
 
 	/**
