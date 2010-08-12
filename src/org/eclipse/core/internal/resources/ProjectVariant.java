@@ -10,10 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.runtime.Assert;
-
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IProjectVariant;
+import org.eclipse.core.runtime.*;
+import org.eclipse.core.resources.*;
 
 public class ProjectVariant implements IProjectVariant {
 	private IProject project;

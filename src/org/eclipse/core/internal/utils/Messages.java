@@ -140,7 +140,7 @@ public class Messages extends NLS {
 	public static String projRead_notProjectDescription;
 	public static String projRead_whichKey;
 	public static String projRead_whichValue;
-	public static String projRead_missingReferenceProject;
+	public static String projRead_missingReferenceProjectName;
 	public static String projRead_missingReferenceVariantName;
 	
 	public static String properties_couldNotClose;

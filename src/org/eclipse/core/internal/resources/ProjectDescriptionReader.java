@@ -13,18 +13,11 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import java.util.List;
-
-import org.eclipse.core.resources.IProjectVariant;
-
-import java.util.Map.Entry;
-
-import org.eclipse.core.resources.IProject;
-
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.Map.Entry;
 import javax.xml.parsers.*;
 import org.eclipse.core.filesystem.URIUtil;
 import org.eclipse.core.internal.events.BuildCommand;
@@ -958,7 +951,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			ProjectVariant reference = (ProjectVariant) objectStack.pop();
 			// Make sure that you have something reasonable
 			if (reference.getProject() != null && project != null) {
-				parseProblem(NLS.bind(Messages.projRead_missingReferenceProject, project.getName()));
+				parseProblem(NLS.bind(Messages.projRead_missingReferenceProjectName, project.getName()));
 				return;
 			}
 			if (reference.getVariant() != null && project != null) {

@@ -13,18 +13,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.internal.resources.ComputeVertexOrder.VertexFilter;
-
-import org.eclipse.core.internal.resources.ComputeVertexOrder.VertexOrder;
-
-import org.eclipse.core.resources.IProjectVariant;
-
-import org.eclipse.core.runtime.CoreException;
-
-import org.eclipse.core.resources.IProjectDescription;
-
-import org.eclipse.core.resources.IProject;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -35,6 +23,8 @@ import org.eclipse.core.internal.events.*;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
 import org.eclipse.core.internal.properties.IPropertyManager;
 import org.eclipse.core.internal.refresh.RefreshManager;
+import org.eclipse.core.internal.resources.ComputeVertexOrder.VertexFilter;
+import org.eclipse.core.internal.resources.ComputeVertexOrder.VertexOrder;
 import org.eclipse.core.internal.utils.*;
 import org.eclipse.core.internal.watson.*;
 import org.eclipse.core.resources.*;

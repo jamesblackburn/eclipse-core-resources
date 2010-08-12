@@ -13,15 +13,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import java.util.Map;
-
-import org.eclipse.core.runtime.CoreException;
-
-import org.eclipse.core.runtime.IPath;
-
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IProjectVariant;
-
 import java.net.URI;
 import java.util.*;
 import org.eclipse.core.filesystem.URIUtil;
@@ -45,7 +36,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected static boolean isWriting = false;
 	protected ICommand[] buildSpec = EMPTY_COMMAND_ARRAY;
 	/*
-	 * Cached union of static and dynamic project references (duplicates omitted).
+	 * Cached union of static and dynamic references (duplicates omitted).
 	 * This cache is not persisted.
 	 */
 	protected HashMap/*<String, IProjectVariant[]>*/ cachedRefs = new HashMap();

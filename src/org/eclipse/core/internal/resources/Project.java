@@ -14,9 +14,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IProjectVariant;
-import org.eclipse.core.runtime.CoreException;
-
 import java.net.URI;
 import java.util.*;
 import org.eclipse.core.filesystem.*;

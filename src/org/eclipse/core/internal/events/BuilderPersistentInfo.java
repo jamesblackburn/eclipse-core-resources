@@ -10,10 +10,9 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
-import org.eclipse.core.resources.IProject;
-
 import org.eclipse.core.internal.resources.ICoreConstants;
 import org.eclipse.core.internal.watson.ElementTree;
+import org.eclipse.core.resources.IProject;
 
 public class BuilderPersistentInfo {
 	protected String builderName;
