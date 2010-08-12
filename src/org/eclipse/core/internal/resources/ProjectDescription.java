@@ -48,7 +48,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Cached union of static and dynamic project references (duplicates omitted).
 	 * This cache is not persisted.
 	 */
-	protected Map/*<String, IProjectVariant[]>*/ cachedRefs = new HashMap();
+	protected HashMap/*<String, IProjectVariant[]>*/ cachedRefs = new HashMap();
 	/*
 	 * Cached union of static and dynamic project variant references (duplicates omitted).
 	 * This cache is not persisted.
@@ -90,8 +90,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected String[] natures = EMPTY_STRING_ARRAY;
 	protected String[] variants = new String[]{EMPTY_STR};
 	protected int activeVariant = 0;
-	protected Map/*<String, IProjectVariant[]>*/ staticRefs = new HashMap();
-	protected Map/*<String, IProjectVariant[]>*/ dynamicRefs = new HashMap();
+	protected HashMap/*<String, IProjectVariant[]>*/ staticRefs = new HashMap();
+	protected HashMap/*<String, IProjectVariant[]>*/ dynamicRefs = new HashMap();
 	protected URI snapshotLocation= null;
 
 	public ProjectDescription() {
@@ -105,6 +105,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		clone.filterDescriptions = null;
 		if (variableDescriptions != null)
 			clone.variableDescriptions = (HashMap) variableDescriptions.clone();
+		clone.staticRefs = (HashMap) staticRefs.clone();
+		clone.dynamicRefs = (HashMap) dynamicRefs.clone();
+		clone.cachedRefs = new HashMap();
 		clone.buildSpec = getBuildSpec(true);
 		return clone;
 	}

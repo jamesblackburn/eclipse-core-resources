@@ -232,13 +232,14 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 
 	private void basicBuild(final IProjectVariant projectVariant, final int trigger, final MultiStatus status, final IProgressMonitor monitor) {
 		try {
+			final IProject project = projectVariant.getProject();
 			final ICommand[] commands;
-			if (projectVariant.getProject().isAccessible())
-				commands = ((Project) projectVariant.getProject()).internalGetDescription().getBuildSpec(false);
+			if (project.isAccessible())
+				commands = ((Project) project).internalGetDescription().getBuildSpec(false);
 			else
 				commands = null;
 			int work = commands == null ? 0 : commands.length;
-			monitor.beginTask(NLS.bind(Messages.events_building_1, projectVariant.getProject().getFullPath()), work);
+			monitor.beginTask(NLS.bind(Messages.events_building_1, project.getFullPath()), work);
 			if (work == 0)
 				return;
 			ISafeRunnable code = new ISafeRunnable() {
@@ -253,7 +254,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 					// builder exceptions in core exceptions if required.
 					String errorText = e.getMessage();
 					if (errorText == null)
-						errorText = NLS.bind(Messages.events_unknown, e.getClass().getName(), projectVariant.getProject().getName());
+						errorText = NLS.bind(Messages.events_unknown, e.getClass().getName(), project.getName());
 					status.add(new Status(IStatus.WARNING, ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, errorText, e));
 				}
 
@@ -772,11 +773,12 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * This method NEVER returns null.
 	 */
 	private IncrementalProjectBuilder initializeBuilder(String builderName, IProjectVariant projectVariant, int buildSpecIndex, MultiStatus status) throws CoreException {
+		IProject project = projectVariant.getProject();
 		IncrementalProjectBuilder builder = null;
 		try {
 			builder = instantiateBuilder(builderName);
 		} catch (CoreException e) {
-			status.add(new ResourceStatus(IResourceStatus.BUILD_FAILED, projectVariant.getProject().getFullPath(), NLS.bind(Messages.events_instantiate_1, builderName), e));
+			status.add(new ResourceStatus(IResourceStatus.BUILD_FAILED, project.getFullPath(), NLS.bind(Messages.events_instantiate_1, builderName), e));
 			status.add(e.getStatus());
 		}
 		if (builder == null) {
@@ -784,7 +786,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			builder = new MissingBuilder(builderName);
 		}
 		// get the map of builders to get the last built tree
-		ArrayList infos = getBuildersPersistentInfo(projectVariant.getProject());
+		ArrayList infos = getBuildersPersistentInfo(project);
 		if (infos != null) {
 			BuilderPersistentInfo info = getBuilderInfo(infos, builderName, projectVariant.getVariant(), buildSpecIndex);
 			if (info != null) {
@@ -796,7 +798,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			}
 			// delete the build map if it's now empty 
 			if (infos.size() == 0)
-				setBuildersPersistentInfo(projectVariant.getProject(), null);
+				setBuildersPersistentInfo(project, null);
 		}
 		return builder;
 	}
@@ -1025,13 +1027,13 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * Returns the scheduling rule that is required for building the project.
 	 */
 	public ISchedulingRule getRule(IProjectVariant projectVariant, int trigger, String builderName, Map args) {
-
+		IProject project = projectVariant.getProject();
 		MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, Messages.events_errors, null);
 		if (builderName == null) {
 			final ICommand[] commands;
-			if (projectVariant.getProject().isAccessible()) {
+			if (project.isAccessible()) {
 				Set rules = new HashSet();
-				commands = ((Project) (projectVariant.getProject())).internalGetDescription().getBuildSpec(false);
+				commands = ((Project) project).internalGetDescription().getBuildSpec(false);
 				boolean hasNullBuildRule = false;
 				for (int i = 0; i < commands.length; i++) {
 					BuildCommand command = (BuildCommand) commands[i];
@@ -1057,7 +1059,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			}
 		} else {
 			// Returns the derived resources for the specified builderName
-			ICommand command = getCommand(projectVariant.getProject(), builderName, args);
+			ICommand command = getCommand(project, builderName, args);
 			try {
 				IncrementalProjectBuilder builder = getBuilder(projectVariant, command, -1, status);
 				if (builder != null)
