@@ -15,8 +15,9 @@ import org.eclipse.core.internal.watson.ElementTree;
 import org.eclipse.core.resources.IProject;
 
 public class BuilderPersistentInfo {
-	protected String builderName;
+	protected String projectName;
 	protected String variantName;
+	protected String builderName;
 	/**
 	 * Index of this builder in the build spec. A value of -1 indicates
 	 * that this index is unknown (it was not serialized in older workspace versions).
@@ -24,13 +25,12 @@ public class BuilderPersistentInfo {
 	private int buildSpecIndex = -1;
 	protected IProject[] interestingProjects = ICoreConstants.EMPTY_PROJECT_ARRAY;
 	protected ElementTree lastBuildTree;
-	protected String projectName;
 
 	public BuilderPersistentInfo(String projectName, String builderName, int buildSpecIndex) {
 		this(projectName, null, builderName, buildSpecIndex);
 	}
 
-	public BuilderPersistentInfo(String projectName, String builderName, String variantName, int buildSpecIndex) {
+	public BuilderPersistentInfo(String projectName, String variantName, String builderName, int buildSpecIndex) {
 		this.projectName = projectName;
 		this.variantName = variantName;
 		this.builderName = builderName;

@@ -1762,8 +1762,8 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			for (int i = 0; i < numBuilders; i++) {
 				BuilderPersistentInfo info = (BuilderPersistentInfo) builders.get(i);
 				output.writeUTF(info.getProjectName());
-				output.writeUTF(info.getBuilderName());
 				output.writeUTF(info.getVariantName());
+				output.writeUTF(info.getBuilderName());
 				// write interesting projects
 				IProject[] interestingProjects = info.getInterestingProjects();
 				output.writeInt(interestingProjects.length);
