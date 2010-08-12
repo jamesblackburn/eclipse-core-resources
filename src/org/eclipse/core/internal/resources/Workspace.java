@@ -581,7 +581,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			for (int j = 0; j < refs.length; j++) {
 				IProjectVariant ref = refs[j];
 				// ignore self references and references to projects that are not accessible
-				if (ref.getProject().isAccessible() && !ref.equals(projectVariant))
+				if (!ref.getProject().isAccessible() || ref.equals(projectVariant))
 					continue;
 				// ignore variants that do not exist
 				ProjectDescription refDesc = ((Project) ref.getProject()).internalGetDescription();
