@@ -13,6 +13,12 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
+import org.eclipse.core.internal.resources.ProjectDescription;
+
+import org.eclipse.core.resources.IProjectDescription;
+
+import org.eclipse.core.runtime.CoreException;
+
 import java.util.*;
 import org.eclipse.core.internal.dtree.DeltaDataTree;
 import org.eclipse.core.internal.resources.*;
@@ -341,7 +347,19 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			try {
 				hookStartBuild(trigger);
 				IProjectVariant[] ordered = workspace.getBuildOrder();
-				HashSet leftover = new HashSet(Arrays.asList(workspace.getRoot().getProjectVariants(IContainer.INCLUDE_HIDDEN)));
+				HashSet/*<IProjectVariant>*/ leftover = new HashSet();
+				IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
+				for (int i = 0; i < projects.length; i++) {
+					IProjectDescription desc;
+					try {
+						desc = projects[i].getDescription();
+					} catch (CoreException e) {
+						continue;
+					}
+					if (desc == null)
+						continue;
+					leftover.add(new ProjectVariant(projects[i], desc.getActiveVariant()));
+				}
 				leftover.removeAll(Arrays.asList(ordered));
 				IProjectVariant[] unordered = (IProjectVariant[]) leftover.toArray(new IProjectVariant[leftover.size()]);
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.BUILD_FAILED, Messages.events_errors, null);
@@ -390,40 +408,47 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 
 	/**
 	 * Creates and returns an ArrayList of BuilderPersistentInfo. 
-	 * The list includes entries for all builders that are
+	 * The list includes entries for all builders for all variants that are
 	 * in the builder spec, and that have a last built state, even if they 
 	 * have not been instantiated this session.
 	 */
-	public ArrayList createBuildersPersistentInfo(IProjectVariant projectVariant) throws CoreException {
+	public ArrayList createBuildersPersistentInfo(IProject project) throws CoreException {
 		/* get the old builders (those not yet instantiated) */
-		ArrayList oldInfos = getBuildersPersistentInfo(projectVariant);
+		ArrayList oldInfos = getBuildersPersistentInfo(project);
 
-		ICommand[] commands = ((Project) projectVariant.getProject()).internalGetDescription().getBuildSpec(false);
+		ProjectDescription desc = ((Project) project).internalGetDescription();
+		ICommand[] commands = desc.getBuildSpec(false);
 		if (commands.length == 0)
+			return null;
+		String[] variants = desc.getVariants(false);
+		if (variants.length == 0)
 			return null;
 
 		/* build the new list */
 		ArrayList newInfos = new ArrayList(commands.length);
 		for (int i = 0; i < commands.length; i++) {
 			String builderName = commands[i].getBuilderName();
-			BuilderPersistentInfo info = null;
-			IncrementalProjectBuilder builder = ((BuildCommand) commands[i]).getBuilder();
-			if (builder == null) {
-				// if the builder was not instantiated, use the old info if any.
-				if (oldInfos != null)
-					info = getBuilderInfo(oldInfos, builderName, i);
-			} else if (!(builder instanceof MissingBuilder)) {
-				ElementTree oldTree = ((InternalBuilder) builder).getLastBuiltTree();
-				//don't persist build state for builders that have no last built state
-				if (oldTree != null) {
-					// if the builder was instantiated, construct a memento with the important info
-					info = new BuilderPersistentInfo(projectVariant.getProject().getName(), projectVariant.getVariant(), builderName, i);
-					info.setLastBuildTree(oldTree);
-					info.setInterestingProjectVariants(((InternalBuilder) builder).getInterestingProjectVariants());
+			for (int j = 0; j < variants.length; j++) {
+				String variant = variants[j];
+				BuilderPersistentInfo info = null;
+				IncrementalProjectBuilder builder = ((BuildCommand) commands[i]).getBuilder();
+				if (builder == null) {
+					// if the builder was not instantiated, use the old info if any.
+					if (oldInfos != null)
+						info = getBuilderInfo(oldInfos, builderName, variant, i);
+				} else if (!(builder instanceof MissingBuilder)) {
+					ElementTree oldTree = ((InternalBuilder) builder).getLastBuiltTree();
+					//don't persist build state for builders that have no last built state
+					if (oldTree != null) {
+						// if the builder was instantiated, construct a memento with the important info
+						info = new BuilderPersistentInfo(project.getName(), variant, builderName, i);
+						info.setLastBuildTree(oldTree);
+						info.setInterestingProjects(((InternalBuilder) builder).getInterestingProjects());
+					}
 				}
+				if (info != null)
+					newInfos.add(info);
 			}
-			if (info != null)
-				newInfos.add(info);
 		}
 		return newInfos;
 	}
@@ -501,18 +526,19 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 
 	/**
 	 * Removes the builder persistent info from the map corresponding to the
-	 * given builder name and build spec index, or <code>null</code> if not found
+	 * given builder name, variant name and build spec index, or <code>null</code> if not found
 	 * 
 	 * @param buildSpecIndex The index in the build spec, or -1 if unknown
 	 */
-	private BuilderPersistentInfo getBuilderInfo(ArrayList infos, String builderName, int buildSpecIndex) {
-		//try to match on builder index, but if not match is found, use the name alone
+	private BuilderPersistentInfo getBuilderInfo(ArrayList infos, String builderName, String variantName, int buildSpecIndex) {
+		//try to match on builder index, but if not match is found, use the builder name and variant name
 		//this is because older workspace versions did not store builder infos in build spec order
 		BuilderPersistentInfo nameMatch = null;
 		for (Iterator it = infos.iterator(); it.hasNext();) {
 			BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
-			//match on name and build spec index if known
-			if (info.getBuilderName().equals(builderName)) {
+			//match on name, variant name and build spec index if known
+			// Note: the variant name may return null if the builder info is loaded from an older version
+			if (info.getBuilderName().equals(builderName) && info.getVariantName() == null || info.getVariantName().equals(variantName)) {
 				//we have found a match on name alone
 				if (nameMatch == null)
 					nameMatch = info;
@@ -530,7 +556,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * The list includes entries for all builders that are in the builder spec,
 	 * and that have a last built state but have not been instantiated this session.
 	 */
-	public ArrayList getBuildersPersistentInfo(IProjectVariant project) throws CoreException {
+	public ArrayList getBuildersPersistentInfo(IProject project) throws CoreException {
 		return (ArrayList) project.getSessionProperty(K_BUILD_LIST);
 	}
 
@@ -553,7 +579,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		return result;
 	}
 
-	IResourceDelta getDelta(IProjectVariant projectVariant) {
+	IResourceDelta getDelta(IProject project) {
 		try {
 			lock.acquire();
 			if (currentTree == null) {
@@ -562,33 +588,33 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				return null;
 			}
 			//check if this builder has indicated it cares about this project
-			if (!isInterestingProjectVariant(projectVariant)) {
+			if (!isInterestingProject(project)) {
 				if (Policy.DEBUG_BUILD_FAILURE)
-					Policy.debug("Build: project not interesting for this builder " + debugBuilder() + " [" + debugProject() + "] " + projectVariant.getProject().getFullPath()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+					Policy.debug("Build: project not interesting for this builder " + debugBuilder() + " [" + debugProject() + "] " + project.getFullPath()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 				return null;
 			}
 			//check if this project has changed
-			if (currentDelta != null && currentDelta.findNodeAt(projectVariant.getProject().getFullPath()) == null) {
+			if (currentDelta != null && currentDelta.findNodeAt(project.getFullPath()) == null) {
 				//if the project never existed (not in delta and not in current tree), return null
-				if (!projectVariant.getProject().exists())
+				if (!project.exists())
 					return null;
 				//just return an empty delta rooted at this project
-				return ResourceDeltaFactory.newEmptyDelta(projectVariant.getProject());
+				return ResourceDeltaFactory.newEmptyDelta(project);
 			}
 			//now check against the cache
-			IResourceDelta result = (IResourceDelta) deltaCache.getDelta(projectVariant.getProject().getFullPath(), currentLastBuiltTree, currentTree);
+			IResourceDelta result = (IResourceDelta) deltaCache.getDelta(project.getFullPath(), currentLastBuiltTree, currentTree);
 			if (result != null)
 				return result;
 
 			long startTime = 0L;
 			if (Policy.DEBUG_BUILD_DELTA) {
 				startTime = System.currentTimeMillis();
-				Policy.debug("Computing delta for project: " + projectVariant.getProject().getName()); //$NON-NLS-1$
+				Policy.debug("Computing delta for project: " + project.getName()); //$NON-NLS-1$
 			}
-			result = ResourceDeltaFactory.computeDelta(workspace, currentLastBuiltTree, currentTree, projectVariant.getProject().getFullPath(), -1);
-			deltaCache.cache(projectVariant.getProject().getFullPath(), currentLastBuiltTree, currentTree, result);
+			result = ResourceDeltaFactory.computeDelta(workspace, currentLastBuiltTree, currentTree, project.getFullPath(), -1);
+			deltaCache.cache(project.getFullPath(), currentLastBuiltTree, currentTree, result);
 			if (Policy.DEBUG_BUILD_FAILURE && result == null)
-				Policy.debug("Build: no delta " + debugBuilder() + " [" + debugProject() + "] " + projectVariant.getProject().getFullPath()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+				Policy.debug("Build: no delta " + debugBuilder() + " [" + debugProject() + "] " + project.getFullPath()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			if (Policy.DEBUG_BUILD_DELTA)
 				Policy.debug("Finished computing delta, time: " + (System.currentTimeMillis() - startTime) + "ms"); //$NON-NLS-1$ //$NON-NLS-2$
 			return result;
@@ -628,15 +654,15 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			}
 
 			public void run() throws Exception {
-				IProjectVariant[] prereqs = null;
+				IProject[] prereqs = null;
 				//invoke the appropriate build method depending on the trigger
 				if (trigger != IncrementalProjectBuilder.CLEAN_BUILD)
 					prereqs = currentBuilder.build(trigger, args, monitor);
 				else
 					currentBuilder.clean(monitor);
 				if (prereqs == null)
-					prereqs = EMPTY_PROJECT_VARIANT_ARRAY;
-				currentBuilder.setInterestingProjectVariants((IProjectVariant[]) prereqs.clone());
+					prereqs = EMPTY_PROJECT_ARRAY;
+				currentBuilder.setInterestingProjects((IProject[]) prereqs.clone());
 			}
 		};
 	}
@@ -662,8 +688,22 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			case LifecycleEvent.PRE_PROJECT_MOVE :
 				project = (IProject) event.resource;
 				//make sure the builder persistent info is deleted for the project move case
-				if (project.isAccessible())
+				if (project.isAccessible()) {
 					setBuildersPersistentInfo(project, null);
+				}
+		}
+	}
+
+	/**
+	 * Returns true if the active variant in the given project has been built during this build cycle, and
+	 * false otherwise.
+	 */
+	boolean hasBeenBuilt(IProject project) {
+		try {
+			IProjectDescription desc = project.getDescription();
+			return desc != null && builtProjectVariants.contains(new ProjectVariant(project, desc.getActiveVariant()));
+		} catch (CoreException e) {
+			return false;
 		}
 	}
 
@@ -749,19 +789,19 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			builder = new MissingBuilder(builderName);
 		}
 		// get the map of builders to get the last built tree
-		ArrayList infos = getBuildersPersistentInfo(projectVariant);
+		ArrayList infos = getBuildersPersistentInfo(projectVariant.getProject());
 		if (infos != null) {
-			BuilderPersistentInfo info = getBuilderInfo(infos, builderName, buildSpecIndex);
+			BuilderPersistentInfo info = getBuilderInfo(infos, builderName, projectVariant.getVariant(), buildSpecIndex);
 			if (info != null) {
 				infos.remove(info);
 				ElementTree tree = info.getLastBuiltTree();
 				if (tree != null)
 					((InternalBuilder) builder).setLastBuiltTree(tree);
-				((InternalBuilder) builder).setInterestingProjectVariants(info.getInterestingProjectVariants());
+				((InternalBuilder) builder).setInterestingProjects(info.getInterestingProjects());
 			}
 			// delete the build map if it's now empty 
 			if (infos.size() == 0)
-				setBuildersPersistentInfo(projectVariant, null);
+				setBuildersPersistentInfo(projectVariant.getProject(), null);
 		}
 		return builder;
 	}
@@ -812,14 +852,14 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 
 	/**
 	 * Returns true if the current builder is interested in changes
-	 * to the given project variant, and false otherwise.
+	 * to the given project, and false otherwise.
 	 */
-	private boolean isInterestingProjectVariant(IProjectVariant projectVariant) {
-		if (projectVariant.equals(currentBuilder.getProjectVariant()))
+	private boolean isInterestingProject(IProject projects) {
+		if (projects.equals(currentBuilder.getProjectVariant()))
 			return true;
-		IProjectVariant[] interestingProjectVariants = currentBuilder.getInterestingProjectVariants();
-		for (int i = 0; i < interestingProjectVariants.length; i++) {
-			if (interestingProjectVariants[i].equals(projectVariant)) {
+		IProject[] interestingProjects = currentBuilder.getInterestingProjects();
+		for (int i = 0; i < interestingProjects.length; i++) {
+			if (interestingProjects[i].equals(projects)) {
 				return true;
 			}
 		}
@@ -874,7 +914,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		}
 
 		//search for builder's interesting projects
-		IProject[] projects = builder.getInterestingProjectVariants();
+		IProject[] projects = builder.getInterestingProjects();
 		for (int i = 0; i < projects.length; i++) {
 			if (currentDelta.findNodeAt(projects[i].getFullPath()) != null) {
 				if (Policy.DEBUG_BUILD_NEEDED)
@@ -929,13 +969,13 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * in the builder spec, and that have a last built state, even if they 
 	 * have not been instantiated this session.
 	 */
-	public void setBuildersPersistentInfo(IProjectVariant projectVariant, ArrayList list) {
+	public void setBuildersPersistentInfo(IProject project, ArrayList list) {
 		try {
-			projectVariant.setSessionProperty(K_BUILD_LIST, list);
+			project.setSessionProperty(K_BUILD_LIST, list);
 		} catch (CoreException e) {
 			//project is missing -- build state will be lost
 			//can't throw an exception because this happens on startup
-			Policy.log(new ResourceStatus(IStatus.ERROR, 1, projectVariant.getProject().getFullPath(), "Project missing in setBuildersPersistentInfo", null)); //$NON-NLS-1$
+			Policy.log(new ResourceStatus(IStatus.ERROR, 1, project.getFullPath(), "Project missing in setBuildersPersistentInfo", null)); //$NON-NLS-1$
 		}
 	}
 
