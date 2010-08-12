@@ -10,43 +10,44 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
-import org.eclipse.core.internal.resources.ProjectVariant;
-
 import org.eclipse.core.resources.IProject;
-
-import org.eclipse.core.resources.IProjectVariant;
 
 import org.eclipse.core.internal.resources.ICoreConstants;
 import org.eclipse.core.internal.watson.ElementTree;
 
 public class BuilderPersistentInfo {
 	protected String builderName;
+	protected String variantName;
 	/**
 	 * Index of this builder in the build spec. A value of -1 indicates
 	 * that this index is unknown (it was not serialized in older workspace versions).
 	 */
 	private int buildSpecIndex = -1;
 	protected IProject[] interestingProjects = ICoreConstants.EMPTY_PROJECT_ARRAY;
-	protected IProjectVariant[] interestingProjectVariants = ICoreConstants.EMPTY_PROJECT_VARIANT_ARRAY;
 	protected ElementTree lastBuildTree;
 	protected String projectName;
-	/**
-	 * Variant that this builder is for, or null if it is interested in the active variant
-	 */
-	protected String variantName;
 
 	public BuilderPersistentInfo(String projectName, String builderName, int buildSpecIndex) {
 		this(projectName, null, builderName, buildSpecIndex);
 	}
 
-	public BuilderPersistentInfo(String projectName, String variantName, String builderName, int buildSpecIndex) {
+	public BuilderPersistentInfo(String projectName, String builderName, String variantName, int buildSpecIndex) {
 		this.projectName = projectName;
 		this.variantName = variantName;
 		this.builderName = builderName;
 		this.buildSpecIndex = buildSpecIndex;
 	}
+
 	public String getBuilderName() {
 		return builderName;
+	}
+
+	/**
+	 * @return the name of the variant for which this information refers. May be null if reading persistent data
+	 * in an older version.
+	 */
+	public String getVariantName() {
+		return variantName;
 	}
 
 	public int getBuildSpecIndex() {
@@ -57,10 +58,6 @@ public class BuilderPersistentInfo {
 		return interestingProjects;
 	}
 
-	public IProjectVariant[] getInterestingProjectVariants() {
-		return interestingProjectVariants;
-	}
-
 	public ElementTree getLastBuiltTree() {
 		return lastBuildTree;
 	}
@@ -69,27 +66,8 @@ public class BuilderPersistentInfo {
 		return projectName;
 	}
 
-	/**
-	 * @return the variant that the builder is interested in, or null if it is interested in the active variant
-	 */
-	public String getVariantName() {
-		return variantName;
-	}
-
 	public void setInterestingProjects(IProject[] projects) {
 		interestingProjects = projects;
-		interestingProjectVariants = new IProjectVariant[projects.length];
-		for (int i = 0; i < projects.length; i++) {
-			interestingProjectVariants[i] = new ProjectVariant(projects[i], null);
-		}
-	}
-
-	public void setInterestingProjectVariants(IProjectVariant[] projectVariants) {
-		interestingProjectVariants = projectVariants;
-		interestingProjects = new IProject[projectVariants.length];
-		for (int i = 0; i < projectVariants.length; i++) {
-			interestingProjects[i] = projectVariants[i].getProject();
-		}
 	}
 
 	public void setLastBuildTree(ElementTree tree) {

@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
+import org.eclipse.core.resources.IProjectVariant;
+
 import java.util.Map;
 import org.eclipse.core.internal.resources.ICoreConstants;
 import org.eclipse.core.internal.watson.ElementTree;
@@ -30,7 +32,7 @@ public abstract class InternalBuilder {
 	static BuildManager buildManager;
 	private ICommand command;
 	private boolean forgetStateRequested = false;
-	private IProjectVariant[] interestingProjectVariants = ICoreConstants.EMPTY_PROJECT_VARIANT_ARRAY;
+	private IProject[] interestingProjects = ICoreConstants.EMPTY_PROJECT_ARRAY;
 	/**
 	 * Human readable builder name for progress reporting.
 	 */
@@ -49,9 +51,8 @@ public abstract class InternalBuilder {
 	private boolean callOnEmptyDelta = false;
 
 	/*
-	 *  @see IncrementalProjectBuilder#build
+	 * @see IncrementalProjectBuilder#build
 	 */
-	//TODO: ALEX Should this return IProjectVariant[]?
 	protected abstract IProject[] build(int kind, Map args, IProgressMonitor monitor) throws CoreException;
 
 	/**
@@ -90,12 +91,12 @@ public abstract class InternalBuilder {
 	/*
 	 * @see IncrementalProjectBuilder#forgetLastBuiltState
 	 */
-	protected IResourceDelta getDelta(IProjectVariant aProjectVariant) {
-		return buildManager.getDelta(aProjectVariant);
+	protected IResourceDelta getDelta(IProject aProject) {
+		return buildManager.getDelta(aProject);
 	}
 
-	final IProjectVariant[] getInterestingProjectVariants() {
-		return interestingProjectVariants;
+	final IProject[] getInterestingProjects() {
+		return interestingProjects;
 	}
 
 	final String getLabel() {
@@ -119,10 +120,24 @@ public abstract class InternalBuilder {
 	}
 
 	/**
+	 * Returns the project for this builder
+	 */
+	protected IProject getProject() {
+		return projectVariant.getProject();
+	}
+
+	/**
 	 * Returns the project variant for this builder
 	 */
 	protected IProjectVariant getProjectVariant() {
 		return projectVariant;
+	}
+
+	/*
+	 * @see IncrementalProjectBuilder#hasBeenBuilt
+	 */
+	protected boolean hasBeenBuilt(IProject aProject) {
+		return buildManager.hasBeenBuilt(aProject);
 	}
 
 	/*
@@ -154,8 +169,8 @@ public abstract class InternalBuilder {
 		this.command = value;
 	}
 
-	final void setInterestingProjectVariants(IProjectVariant[] value) {
-		interestingProjectVariants = value;
+	final void setInterestingProjects(IProject[] value) {
+		interestingProjects = value;
 	}
 
 	final void setLabel(String value) {
