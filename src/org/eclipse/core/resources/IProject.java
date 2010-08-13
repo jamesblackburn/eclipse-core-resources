@@ -943,4 +943,34 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @since 2.0
 	 */
 	public void setDescription(IProjectDescription description, int updateFlags, IProgressMonitor monitor) throws CoreException;
+
+	/**
+	 * Returns the specified project variant for this project or <code>null</code> if
+	 * the project variant does not exist in this project.
+	 *
+	 * @param variantName the name of the variant
+	 * @return the project variant object
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * <li> The project variant could not be found.</li>
+	 * </ul>
+	 */
+
+	public IProjectVariant getVariant(String variantName) throws CoreException;
+
+	/**
+	 * Returns whether the project variant specified
+	 * exists in this project.
+	 *
+	 * @param variantName the variant name
+	 * @return <code>true</code> if the project has the given variant
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * </ul>
+	 */
+	public boolean hasVariant(String variantName) throws CoreException;
 }
