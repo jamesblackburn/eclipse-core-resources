@@ -517,11 +517,11 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	/**
 	 * Computes the global total ordering of all open projects' active variants in the
 	 * workspace based on project variant references. If an existing and open project variant P
-	 * active variant references another existing and open project variant Q also included in the list,
-	 * then Q should come before P in the resulting ordering. Closed and non-
-	 * existent projects/variants are ignored, and will not appear in the result. References
-	 * to non-existent or closed projects/variants are also ignored, as are any self-
-	 * references.
+	 * references another existing and open project variant Q, then Q should come before P
+	 * in the resulting ordering. If a project variant references a non-active variant it is
+	 * added to the resulting ordered list. Closed and non-existent projects/variants are
+	 * ignored, and will not appear in the result. References to non-existent or closed
+	 * projects/variants are also ignored, as are any self-references.
 	 * <p>
 	 * When there are choices, the choice is made in a reasonably stable way. For
 	 * example, given an arbitrary choice between two project variants, the one with the
@@ -541,9 +541,12 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @since 2.1
 	 */
 	private VertexOrder computeFullProjectVariantOrder() {
-
-		// determine the full set of accessible projects' active variants in the workspace
-		// order the set in descending alphabetical order of project name then variant name
+		// Determine the full set of accessible active project variants in the workspace,
+		// and all the accessible project variants that they reference. This forms a set
+		// of all the project variants that will be returned.
+		// Order the set in descending alphabetical order of project name then variant name,
+		// as a secondary sort applied after sorting based on references, to achieve a stable
+		// ordering.
 		SortedSet allAccessibleProjectVariants = new TreeSet(new Comparator() {
 			public int compare(Object x, Object y) {
 				IProjectVariant px = (IProjectVariant) x;
@@ -554,30 +557,55 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 				return cmp;
 			}
 		});
+
+		// For each projects active variant, perform a depth first search in the reference graph
+		// rooted at that variant.
+		// This generates the required subset of the reference graph that is required to order all
+		// the dependencies of the active project variants.
 		IProject[] allProjects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
 		List/*<IProjectVariant[]>*/ edges = new ArrayList(allProjects.length);
+
 		for (int i = 0; i < allProjects.length; i++) {
 			Project project = (Project) allProjects[i];
-			// ignore projects that are not accessible
+			// Ignore projects that are not accessible
 			if (!project.isAccessible())
 				continue;
-			ProjectDescription desc = project.internalGetDescription();
-			if (desc == null)
-				continue;
-			IProjectVariant projectVariant = project.internalGetActiveVariant();
-			allAccessibleProjectVariants.add(projectVariant);
-			//obtain both static and dynamic project references for the projects active variant
-			IProjectVariant[] refs = desc.getAllVariantReferences(projectVariant.getVariant(), false);
-			for (int j = 0; j < refs.length; j++) {
-				IProjectVariant ref = refs[j];
-				// ignore self references and references to projects that are not accessible
-				if (!ref.getProject().isAccessible() || ref.equals(projectVariant))
-					continue;
-				// ignore variants that do not exist
-				ProjectDescription refDesc = ((Project) ref.getProject()).internalGetDescription();
-				if (!refDesc.hasVariant(ref.getVariant()))
-					continue;
-				edges.add(new IProjectVariant[] {projectVariant, ref});
+
+			// If the active project variant hasn't already been explored
+			// perform a depth first search rooted at it
+			if (!allAccessibleProjectVariants.contains(project.internalGetActiveVariant())) {
+				allAccessibleProjectVariants.add(project.internalGetActiveVariant());
+				Stack stack = new Stack();
+				stack.push(project.internalGetActiveVariant());
+
+				while (!stack.isEmpty()) {
+					IProjectVariant projectVariant = (IProjectVariant) stack.pop();
+
+					// Add all referenced variants from the current variant
+					// (it is guaranteed to be accessible as it was pushed onto the stack)
+					Project subProject = (Project) projectVariant.getProject();
+					ProjectDescription subDesc = subProject.internalGetDescription();
+					IProjectVariant[] refs = subDesc.getReferencedProjectVariants(projectVariant.getVariant());
+					for (int j = 0; j < refs.length; j++) {
+						IProjectVariant ref = refs[j];
+
+						// Ignore self references and references to projects that are not accessible
+						if (!ref.getProject().isAccessible() || ref.equals(projectVariant))
+							continue;
+
+						// Ignore variants that do not exist
+						ProjectDescription refDesc = ((Project) ref.getProject()).internalGetDescription();
+						if (!refDesc.hasVariant(ref.getVariant()))
+							continue;
+
+						// Add the referenced accessible variant
+						edges.add(new IProjectVariant[] {projectVariant, ref});
+						allAccessibleProjectVariants.add(refs[j]);
+
+						// Push the referenced variant onto the stack so that it is explored by the depth first search
+						stack.push(refs[j]);
+					}
+				}
 			}
 		}
 		return ComputeVertexOrder.computeVertexOrder(allAccessibleProjectVariants, edges);
