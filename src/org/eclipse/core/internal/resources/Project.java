@@ -1381,4 +1381,26 @@ public class Project extends Container implements IProject {
 		}
 		return (IProjectVariant[]) result.toArray(new IProjectVariant[result.size()]);
 	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProject#getVariant(java.lang.String)
+	 */
+	public IProjectVariant getVariant(String variantName) throws CoreException {
+		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
+		checkAccessible(getFlags(info));
+		return hasVariant(variantName) ? new ProjectVariant(this, variantName) : null;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProject#hasVariant(java.lang.String)
+	 */
+	public boolean hasVariant(String variantName) throws CoreException {
+		checkAccessible(getFlags(getResourceInfo(false, false)));
+		IProjectDescription desc = internalGetDescription();
+		if (desc == null)
+			checkAccessible(NULL_FLAG);
+		return desc.hasVariant(variantName);
+	}
 }
