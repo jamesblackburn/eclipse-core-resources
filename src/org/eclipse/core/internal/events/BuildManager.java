@@ -13,8 +13,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
-import org.eclipse.core.internal.resources.ProjectDescription;
-
 import java.util.*;
 import org.eclipse.core.internal.dtree.DeltaDataTree;
 import org.eclipse.core.internal.resources.*;
@@ -350,8 +348,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				for (int i = 0; i < projects.length; i++) {
 					IProject project = projects[i];
 					if (project.isAccessible()) {
-						IProjectDescription desc = ((Project) project).internalGetDescription();
-						leftover.add(new ProjectVariant(project, desc.getActiveVariant()));
+						leftover.add(((Project)project).internalGetActiveVariant());
 					}
 				}
 				leftover.removeAll(Arrays.asList(ordered));
@@ -576,8 +573,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	IResourceDelta getDelta(IProject project) {
 		if (!project.isAccessible())
 			return null;
-		ProjectDescription desc = ((Project) project).internalGetDescription();
-		return getDelta(new ProjectVariant(project, desc.getActiveVariant()));
+		return getDelta(((Project)project).internalGetActiveVariant());
 	}
 
 	IResourceDelta getDelta(IProjectVariant projectVariant) {
@@ -702,8 +698,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	boolean hasBeenBuilt(IProject project) {
 		if (!project.isAccessible())
 			return false;
-		IProjectDescription desc = ((Project) project).internalGetDescription();
-		return builtProjectVariants.contains(new ProjectVariant(project, desc.getActiveVariant()));
+		return builtProjectVariants.contains(((Project) project).internalGetActiveVariant());
 	}
 
 	/**

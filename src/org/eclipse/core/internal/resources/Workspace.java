@@ -564,7 +564,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			ProjectDescription desc = project.internalGetDescription();
 			if (desc == null)
 				continue;
-			ProjectVariant projectVariant = new ProjectVariant(project, desc.getActiveVariant());
+			IProjectVariant projectVariant = project.internalGetActiveVariant();
 			allAccessibleProjectVariants.add(projectVariant);
 			//obtain both static and dynamic project references for the projects active variant
 			IProjectVariant[] refs = desc.getAllVariantReferences(projectVariant.getVariant(), false);
@@ -1334,16 +1334,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			// active variants
 			List projectVariantList = new ArrayList(projectList.size());
 			for (Iterator it = projectList.iterator(); it.hasNext(); ) {
-				IProject project = (IProject) it.next();
-				IProjectDescription desc;
-				try {
-					desc = project.getDescription();
-				} catch (CoreException e) {
-					continue;
-				}
-				if (desc == null)
-					continue;
-				projectVariantList.add(new ProjectVariant(project, desc.getActiveVariant()));
+				Project project = (Project) it.next();
+				projectVariantList.add(project.internalGetActiveVariant());
 			}
 			buildOrder = new IProjectVariant[projectVariantList.size()];
 			projectVariantList.toArray(buildOrder);

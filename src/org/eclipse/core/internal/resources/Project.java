@@ -42,7 +42,9 @@ public class Project extends Container implements IProject {
 	 * @since 3.6
 	 */
 	public static final int SNAPSHOT_SET_AUTOLOAD = 2;
-	
+
+	protected String activeVariant = null;
+
 	protected Project(IPath path, Workspace container) {
 		super(path, container);
 	}
@@ -549,7 +551,7 @@ public class Project extends Container implements IProject {
 					} finally {
 						workspace.endOperation(rule, false, innerMonitor);
 					}
-					ProjectVariant variant = new ProjectVariant(Project.this, Project.this.internalGetDescription().getActiveVariant());
+					ProjectVariant variant = new ProjectVariant(Project.this, activeVariant);
 					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(variant, trigger, builderName, args);
 					try {
 						IStatus result;
@@ -1402,5 +1404,40 @@ public class Project extends Container implements IProject {
 		if (desc == null)
 			checkAccessible(NULL_FLAG);
 		return desc.hasVariant(variantName);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProject#getActiveVariant()
+	 */
+	public IProjectVariant getActiveVariant() throws CoreException {
+		if (!hasVariant(activeVariant)) {
+			ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
+			checkAccessible(getFlags(info));
+			ProjectDescription desc = internalGetDescription();
+			activeVariant = desc.getVariants()[0];
+		}
+		return new ProjectVariant(this, activeVariant);
+	}
+
+	/**
+	 * This is an internal helper method. This implementation is different from the API
+	 * method getActiveVariant(). This one does not check the project accessibility.
+	 */
+	public IProjectVariant internalGetActiveVariant() {
+		ProjectDescription desc = internalGetDescription();
+		if (!desc.hasVariant(activeVariant))
+			activeVariant = desc.getVariants()[0];
+		return new ProjectVariant(this, activeVariant);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProject#setActiveVariant()
+	 */
+	public void setActiveVariant(String variant) throws CoreException {
+		if (hasVariant(variant)) {
+			activeVariant = variant;
+		}
 	}
 }
