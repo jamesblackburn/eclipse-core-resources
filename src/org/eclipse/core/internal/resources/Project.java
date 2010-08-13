@@ -1394,6 +1394,20 @@ public class Project extends Container implements IProject {
 		return hasVariant(variantName) ? new ProjectVariant(this, variantName) : null;
 	}
 
+	/**
+	 * This is an internal helper method. This implementation is different from the API
+	 * method {@link #getVariant(String)}. This one does not check the project accessibility.
+	 * @param variant the variant to get
+	 * @return the variant object for the named variant; or null if a variant with that name
+	 * does not exist
+	 */
+	public IProjectVariant internalGetVariant(String variant) {
+		ProjectDescription desc = internalGetDescription();
+		if (!desc.hasVariant(variant))
+			return null;
+		return new ProjectVariant(this, variant);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see IProject#hasVariant(java.lang.String)
@@ -1422,7 +1436,7 @@ public class Project extends Container implements IProject {
 
 	/**
 	 * This is an internal helper method. This implementation is different from the API
-	 * method getActiveVariant(). This one does not check the project accessibility.
+	 * method {@link #getActiveVariant()}. This one does not check the project accessibility.
 	 */
 	public IProjectVariant internalGetActiveVariant() {
 		ProjectDescription desc = internalGetDescription();
