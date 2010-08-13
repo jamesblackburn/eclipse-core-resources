@@ -585,7 +585,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					// (it is guaranteed to be accessible as it was pushed onto the stack)
 					Project subProject = (Project) projectVariant.getProject();
 					ProjectDescription subDesc = subProject.internalGetDescription();
-					IProjectVariant[] refs = subDesc.getReferencedProjectVariants(projectVariant.getVariant());
+					IProjectVariant[] refs = subDesc.getAllVariantReferences(projectVariant.getVariant(), false);
 					for (int j = 0; j < refs.length; j++) {
 						IProjectVariant ref = refs[j];
 
