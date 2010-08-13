@@ -396,20 +396,4 @@ public interface IProjectDescription {
 	 * @return true if the described project has the variant
 	 */
 	public boolean hasVariant(String variant);
-
-	/**
-	 * Returns the active variant for the project.
-	 * This does not persist.
-	 *
-	 * @return the active variant
-	 */
-	public String getActiveVariant();
-
-	/**
-	 * Sets the active variant for the project.
-	 * This does not persist.
-	 *
-	 * @param variant the variant to make the active variant
-	 */
-	public void setActiveVariant(String variant);
 }
