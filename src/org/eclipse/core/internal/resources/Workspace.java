@@ -600,10 +600,15 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 
 						// Add the referenced accessible variant
 						edges.add(new IProjectVariant[] {projectVariant, ref});
-						allAccessibleProjectVariants.add(refs[j]);
+
+						// If we have already explored the referenced variant, don't explore it again
+						if (allAccessibleProjectVariants.contains(ref))
+							continue;
+
+						allAccessibleProjectVariants.add(ref);
 
 						// Push the referenced variant onto the stack so that it is explored by the depth first search
-						stack.push(refs[j]);
+						stack.push(ref);
 					}
 				}
 			}
