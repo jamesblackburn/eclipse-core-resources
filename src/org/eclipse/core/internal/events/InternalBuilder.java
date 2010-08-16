@@ -207,6 +207,7 @@ public abstract class InternalBuilder {
 	 */
 	final void setProjectVariant(IProjectVariant value) {
 		Assert.isTrue(projectVariant == null);
+		Assert.isNotNull(value.getVariant());
 		projectVariant = value;
 	}
 
