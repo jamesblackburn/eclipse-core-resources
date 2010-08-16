@@ -551,14 +551,13 @@ public class Project extends Container implements IProject {
 					} finally {
 						workspace.endOperation(rule, false, innerMonitor);
 					}
-					ProjectVariant variant = new ProjectVariant(Project.this, activeVariant);
-					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(variant, trigger, builderName, args);
+					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(getActiveVariant(), trigger, builderName, args);
 					try {
 						IStatus result;
 						workspace.prepareOperation(buildRule, innerMonitor);
 						//don't open the tree eagerly because it will be wasted if no build occurs
 						workspace.beginOperation(false);
-						result = workspace.getBuildManager().build(variant, trigger, builderName, args, Policy.subMonitorFor(innerMonitor, Policy.opWork));
+						result = workspace.getBuildManager().build(getActiveVariant(), trigger, builderName, args, Policy.subMonitorFor(innerMonitor, Policy.opWork));
 						if (!result.isOK())
 							throw new ResourceException(result);
 					} finally {
