@@ -406,7 +406,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		ICommand[] commands = desc.getBuildSpec(false);
 		if (commands.length == 0)
 			return null;
-		String[] variants = desc.getVariants(false);
+		String[] variants = desc.getAllVariants(false);
 		if (variants.length == 0)
 			return null;
 

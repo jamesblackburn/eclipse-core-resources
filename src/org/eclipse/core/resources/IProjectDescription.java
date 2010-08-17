@@ -390,8 +390,15 @@ public interface IProjectDescription {
 	 */
 	public void setVariants(String[] variants);
 
+	public String[] getDynamicVariants();
+
+	public void setDynamicVariants(String[] cfgIds);
+
+	public String[] getAllVariants();
+
 	/**
 	 * Check if the described project has the specified variant.
+	 * This checks both the static and dynamic variants.
 	 * @param variant the variant to check for
 	 * @return true if the described project has the variant
 	 */

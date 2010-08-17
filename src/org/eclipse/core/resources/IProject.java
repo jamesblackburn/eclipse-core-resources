@@ -954,7 +954,6 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <ul>
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
-	 * <li> The project variant could not be found.</li>
 	 * </ul>
 	 */
 
