@@ -79,7 +79,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	// fields
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
-	protected String[] variants = new String[]{EMPTY_STR};
+	protected String[] variants = new String[]{};
+	protected String[] dynamicVariants = new String[]{};
+	protected String[] cachedAllVariants = null;
 	protected HashMap/*<String, IProjectVariant[]>*/ staticRefs = new HashMap();
 	protected HashMap/*<String, IProjectVariant[]>*/ dynamicRefs = new HashMap();
 	protected URI snapshotLocation= null;
@@ -244,6 +246,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public boolean hasPrivateChanges(ProjectDescription description) {
 		if (!dynamicRefs.equals(description.dynamicRefs))
+			return true;
+		if (!dynamicVariants.equals(description.dynamicVariants))
 			return true;
 		IPath otherLocation = description.getLocation();
 		if (location == null)
@@ -631,8 +635,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 	public String[] getVariants(boolean makeCopy) {
 		Assert.isNotNull(variants);
-		Assert.isTrue(variants.length > 0);
-		Assert.isTrue(variants[0] != null);
 		return makeCopy ? (String[]) variants.clone() : variants;
 	}
 
@@ -640,8 +642,53 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#setVariants(String[])
 	 */
 	public void setVariants(String[] value) {
-		Assert.isLegal(value != null && value.length > 0 && value[0] != null);
+		Assert.isLegal(value != null);
 		variants = (String[]) value.clone();
+		clearCachedVariants();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProjectDescription#getDynamicVariants()
+	 */
+	public String[] getDynamicVariants() {
+		return getDynamicVariants(true);
+	}
+
+	public String[] getDynamicVariants(boolean makeCopy) {
+		Assert.isNotNull(dynamicVariants);
+		return makeCopy ? (String[]) dynamicVariants.clone() : dynamicVariants;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProjectDescription#setDynamicVariants(java.lang.String[])
+	 */
+	public void setDynamicVariants(String[] value) {
+		Assert.isLegal(value != null);
+		dynamicVariants = (String[]) value.clone();
+		clearCachedVariants();
+	}
+
+	public String[] getAllVariants() {
+		return getAllVariants(false);
+	}
+
+	public String[] getAllVariants(boolean makeCopy) {
+		if (cachedAllVariants == null || cachedAllVariants.length == 0) {
+			String[] statik = getVariants(false);
+			String[] dynamic = getDynamicVariants(false);
+			if (statik.length == 0 && dynamic.length == 0)
+				// Return an array containing the default variant if none are defined
+				cachedAllVariants = new String[]{EMPTY_STR};
+			else {
+				LinkedHashSet set = new LinkedHashSet();
+				set.addAll(Arrays.asList(statik));
+				set.addAll(Arrays.asList(dynamic));
+				cachedAllVariants = (String[]) set.toArray(new String[set.size()]);
+			}
+		}
+		return makeCopy ? (String[]) cachedAllVariants.clone() : cachedAllVariants;
 	}
 
 	/* (non-Javadoc)
@@ -655,6 +702,13 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 				return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Clear the cached union of static and dynamic variants
+	 */
+	private void clearCachedVariants() {
+		cachedAllVariants = null;
 	}
 
 	/**
@@ -693,11 +747,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			} else if (statik.length == 0) {
 				cachedProjectRefs = dynamic;
 			} else {
-				//combine all references
-				IProject[] result = new IProject[dynamic.length + statik.length];
-				System.arraycopy(statik, 0, result, 0, statik.length);
-				System.arraycopy(dynamic, 0, result, statik.length, dynamic.length);
-				cachedProjectRefs = copyProjectsAndRemoveDuplicates(result);
+				Set set = new LinkedHashSet();
+				set.addAll(Arrays.asList(statik));
+				set.addAll(Arrays.asList(dynamic));
+				cachedProjectRefs = (IProject[]) set.toArray(new IProject[set.size()]);
 			}
 		}
 		//still need to copy the result to prevent tampering with the cache
@@ -785,16 +838,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
-	 * Returns a copy of the given array of projects with all duplicates removed
-	 * @deprecated
-	 */
-	private IProject[] copyProjectsAndRemoveDuplicates(IProject[] values) {
-		Set set = new LinkedHashSet();
-		set.addAll(Arrays.asList(values));
-		return (IProject[]) set.toArray(new IProject[set.size()]);
-	}
-
-	/**
 	 * Get a list of projects, without duplicates, from a list of project variants.
 	 * Order is preserved, and is according to the first occurence of a project in the
 	 * array of project variants.
@@ -826,17 +869,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	private IProjectVariant[] getProjectVariantsFromProjects(IProject[] projects) {
 		List projectVariants = new ArrayList();
 		for (int i = 0; i < projects.length; i++) {
-			IProjectDescription desc;
-			try {
-				desc = projects[i].getDescription();
-			} catch (CoreException e) {
-				// Project not accessible - add default variant
-				projectVariants.add(new ProjectVariant(projects[i], "")); //$NON-NLS-1$
-				continue;
-			}
-			if (desc == null)
-				continue;
-			String[] variantNames = desc.getVariants();
+			ProjectDescription desc = ((Project) projects[i]).internalGetDescription();
+			String[] variantNames = desc.getAllVariants(false);
 			for (int j = 0; j < variantNames.length; j++) {
 				projectVariants.add(new ProjectVariant(projects[i], variantNames[j]));
 			}

@@ -84,11 +84,12 @@ public class Project extends Container implements IProject {
 		// set the build order before setting the references or the natures
 		current.setBuildSpec(description.getBuildSpec(true));
 
-		String[] variants = description.getVariants();
-		current.setVariants(variants);
+		current.setVariants(description.getVariants());
+		current.setDynamicVariants(description.getDynamicVariants());
 
 		// set the references before the natures 
 		boolean flushOrder = false;
+		String[] variants = description.getAllVariants(false);
 		for (int i = 0; i < variants.length; i++) {
 			IProjectVariant[] oldReferences = current.getReferencedProjectVariants(variants[i]);
 			IProjectVariant[] newReferences = description.getReferencedProjectVariants(variants[i]);
@@ -1369,7 +1370,7 @@ public class Project extends Container implements IProject {
 			ProjectDescription description = project.internalGetDescription();
 			if (description == null)
 				continue;
-			String[] variants = description.getVariants();
+			String[] variants = description.getAllVariants(false);
 			for (int j = 0; j < variants.length; j++) {
 				IProjectVariant[] references = description.getAllVariantReferences(variants[j], false);
 				for (int k = 0; k < references.length; k++) {
@@ -1390,7 +1391,10 @@ public class Project extends Container implements IProject {
 	public IProjectVariant getVariant(String variantName) throws CoreException {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
-		return hasVariant(variantName) ? new ProjectVariant(this, variantName) : null;
+		if (!hasVariant(variantName))
+			throw new CoreException(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, IStatus.ERROR,
+					"Project does not have variant", null)); //$NON-NLS-1$
+		return new ProjectVariant(this, variantName);
 	}
 
 	/**
@@ -1428,7 +1432,7 @@ public class Project extends Container implements IProject {
 			ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 			checkAccessible(getFlags(info));
 			ProjectDescription desc = internalGetDescription();
-			activeVariant = desc.getVariants()[0];
+			activeVariant = desc.getAllVariants(false)[0];
 		}
 		return new ProjectVariant(this, activeVariant);
 	}
@@ -1440,7 +1444,7 @@ public class Project extends Container implements IProject {
 	public IProjectVariant internalGetActiveVariant() {
 		ProjectDescription desc = internalGetDescription();
 		if (!desc.hasVariant(activeVariant))
-			activeVariant = desc.getVariants()[0];
+			activeVariant = desc.getAllVariants(false)[0];
 		return new ProjectVariant(this, activeVariant);
 	}
 
