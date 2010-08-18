@@ -19,59 +19,60 @@ package org.eclipse.core.resources;
  */
 public interface IBuildContext {
 	/**
-	 * Gets the projects that will be built as a result of building the
-	 * project variant that this build context is for.
+	 * Gets a list of projects that were built before this project variant, and
+	 * which this project variant required to be built.
 	 * 
-	 * These are the project variants that reference this project variant,
-	 * and therefore caused this build to happen.
+	 * This includes indirect dependencies as well as direct dependencies. For example
+	 * if we have three projects P1, P2 and P3, where P1 references P2 and P2 references P3,
+	 * the list of all referenced projects for P1 (as part of building P1 and all its
+	 * references) will include _both_ P2 and P3, not just P2. 
 	 * 
-	 * If the list is empty, then this build occur due to a top-level request
-	 * (such as a UI action) instead of as a result of building a
-	 * projects references.
+	 * @return the list of all referenced projects that have been built
+	 * in the current build; never null.
+	 */
+	public IProject[] getAllReferencedProjects();
+
+	/**
+	 * Gets a list of project variants that were built before this project variant, and
+	 * which this project variant required to be built.
 	 * 
-	 * @return a list of referencing projects; never null.
+	 * This includes indirect dependencies as well as direct dependencies.
+	 * @see #getAllReferencedProjects
+	 * 
+	 * @return the list of all referenced project variants that have been built
+	 * in the current build; never null.
+	 */
+	public IProjectVariant[] getAllReferencedProjectVariants();
+
+	/**
+	 * Gets a list of projects that will be built after this project variant,
+	 * and which reference this project variant.
+	 * 
+	 * This includes indirect dependencies as well as direct dependencies.
+	 * @see #getAllReferencedProjects
+	 * 
+	 * If the list is empty, then this build occurred due to a top-level request
+	 * (such as a UI action); not as a result of building another project variant's
+	 * references.
+	 * 
+	 * @return a list of all referencing projects that will be built
+	 * in the current build; never null.
 	 */
 	public IProject[] getAllReferencingProjects();
 
 	/**
-	 * Gets the project variants that will be built as a result of building the
-	 * project variant that this build context is for.
+	 * Gets a list of project variants that will be built after this project variant,
+	 * and which reference this project variant.
 	 * 
-	 * These are the project variants that reference this project variant,
-	 * and therefore caused this build to happen.
+	 * This includes indirect dependencies as well as direct dependencies.
+	 * @see #getAllReferencedProjects
 	 * 
-	 * If the list is empty, then this build occur due to a top-level request
-	 * (such as a UI action) instead of as a result of building a
-	 * projects references.
+	 * If the list is empty, then this build occurred due to a top-level request
+	 * (such as a UI action); not as a result of building another project variant's
+	 * references.
 	 * 
-	 * @return a list of referencing projects; never null.
+	 * @return a list of all referencing project variants that will be built
+	 * in the current build; never null.
 	 */
 	public IProjectVariant[] getAllReferencingProjectVariants();
-
-	/**
-	 * Returns a list of project variants, in arbitrary order, that reference
-	 * the specified project variant.
-	 * 
-	 * This can be used to explore the tree of references that make up this context.
-	 * 
-	 * This only returns project variants that are part of the build. If the
-	 * project variants references include cycles, the result may differ to what
-	 * you might expect to be returned when considering all of a project variants
-	 * references. This is because edges are removed to generate the build order,
-	 * so that cycles do not exist when the builders are run.
-	 * 
-	 * @param projectVariant the project variant to get the references for 
-	 * @return a list of referencing project variants. The list will be empty if
-	 * the project variant has no referencing project variants, and will be null
-	 * if the project variant is not part of this build context.
-	 */
-	public IProjectVariant[] getReferencingProjectVariants(IProjectVariant projectVariant);
-
-	/**
-	 * Returns a list of project variants that are part of the build, in arbitrary
-	 * order, that this project variant references.
-	 * 
-	 * @return a list of referenced project variants; never null.
-	 */
-	public IProjectVariant[] getAllReferencedProjectVariants();
 }
