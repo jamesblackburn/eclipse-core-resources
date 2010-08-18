@@ -537,7 +537,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * @param status MultiStatus for collecting errors
 	 */
 	private IncrementalProjectBuilder getBuilder(IProjectVariant projectVariant, ICommand command, int buildSpecIndex, MultiStatus status, IBuildContext context) throws CoreException {
-		InternalBuilder builder = getBuilder(projectVariant, command, buildSpecIndex, status, context);
+		InternalBuilder builder = getBuilder(projectVariant, command, buildSpecIndex, status);
 		builder.setContext(context);
 		return (IncrementalProjectBuilder) builder;
 	}
