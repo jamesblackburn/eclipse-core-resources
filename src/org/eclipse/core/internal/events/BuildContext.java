@@ -18,6 +18,7 @@ import java.util.*;
 import org.eclipse.core.resources.*;
 
 public class BuildContext implements IBuildContext {
+	private static final IProjectVariant[] EMPTY_PROJECT_VARIANT_ARRAY = new IProjectVariant[0];
 	/**
 	 * A directed acyclic graph of the project variants representing the project
 	 * references that caused this build to happen. The tree is rooted at the project
@@ -34,7 +35,7 @@ public class BuildContext implements IBuildContext {
 	 * List of project variants that this project references, and that preceed it
 	 * in the build order.
 	 */
-	private IProjectVariant[] referencedProjectVariants = null;
+	private IProjectVariant[] referencedProjectVariants = EMPTY_PROJECT_VARIANT_ARRAY;
 
 	/** Cached lists of referencing projects and project variants */
 	private IProject[] cachedProjects = null;
@@ -88,6 +89,13 @@ public class BuildContext implements IBuildContext {
 				return;
 			fromVertex.children.add(toVertex);
 		}
+	}
+
+	/**
+	 * Create an empty build context for the given project variant.
+	 */
+	BuildContext(IProjectVariant projectVariant) {
+		graph.addVertex(projectVariant);
 	}
 
 	/**

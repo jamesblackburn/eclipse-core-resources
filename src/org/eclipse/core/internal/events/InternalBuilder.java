@@ -48,7 +48,7 @@ public abstract class InternalBuilder {
 	/**
 	 * The context in which the builder was called.
 	 */
-	private IBuildContext context;
+	private IBuildContext context = null;
 
 	/**
 	 * The value of the callOnEmptyDelta builder extension attribute.
@@ -220,6 +220,8 @@ public abstract class InternalBuilder {
 		Assert.isTrue(projectVariant == null);
 		Assert.isNotNull(value.getVariant());
 		projectVariant = value;
+		if (context == null)
+			context = new BuildContext(projectVariant);
 	}
 
 	/**
