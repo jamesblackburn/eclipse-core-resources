@@ -305,8 +305,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	/**
 	 * Loop the workspace build until no more builders request a rebuild.
 	 */
-	private void basicBuildLoop(IProjectVariant[] ordered, IProjectVariant[] unordered, int trigger, MultiStatus status, IProgressMonitor monitor) {
-		int projectWork = ordered.length;
+	private void basicBuildLoop(IProjectVariant[] variants, int trigger, MultiStatus status, IProgressMonitor monitor) {
+		int projectWork = variants.length;
 		if (projectWork > 0)
 			projectWork = TOTAL_BUILD_WORK / projectWork;
 		int maxIterations = workspace.getDescription().getMaxBuildIterations();
@@ -316,18 +316,11 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		for (int iter = 0; rebuildRequested && iter < maxIterations; iter++) {
 			rebuildRequested = false;
 			builtProjectVariants.clear();
-			for (int i = 0; i < ordered.length; i++) {
-				if (ordered[i].getProject().isAccessible()) {
-					IBuildContext context = new BuildContext(ordered[i], ordered);
-					basicBuild(ordered[i], trigger, context, status, Policy.subMonitorFor(monitor, projectWork));
-					builtProjectVariants.add(ordered[i]);
-				}
-			}
-			for (int i = 0; i < unordered.length; i++) {
-				if (unordered[i].getProject().isAccessible()) {
-					IBuildContext context = new BuildContext(ordered[i], ordered);
-					basicBuild(unordered[i], trigger, context, status, Policy.subMonitorFor(monitor, projectWork));
-					builtProjectVariants.add(unordered[i]);
+			for (int i = 0; i < variants.length; i++) {
+				if (variants[i].getProject().isAccessible()) {
+					IBuildContext context = new BuildContext(variants[i], variants);
+					basicBuild(variants[i], trigger, context, status, Policy.subMonitorFor(monitor, projectWork));
+					builtProjectVariants.add(variants[i]);
 				}
 			}
 			//subsequent builds should always be incremental
@@ -336,10 +329,11 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Runs all builders on all projects' active variants.
+	 * Runs all builders on all the given project variants, in the order that
+	 * they are given.
 	 * @return A status indicating if the build succeeded or failed
 	 */
-	public IStatus build(int trigger, IProgressMonitor monitor) {
+	public IStatus build(IProjectVariant[] variants, int trigger, IProgressMonitor monitor) {
 		monitor = Policy.monitorFor(monitor);
 		try {
 			monitor.beginTask(Messages.events_building_0, TOTAL_BUILD_WORK);
@@ -347,19 +341,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				return Status.OK_STATUS;
 			try {
 				hookStartBuild(trigger);
-				IProjectVariant[] ordered = workspace.getBuildOrder();
-				HashSet/*<IProjectVariant>*/ leftover = new HashSet();
-				IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
-				for (int i = 0; i < projects.length; i++) {
-					IProject project = projects[i];
-					if (project.isAccessible()) {
-						leftover.add(((Project)project).internalGetActiveVariant());
-					}
-				}
-				leftover.removeAll(Arrays.asList(ordered));
-				IProjectVariant[] unordered = (IProjectVariant[]) leftover.toArray(new IProjectVariant[leftover.size()]);
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.BUILD_FAILED, Messages.events_errors, null);
-				basicBuildLoop(ordered, unordered, trigger, status, monitor);
+				basicBuildLoop(variants, trigger, status, monitor);
 				return status;
 			} finally {
 				hookEndBuild(trigger);

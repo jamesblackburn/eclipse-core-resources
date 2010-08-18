@@ -238,6 +238,83 @@ public interface IWorkspace extends IAdaptable {
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
+	 * Build the given project's active variant along with its references.
+	 * This is equivalent to calling {@link #build(IProject[], int, IProgressMonitor)} with
+	 * an array containing a single project.
+	 * 
+	 * @see #build(IProject[], int, IProgressMonitor)
+	 * @see #build(IProjectVariant, int, IProgressMonitor)
+	 * @see #build(IProjectVariant[], int, IProgressMonitor)
+	 */
+	public void build(IProject project, int kind, IProgressMonitor monitor) throws CoreException;
+
+	/**
+	 * Builds each projects' active variant in the given list along with their references.
+	 * This is equivalent to calling {@link #build(IProjectVariant[], int, IProgressMonitor)} with
+	 * all the project's active variants.
+	 * 
+	 * @see #build(IProject, int, IProgressMonitor)
+	 * @see #build(IProjectVariant, int, IProgressMonitor)
+	 * @see #build(IProjectVariant[], int, IProgressMonitor)
+	 */
+	public void build(IProject[] projects, int kind, IProgressMonitor monitor) throws CoreException;
+
+	/**
+	 * Build the given project variant along with its references.
+	 * This is equivalent to calling {@link #build(IProjectVariant[], int, IProgressMonitor)} with
+	 * an array containing a single project variant.
+	 * 
+	 * @see #build(IProject, int, IProgressMonitor)
+	 * @see #build(IProject[], int, IProgressMonitor)
+	 * @see #build(IProjectVariant[], int, IProgressMonitor)
+	 */
+	public void build(IProjectVariant projectVariant, int kind, IProgressMonitor monitor) throws CoreException;
+
+	/**
+	 * Builds all project variants in the given list along with their references.
+	 * The project variants are built in the order specified in the list.
+	 * Any referenced project variants that do not appear in the list are built before any
+	 * of the variants in the list, in an order specified in the workspace description.
+	 * If no order is specified, the workspace computes an order determined by project variant
+	 * references.
+	 * <p>
+	 * This method may change resources; these changes will be reported in a
+	 * subsequent resource change event.
+	 * </p>
+	 * <p>
+	 * This method is long-running; progress and cancellation are provided by
+	 * the given progress monitor.
+	 * </p>
+	 * 
+	 * @param kind the kind of build being requested. Valid values are
+	 *	<ul>
+	 * <li>{@link IncrementalProjectBuilder#FULL_BUILD}- indicates a full build.</li>
+	 * <li>{@link IncrementalProjectBuilder#INCREMENTAL_BUILD}- indicates a incremental build.</li>
+	 * <li>{@link IncrementalProjectBuilder#CLEAN_BUILD}- indicates a clean request.  Clean does
+	 * not actually build anything, but rather discards all problems and build states.</li>
+	 *	</ul>
+	 * @param monitor a progress monitor, or <code>null</code> if progress
+	 * reporting is not desired
+	 * @exception CoreException if the build fails.
+	 *		The status contained in the exception may be a generic {@link IResourceStatus#BUILD_FAILED}
+	 *		code, but it could also be any other status code; it might
+	 *		also be a {@link MultiStatus}.
+	 * @exception OperationCanceledException if the operation is canceled. 
+	 * Cancelation can occur even if no progress monitor is provided.
+	 * 
+	 * @see #build(IProject, int, IProgressMonitor)
+	 * @see #build(IProject[], int, IProgressMonitor)
+	 * @see #build(IProjectVariant, int, IProgressMonitor)
+	 * @see IProject#build(int, IProgressMonitor)
+	 * @see #computeProjectVariantOrder(IProjectVariant[])
+	 * @see IncrementalProjectBuilder#FULL_BUILD
+	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
+	 * @see IncrementalProjectBuilder#CLEAN_BUILD
+	 * @see IResourceRuleFactory#buildRule()
+	 */
+	public void build(IProjectVariant projectsVariants[], int kind, IProgressMonitor monitor) throws CoreException;
+
+	/**
 	 * Checkpoints the operation currently in progress. This method is used in
 	 * the middle of a group of operations to force a background autobuild (if
 	 * the build argument is true) and send an interim notification of resource
