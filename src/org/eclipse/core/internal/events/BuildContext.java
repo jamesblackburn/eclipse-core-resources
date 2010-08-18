@@ -6,18 +6,13 @@
  * http://www.eclipse.org/legal/epl-v10.html
  * 
  * Contributors:
- *     Alex Collins (Broadcom Corp.) - initial API and implementation
+ * Alex Collins (Broadcom Corp.) - initial API and implementation
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
-import org.eclipse.core.runtime.Assert;
-
-import java.util.HashSet;
-
-import org.eclipse.core.resources.IProjectVariant;
-
 import java.util.*;
 import org.eclipse.core.resources.*;
+import org.eclipse.core.runtime.*;
 
 public class BuildContext implements IBuildContext {
 	/** The project variant for which this context applies. */
@@ -27,38 +22,29 @@ public class BuildContext implements IBuildContext {
 	/** The position in the build order array that this project variant is. */
 	private final int buildOrderPosition;
 
-	private static final IProjectVariant[] EMPTY_PROJECT_VARIANT_ARRAY = new IProjectVariant[0];
+	static final IProjectVariant[] EMPTY_PROJECT_VARIANT_ARRAY = new IProjectVariant[0];
 	/**
-	 * A directed acyclic graph of the project variants representing the project
-	 * references that caused this build to happen. The tree is rooted at the project
-	 * variant that this build context represents.
+	 * A directed acyclic graph of the project variant's referenced project variants
+	 * that were built before this project variant.
 	 * 
 	 * This is computed on demand, when the client requests the information, and is
 	 * subsequently cached.
 	 */
-	private DAG graph = null;
-
+	private DAG referencesGraph = null;
 	/**
-	 * Set of all project variants that reference this project reference as
-	 * part of the build.
+	 * A directed acyclic graph of the project variants referencing this project variant
+	 * that will be built after this project variant.
 	 * 
 	 * This is computed on demand, when the client requests the information, and is
 	 * subsequently cached.
 	 */
-	private Set/*<IProjectVariant>*/ allReferences = null;
+	private DAG referencingGraph = null;
 
-	/**
-	 * List of project variants that this project references, and that preceed it
-	 * in the build order.
-	 * 
-	 * This is computed on demand, when the client requests the information, and is
-	 * subsequently cached.
-	 */
-	private IProjectVariant[] referencedVariants = null;
-
-	/** Cached lists of referencing projects and project variants */
-	private IProject[] cachedProjects = null;
-	private IProjectVariant[] cachedProjectVariants = null;
+	/** Cached lists of referenced and referencing projects and project variants */
+	private IProject[] cachedReferencedProjects = null;
+	private IProjectVariant[] cachedReferencedProjectVariants = null;
+	private IProject[] cachedReferencingProjects = null;
+	private IProjectVariant[] cachedReferencingProjectVariants = null;
 
 	/**
 	 * A lightweight implementation of a directed acyclic graph
@@ -68,28 +54,32 @@ public class BuildContext implements IBuildContext {
 	 */
 	private static class DAG {
 		private static class Vertex {
-			List children;
+			Set children = new HashSet();
 			Vertex() {
 				// Empty ctor
 			}
 		}
 
-		Map vertexMap = new HashMap();
-		Set vertices = new HashSet();
+		private Map vertexMap = new HashMap();
+		private Set vertices = new HashSet();
 
 		DAG() {
 			// Empty ctor
 		}
 
-		public boolean hasVertex(Object id) {
-			return vertexMap.containsKey(id);
+		public Set getVertices() {
+			return vertexMap.keySet();
 		}
 
-		public List getChildren(Object id) {
-			if (vertexMap.containsKey(id))
-				return ((Vertex) vertexMap.get(id)).children;
-			return null;
-		}
+//		public boolean hasVertex(Object id) {
+//			return vertexMap.containsKey(id);
+//		}
+//
+//		public List getChildren(Object id) {
+//			if (vertexMap.containsKey(id))
+//				return ((Vertex) vertexMap.get(id)).children;
+//			return null;
+//		}
 
 		void addVertex(Object id) {
 			Vertex vertex = new Vertex();
@@ -114,15 +104,13 @@ public class BuildContext implements IBuildContext {
 	 * Create an empty build context for the given project variant.
 	 * @param projectVariant the project variant being built, that we need the context for
 	 */
-	BuildContext(IProjectVariant projectVariant) {
+	public BuildContext(IProjectVariant projectVariant) {
 		this.projectVariant = projectVariant;
 		buildOrder = EMPTY_PROJECT_VARIANT_ARRAY;
 		buildOrderPosition = -1;
 
-		graph = new DAG();
-		graph.addVertex(projectVariant);
-		allReferences = new HashSet();
-		referencedVariants = EMPTY_PROJECT_VARIANT_ARRAY;
+		referencesGraph = new DAG();
+		referencesGraph.addVertex(projectVariant);
 	}
 
 	/**
@@ -130,11 +118,11 @@ public class BuildContext implements IBuildContext {
 	 * @param projectVariant the project variant being built, that we need the context for
 	 * @param buildOrder the build order for the entire build, indicating how cycles etc. have been resolved
 	 */
-	BuildContext(IProjectVariant projectVariant, IProjectVariant[] buildOrder) {
+	public BuildContext(IProjectVariant projectVariant, IProjectVariant[] buildOrder) {
 		this.projectVariant = projectVariant;
 		this.buildOrder = buildOrder;
 		int position = -1;
-		for (int i = 0; i < position; i++) {
+		for (int i = 0; i < buildOrder.length; i++) {
 			if (buildOrder[i].equals(projectVariant))
 			{
 				position = i;
@@ -147,47 +135,20 @@ public class BuildContext implements IBuildContext {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getReferencingProjects()
+	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedProjects()
 	 */
-	public IProject[] getAllReferencingProjects() {
-		if (allReferences == null)
-			computeGraphAndReferencingVariants();
-		if (cachedProjects == null) {
+	public IProject[] getAllReferencedProjects() {
+		if (referencesGraph == null)
+			computeReferencesGraph();
+		if (cachedReferencedProjects == null) {
 			Set set = new HashSet();
-			for (Iterator it = allReferences.iterator(); it.hasNext();) {
+			for (Iterator it = referencesGraph.getVertices().iterator(); it.hasNext();) {
 				set.add(((IProjectVariant) it.next()).getProject());
 			}
-			cachedProjects = new IProject[set.size()];
-			set.toArray(cachedProjects);
+			cachedReferencedProjects = new IProject[set.size()];
+			set.toArray(cachedReferencedProjects);
 		}
-		return (IProject[]) cachedProjects.clone();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getReferencingProjectVariants()
-	 */
-	public IProjectVariant[] getAllReferencingProjectVariants() {
-		if (cachedProjectVariants == null) {
-			cachedProjectVariants = new IProjectVariant[allReferences.size()];
-			allReferences.toArray(cachedProjectVariants);
-		}
-		return (IProjectVariant[]) cachedProjectVariants.clone();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getReferencingProjectVariants(org.eclipse.core.resources.IProjectVariant)
-	 */
-	public IProjectVariant[] getReferencingProjectVariants(IProjectVariant variant) {
-		if (graph == null)
-			computeGraphAndReferencingVariants();
-		if (!graph.hasVertex(variant))
-			return null;
-		List children = graph.getChildren(variant);
-		IProjectVariant[] result = new IProjectVariant[children.size()];
-		children.toArray(result);
-		return result;
+		return (IProject[]) cachedReferencedProjects.clone();
 	}
 
 	/*
@@ -195,63 +156,110 @@ public class BuildContext implements IBuildContext {
 	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedProjectVariants()
 	 */
 	public IProjectVariant[] getAllReferencedProjectVariants() {
-		if (referencedVariants == null)
-			computeReferencedVariants();
-		return referencedVariants;
-	}
-
-	/** Compute the reference graph and set of all variants that reference this project variant. */
-	private void computeGraphAndReferencingVariants() {
-		graph.addVertex(projectVariant);
-
-		// Get the sets subsequent variants in the build order
-		Set subsequentVariants = new HashSet();
-		for (int i = buildOrderPosition+1; i < buildOrder.length; i++)
-			subsequentVariants.add(buildOrder[i]);
-
-		// Do a depth first search of the project variants references
-		// to construct the build context tree
-		Stack stack = new Stack();
-		stack.push(projectVariant);
-
-		// Set to track the number of unique referencing project variants
-		allReferences = new HashSet();
-
-		while (!stack.isEmpty()) {
-			IProjectVariant variant = (IProjectVariant) stack.pop();
-
-			IProjectVariant[] refs = variant.getProject().getReferencingProjectVariants(variant.getVariant());
-			for (int i = 0; i < refs.length; i++) {
-				IProjectVariant ref = refs[i];
-
-				// Don't explore nodes not included in the build order
-				if (!subsequentVariants.contains(ref))
-					continue;
-
-				// Avoid exploring cycles
-				if (stack.contains(ref))
-					continue;
-
-				graph.addVertex(ref);
-				graph.addEdge(variant, ref);
-				stack.push(ref);
-				allReferences.add(ref);
-			}
+		if (referencesGraph == null)
+			computeReferencesGraph();
+		if (cachedReferencedProjectVariants == null) {
+			cachedReferencedProjectVariants = new IProjectVariant[referencesGraph.getVertices().size()];
+			referencesGraph.getVertices().toArray(cachedReferencedProjectVariants);
 		}
+		return (IProjectVariant[]) cachedReferencedProjectVariants.clone();
 	}
 
-	/** Compute the set of all variants that this project variant references. */
-	private void computeReferencedVariants() {
-		// Get the sets previous variants in the build order
+	/*
+	 * (non-Javadoc)
+	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencingProjects()
+	 */
+	public IProject[] getAllReferencingProjects() {
+		if (referencingGraph == null)
+			computeReferencingGraph();
+		if (cachedReferencingProjects == null) {
+			cachedReferencingProjects = new IProject[referencingGraph.getVertices().size()];
+			referencingGraph.getVertices().toArray(cachedReferencingProjects);
+		}
+		return (IProject[]) cachedReferencingProjects.clone();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencingProjectVariants()
+	 */
+	public IProjectVariant[] getAllReferencingProjectVariants() {
+		if (referencingGraph == null)
+			computeReferencingGraph();
+		if (cachedReferencingProjectVariants == null) {
+			cachedReferencingProjectVariants = new IProjectVariant[referencingGraph.getVertices().size()];
+			referencingGraph.getVertices().toArray(cachedReferencingProjectVariants);
+		}
+		return (IProjectVariant[]) cachedReferencingProjectVariants.clone();
+	}
+
+	private void computeReferencesGraph() {
+		referencesGraph = new DAG();
+
 		Set previousVariants = new HashSet();
 		for (int i = 0; i < buildOrderPosition; i++)
 			previousVariants.add(buildOrder[i]);
 
-		// Intersect the set of previous variants and the set of all referencing project variants
-		Set allReferencing = new HashSet();
-		allReferencing.addAll(Arrays.asList(projectVariant.getProject().getReferencingProjectVariants(projectVariant.getVariant())));
-		allReferencing.retainAll(previousVariants);
-		referencedVariants = new IProjectVariant[allReferencing.size()];
-		allReferencing.toArray(referencedVariants);
+		// Do a depth first search of the project variant's references to construct
+		// the references graph.
+		computeGraph(referencesGraph, projectVariant, previousVariants, new GetChildrenFunctor() {
+			public IProjectVariant[] run(IProjectVariant variant) {
+				try {
+					return variant.getProject().getReferencedProjectVariants(variant.getVariant());
+				} catch (CoreException e) {
+					return EMPTY_PROJECT_VARIANT_ARRAY;
+				}
+			}
+		});
+	}
+
+	private void computeReferencingGraph() {
+		referencingGraph = new DAG();
+
+		Set subsequentVariants = new HashSet();
+		for (int i = buildOrderPosition+1; i < buildOrder.length; i++)
+			subsequentVariants.add(buildOrder[i]);
+
+		// Do a depth first search of the project variant's referencing variants
+		// to construct the referencing graph.
+		computeGraph(referencingGraph, projectVariant, subsequentVariants, new GetChildrenFunctor() {
+			public IProjectVariant[] run(IProjectVariant variant) {
+				return variant.getProject().getReferencingProjectVariants(variant.getVariant());
+			}
+		});
+	}
+
+	private static interface GetChildrenFunctor {
+		IProjectVariant[] run(IProjectVariant variant);
+	}
+
+	private void computeGraph(DAG graph, IProjectVariant root, Set filter, GetChildrenFunctor getChildren) {
+		Stack stack = new Stack();
+		stack.push(root);
+		Set visited = new HashSet();
+
+		if (filter.contains(root))
+			graph.addVertex(root);
+
+		while (!stack.isEmpty()) {
+			IProjectVariant variant = (IProjectVariant) stack.pop();
+			visited.add(variant);
+			IProjectVariant[] refs = getChildren.run(variant);
+			for (int i = 0; i < refs.length; i++) {
+				IProjectVariant ref = refs[i];
+	
+				if (!filter.contains(ref))
+					continue;
+
+				// Avoid exploring cycles
+				if (visited.contains(ref))
+					continue;
+
+				graph.addVertex(ref);
+				if (!variant.equals(root))
+					graph.addEdge(variant, ref);
+				stack.push(ref);
+			}
+		}
 	}
 }
