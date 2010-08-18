@@ -846,7 +846,12 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		List projectVariants = new ArrayList();
 		for (int i = 0; i < projects.length; i++) {
 			ProjectDescription desc = ((Project) projects[i]).internalGetDescription();
-			String[] variantNames = desc.getAllVariants(false);
+			String[] variantNames;
+			//FIXME: If a desc cannot be found, have to assume the default variant is the only one
+			if (desc == null)
+				variantNames = new String[]{EMPTY_STR};
+			else
+				variantNames = desc.getAllVariants(false);
 			for (int j = 0; j < variantNames.length; j++) {
 				projectVariants.add(new ProjectVariant(projects[i], variantNames[j]));
 			}
