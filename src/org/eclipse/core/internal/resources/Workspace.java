@@ -333,6 +333,101 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @see IWorkspace#build(int, IProgressMonitor)
 	 */
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
+		List variants = new ArrayList();
+		variants.addAll(Arrays.asList(getBuildOrder()));
+
+		// Include any projects that were omitted from the build order at the end of the build
+		HashSet/*<IProjectVariant>*/ leftover = new HashSet();
+		IProject[] projects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
+		for (int i = 0; i < projects.length; i++) {
+			IProject project = projects[i];
+			if (project.isAccessible())
+				leftover.add(((Project) project).internalGetActiveVariant());
+		}
+		leftover.removeAll(variants);
+		variants.addAll(leftover);
+
+		IProjectVariant[] ordered = (IProjectVariant[]) variants.toArray(new IProjectVariant[variants.size()]);
+		buildInternal(ordered, trigger, monitor);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IWorkspace#build(IProject, int, IProgressMonitor)
+	 */
+	public void build(IProject project, int trigger, IProgressMonitor monitor) throws CoreException {
+		build(new IProject[]{project}, trigger, monitor);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IWorkspace#build(IProject[], int, IProgressMonitor)
+	 */
+	public void build(IProject[] projects, int trigger, IProgressMonitor monitor) throws CoreException {
+		IProjectVariant[] variants = new IProjectVariant[projects.length];
+		for (int i = 0; i < projects.length; i++) {
+			variants[i] = projects[i].getActiveVariant();
+		}
+		build(variants, trigger, monitor);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IWorkspace#build(IProjectVariant, int, IProgressMonitor)
+	 */
+	public void build(IProjectVariant variant, int trigger, IProgressMonitor monitor) throws CoreException {
+		build(new IProjectVariant[]{variant}, trigger, monitor);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IWorkspace#build(IProjectVariant[], int, IProgressMonitor)
+	 */
+	public void build(IProjectVariant[] variants, int trigger, IProgressMonitor monitor) throws CoreException {
+		if (variants.length == 0)
+			return;
+
+		Set variantSet = new HashSet(variants.length);
+		variantSet.addAll(Arrays.asList(variants));
+
+		// Find transitive closure of referencing project variants, not including
+		// the variants that were asked to be built
+		Set refs = new HashSet(variantSet);
+		Set buffer = new HashSet();
+		int size = -1;
+		while (size != refs.size()) {
+			size = refs.size();
+			for (Iterator it = refs.iterator(); it.hasNext();) {
+				IProjectVariant variant = (IProjectVariant) it.next();
+				buffer.addAll(Arrays.asList(variant.getProject().getReferencingProjectVariants(variant.getVariant())));
+			}
+			refs.addAll(buffer);
+			buffer.clear();
+		}
+		refs.removeAll(variantSet);
+		List refsList = new LinkedList(refs);
+
+		// Filter out inaccessible projects, or variants that do not exist
+		for (ListIterator it = refsList.listIterator(); it.hasNext();) {
+			IProjectVariant variant = (IProjectVariant) it.next();
+			if (!variant.getProject().isAccessible() || !variant.getProject().hasVariant(variant.getVariant()))
+				it.remove();
+		}
+
+		// Order the referenced project variants
+		ProjectVariantOrder order = computeProjectVariantOrder((IProjectVariant[]) refsList.toArray(new IProjectVariant[refs.size()]));
+
+		// Compose the two orderings and run the build
+		IProjectVariant[] finalOrder = new IProjectVariant[order.projectVariants.length + variants.length];
+		System.arraycopy(order.projectVariants, 0, finalOrder, 0, order.projectVariants.length);
+		System.arraycopy(variants, 0, finalOrder, order.projectVariants.length, variants.length);
+		buildInternal(finalOrder, trigger, monitor);
+	}
+
+	/**
+	 * Builds the given project variants in the order supplied.
+	 */
+	private void buildInternal(IProjectVariant[] variants, int trigger, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		final ISchedulingRule rule = getRuleFactory().buildRule();
 		try {
@@ -343,7 +438,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 				aboutToBuild(this, trigger);
 				IStatus result;
 				try {
-					result = getBuildManager().build(trigger, Policy.subMonitorFor(monitor, Policy.opWork));
+					result = getBuildManager().build(variants, trigger, Policy.subMonitorFor(monitor, Policy.opWork));
 				} finally {
 					//must fire POST_BUILD if PRE_BUILD has occurred
 					broadcastBuildEvent(this, IResourceChangeEvent.POST_BUILD, trigger);
