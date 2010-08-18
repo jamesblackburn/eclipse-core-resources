@@ -697,8 +697,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public boolean hasVariant(String variant) {
 		if (variant == null)
 			return false;
-		for (int i = 0; i < variants.length; i++) {
-			if (variants[i].equals(variant))
+		String[] allVariants = getAllVariants();
+		for (int i = 0; i < allVariants.length; i++) {
+			if (allVariants[i].equals(variant))
 				return true;
 		}
 		return false;
@@ -736,7 +737,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Returns the union of the description's static and dynamic project references,
 	 * with duplicates omitted. The calculation is optimized by caching the result
 	 * @see #getAllVariantReferences(String, boolean)
-	 * @deprecated
 	 */
 	public IProject[] getAllReferences(boolean makeCopy) {
 		if (cachedProjectRefs == null) {
@@ -760,18 +760,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#getReferencedProjects()
 	 */
-	/**
-	 * @deprecated
-	 * @see #getReferencedProjectVariants(String)
-	 */
 	public IProject[] getReferencedProjects() {
 		return getReferencedProjects(true);
 	}
 
-	/**
-	 * @deprecated
-	 * @see #getReferencedProjectVariants(String, boolean)
-	 */
 	public IProject[] getReferencedProjects(boolean makeCopy) {
 		if (staticRefs == null)
 			return EMPTY_PROJECT_ARRAY;
@@ -786,33 +778,22 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setReferencedProjects(IProject[])
 	 */
-	/**
-	 * @see #setReferencedProjectVariants(String, IProjectVariant[])
-	 * @deprecated
-	 */
 	public void setReferencedProjects(IProject[] projects) {
 		Assert.isLegal(projects != null);
 		// Add all variants in each of the projects as a reference
-		for (int i = 0; i < variants.length; i++) {
-			setReferencedProjectVariants(variants[i], getProjectVariantsFromProjects(projects));
+		String[] allVariants = getAllVariants(false);
+		for (int i = 0; i < allVariants.length; i++) {
+			setReferencedProjectVariants(allVariants[i], getProjectVariantsFromProjects(projects));
 		}
 	}
 
 	/* (non-Javadoc)
 	 * @see IProjectDescription#getDynamicReferences()
 	 */
-	/**
-	 * @deprecated
-	 * @see #getDynamicVariantReferences(String)
-	 */
 	public IProject[] getDynamicReferences() {
 		return getDynamicReferences(true);
 	}
 
-	/**
-	 * @deprecated
-	 * @see #getDynamicVariantReferences(String, boolean)
-	 */
 	public IProject[] getDynamicReferences(boolean makeCopy) {
 		if (dynamicRefs == null)
 			return EMPTY_PROJECT_ARRAY;
@@ -826,14 +807,11 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setDynamicReferences(IProject[])
 	 */
-	/**
-	 * @deprecated
-	 * @see #setDynamicVariantReferences(String, IProjectVariant[])
-	 */
 	public void setDynamicReferences(IProject[] projects) {
 		Assert.isLegal(projects != null);
-		for (int i = 0; i < variants.length; i++) {
-			setDynamicVariantReferences(variants[i], getProjectVariantsFromProjects(projects));
+		String[] allVariants = getAllVariants(false);
+		for (int i = 0; i < allVariants.length; i++) {
+			setDynamicVariantReferences(allVariants[i], getProjectVariantsFromProjects(projects));
 		}
 	}
 
@@ -843,7 +821,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * array of project variants.
 	 * @param variantsMap map containing the project variants to get the projects from
 	 * @return list of projects
-	 * @deprecated
 	 */
 	private IProject[] getProjectsFromProjectVariants(Map/*<String, IProjectVariant[]>*/ variantsMap) {
 		Set projects = new LinkedHashSet();
@@ -864,7 +841,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * that the projects were specified.
 	 * @param projects projects to get the project variants from
 	 * @return list of project variants
-	 * @deprecated
 	 */
 	private IProjectVariant[] getProjectVariantsFromProjects(IProject[] projects) {
 		List projectVariants = new ArrayList();
