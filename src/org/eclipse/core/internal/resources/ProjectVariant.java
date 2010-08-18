@@ -85,4 +85,26 @@ public class ProjectVariant implements IProjectVariant {
 			return false;
 		return true;
 	}
-}
+
+	/*
+	 * (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	/**
+	 * For debugging purposes only.
+	 */
+	public String toString()
+	{
+		StringBuffer result = new StringBuffer();
+		if (project != null)
+			result.append(project.getName());
+		else
+			result.append("?"); //$NON-NLS-1$
+		result.append(";"); //$NON-NLS-1$
+		if (variant != null)
+			result.append(variant);
+		else
+			result.append("?"); //$NON-NLS-1$
+		return result.toString();
+	}
+ }
