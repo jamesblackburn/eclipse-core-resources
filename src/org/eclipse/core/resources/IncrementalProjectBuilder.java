@@ -468,4 +468,11 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	public ISchedulingRule getRule(int kind, Map args) {
 		return getRule();
 	}
+
+	/**
+	 * @return the context for the most recent invocation of the builder.
+	 */
+	public final IBuildContext getContext() {
+		return super.getContext();
+	}
 }

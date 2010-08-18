@@ -41,8 +41,15 @@ public abstract class InternalBuilder {
 	 * The symbolic name of the plugin that defines this builder
 	 */
 	private String pluginId;
+	/**
+	 * The project variant that this builder is to build.
+	 */
 	private IProjectVariant projectVariant;
-	
+	/**
+	 * The context in which the builder was called.
+	 */
+	private IBuildContext context;
+
 	/**
 	 * The value of the callOnEmptyDelta builder extension attribute.
 	 */
@@ -98,6 +105,10 @@ public abstract class InternalBuilder {
 	 */
 	protected IResourceDelta getDelta(IProjectVariant aProjectVariant) {
 		return buildManager.getDelta(aProjectVariant);
+	}
+
+	protected IBuildContext getContext() {
+		return context;
 	}
 
 	final IProject[] getInterestingProjects() {
@@ -200,7 +211,7 @@ public abstract class InternalBuilder {
 	final void setPluginId(String value) {
 		pluginId = value;
 	}
-
+	
 	/**
 	 * Sets the project variant for which this builder operates.
 	 * @see #getProjectVariant()
@@ -209,6 +220,14 @@ public abstract class InternalBuilder {
 		Assert.isTrue(projectVariant == null);
 		Assert.isNotNull(value.getVariant());
 		projectVariant = value;
+	}
+
+	/**
+	 * Sets the context in which the builder was last called.
+	 * @see #getContext()
+	 */
+	final void setContext(IBuildContext context) {
+		this.context = context;
 	}
 
 	/*

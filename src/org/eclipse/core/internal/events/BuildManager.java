@@ -13,6 +13,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
+import org.eclipse.core.resources.IncrementalProjectBuilder;
+
 import java.util.*;
 import org.eclipse.core.internal.dtree.DeltaDataTree;
 import org.eclipse.core.internal.resources.*;
@@ -197,13 +199,13 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		}
 	}
 
-	protected void basicBuild(IProjectVariant projectVariant, int trigger, ICommand[] commands, MultiStatus status, IProgressMonitor monitor) {
+	protected void basicBuild(IProjectVariant projectVariant, int trigger, IBuildContext context, ICommand[] commands, MultiStatus status, IProgressMonitor monitor) {
 		try {
 			for (int i = 0; i < commands.length; i++) {
 				checkCanceled(trigger, monitor);
 				BuildCommand command = (BuildCommand) commands[i];
 				IProgressMonitor sub = Policy.subMonitorFor(monitor, 1);
-				IncrementalProjectBuilder builder = getBuilder(projectVariant, command, i, status);
+				IncrementalProjectBuilder builder = getBuilder(projectVariant, command, i, status, context);
 				if (builder != null)
 					basicBuild(trigger, builder, command.getArguments(false), status, sub);
 			}
@@ -216,20 +218,20 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * Runs all builders on the given project variant.
 	 * @return A status indicating if the build succeeded or failed
 	 */
-	private IStatus basicBuild(IProjectVariant projectVariant, int trigger, IProgressMonitor monitor) {
+	private IStatus basicBuild(IProjectVariant projectVariant, int trigger, IBuildContext context, IProgressMonitor monitor) {
 		if (!canRun(trigger))
 			return Status.OK_STATUS;
 		try {
 			hookStartBuild(trigger);
 			MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, Messages.events_errors, null);
-			basicBuild(projectVariant, trigger, status, monitor);
+			basicBuild(projectVariant, trigger, context, status, monitor);
 			return status;
 		} finally {
 			hookEndBuild(trigger);
 		}
 	}
 
-	private void basicBuild(final IProjectVariant projectVariant, final int trigger, final MultiStatus status, final IProgressMonitor monitor) {
+	private void basicBuild(final IProjectVariant projectVariant, final int trigger, final IBuildContext context, final MultiStatus status, final IProgressMonitor monitor) {
 		try {
 			final IProject project = projectVariant.getProject();
 			final ICommand[] commands;
@@ -258,7 +260,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				}
 
 				public void run() throws Exception {
-					basicBuild(projectVariant, trigger, commands, status, monitor);
+					basicBuild(projectVariant, trigger, context, commands, status, monitor);
 				}
 			};
 			SafeRunner.run(code);
@@ -284,7 +286,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, Messages.events_errors, null);
 				ICommand command = getCommand(project, builderName, args);
 				try {
-					IncrementalProjectBuilder builder = getBuilder(projectVariant, command, -1, status);
+					IBuildContext context = new BuildContext(projectVariant, new IProjectVariant[]{projectVariant});
+					IncrementalProjectBuilder builder = getBuilder(projectVariant, command, -1, status, context);
 					if (builder != null)
 						basicBuild(trigger, builder, args, status, Policy.subMonitorFor(monitor, 1));
 				} catch (CoreException e) {
@@ -315,13 +318,15 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			builtProjectVariants.clear();
 			for (int i = 0; i < ordered.length; i++) {
 				if (ordered[i].getProject().isAccessible()) {
-					basicBuild(ordered[i], trigger, status, Policy.subMonitorFor(monitor, projectWork));
+					IBuildContext context = new BuildContext(ordered[i], ordered);
+					basicBuild(ordered[i], trigger, context, status, Policy.subMonitorFor(monitor, projectWork));
 					builtProjectVariants.add(ordered[i]);
 				}
 			}
 			for (int i = 0; i < unordered.length; i++) {
 				if (unordered[i].getProject().isAccessible()) {
-					basicBuild(unordered[i], trigger, status, Policy.subMonitorFor(monitor, projectWork));
+					IBuildContext context = new BuildContext(ordered[i], ordered);
+					basicBuild(unordered[i], trigger, context, status, Policy.subMonitorFor(monitor, projectWork));
 					builtProjectVariants.add(unordered[i]);
 				}
 			}
@@ -372,8 +377,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 */
 	public IStatus build(IProjectVariant projectVariant, int trigger, String builderName, Map args, IProgressMonitor monitor) {
 		monitor = Policy.monitorFor(monitor);
-		if (builderName == null)
-			return basicBuild(projectVariant, trigger, monitor);
+		if (builderName == null) {
+			IBuildContext context = new BuildContext(projectVariant, new IProjectVariant[]{projectVariant});
+			return basicBuild(projectVariant, trigger, context, monitor);
+		}
 		return basicBuild(projectVariant, trigger, builderName, args, monitor);
 	}
 
@@ -491,6 +498,9 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	/**
 	 * Returns the builder instance corresponding to the given command, or
 	 * <code>null</code> if the builder was not valid.
+	 * 
+	 * Note that this does not modify the context of the builder.
+	 * 
 	 * @param projectVariant The project variant this builder corresponds to
 	 * @param command The build command
 	 * @param buildSpecIndex The index of this builder in the build spec, or -1 if
@@ -513,6 +523,23 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			return null;
 		}
 		return (IncrementalProjectBuilder) result;
+	}
+
+	/**
+	 * Returns the builder instance corresponding to the given command, or
+	 * <code>null</code> if the builder was not valid, and sets its context
+	 * to the one supplied.
+	 * 
+	 * @param projectVariant The project variant this builder corresponds to
+	 * @param command The build command
+	 * @param buildSpecIndex The index of this builder in the build spec, or -1 if
+	 * the index is unknown
+	 * @param status MultiStatus for collecting errors
+	 */
+	private IncrementalProjectBuilder getBuilder(IProjectVariant projectVariant, ICommand command, int buildSpecIndex, MultiStatus status, IBuildContext context) throws CoreException {
+		InternalBuilder builder = getBuilder(projectVariant, command, buildSpecIndex, status, context);
+		builder.setContext(context);
+		return (IncrementalProjectBuilder) builder;
 	}
 
 	/**
