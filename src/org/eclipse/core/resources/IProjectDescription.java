@@ -234,7 +234,6 @@ public interface IProjectDescription {
 	 * @see #getDynamicReferences()
 	 * @return a list of projects
 	 * @see #getReferencedProjectVariants(String)
-	 * @deprecated
 	 */
 	public IProject[] getReferencedProjects();
 
@@ -250,7 +249,6 @@ public interface IProjectDescription {
 	 * @param projects a list of projects
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
 	 * @see #setReferencedProjectVariants(String, IProjectVariant[])
-	 * @deprecated
 	 */
 	public void setReferencedProjects(IProject[] projects);
 
@@ -273,7 +271,6 @@ public interface IProjectDescription {
 	 * @return a list of projects
 	 * @since 3.0
 	 * @see #getDynamicVariantReferences(String)
-	 * @deprecated
 	 */
 	public IProject[] getDynamicReferences();
 
@@ -290,7 +287,6 @@ public interface IProjectDescription {
 	 * @param projects list of projects
 	 * @since 3.0
 	 * @see #setDynamicVariantReferences(String, IProjectVariant[])
-	 * @deprecated
 	 */
 	public void setDynamicReferences(IProject[] projects);
 
