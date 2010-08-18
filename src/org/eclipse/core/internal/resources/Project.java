@@ -1375,7 +1375,7 @@ public class Project extends Container implements IProject {
 				IProjectVariant[] references = description.getAllVariantReferences(variants[j], false);
 				for (int k = 0; k < references.length; k++) {
 					if (references[k].getProject().equals(this) && references[k].getVariant().equals(variant)) {
-						result.add(references[k]);
+						result.add(project.internalGetVariant(variants[j]));
 						break;
 					}
 				}
