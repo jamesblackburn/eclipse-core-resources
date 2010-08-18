@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
+import org.eclipse.core.runtime.Assert;
+
 import java.util.HashSet;
 
 import org.eclipse.core.resources.IProjectVariant;
@@ -18,24 +20,41 @@ import java.util.*;
 import org.eclipse.core.resources.*;
 
 public class BuildContext implements IBuildContext {
+	/** The project variant for which this context applies. */
+	private final IProjectVariant projectVariant;
+	/** The build order for the build that this context is part of. */
+	private final IProjectVariant[] buildOrder;
+	/** The position in the build order array that this project variant is. */
+	private final int buildOrderPosition;
+
 	private static final IProjectVariant[] EMPTY_PROJECT_VARIANT_ARRAY = new IProjectVariant[0];
 	/**
 	 * A directed acyclic graph of the project variants representing the project
 	 * references that caused this build to happen. The tree is rooted at the project
 	 * variant that this build context represents.
+	 * 
+	 * This is computed on demand, when the client requests the information, and is
+	 * subsequently cached.
 	 */
-	private final DAG graph = new DAG();
+	private DAG graph = null;
 
 	/**
 	 * Set of all project variants that reference this project reference as
 	 * part of the build.
+	 * 
+	 * This is computed on demand, when the client requests the information, and is
+	 * subsequently cached.
 	 */
-	private Set/*<IProjectVariant>*/ allReferences = new HashSet();
+	private Set/*<IProjectVariant>*/ allReferences = null;
+
 	/**
 	 * List of project variants that this project references, and that preceed it
 	 * in the build order.
+	 * 
+	 * This is computed on demand, when the client requests the information, and is
+	 * subsequently cached.
 	 */
-	private IProjectVariant[] referencedProjectVariants = EMPTY_PROJECT_VARIANT_ARRAY;
+	private IProjectVariant[] referencedVariants = null;
 
 	/** Cached lists of referencing projects and project variants */
 	private IProject[] cachedProjects = null;
@@ -93,31 +112,102 @@ public class BuildContext implements IBuildContext {
 
 	/**
 	 * Create an empty build context for the given project variant.
+	 * @param projectVariant the project variant being built, that we need the context for
 	 */
 	BuildContext(IProjectVariant projectVariant) {
+		this.projectVariant = projectVariant;
+		buildOrder = EMPTY_PROJECT_VARIANT_ARRAY;
+		buildOrderPosition = -1;
+
+		graph = new DAG();
 		graph.addVertex(projectVariant);
+		allReferences = new HashSet();
+		referencedVariants = EMPTY_PROJECT_VARIANT_ARRAY;
 	}
 
 	/**
-	 * Create a build context for the given project variant
+	 * Create a build context for the given project variant.
 	 * @param projectVariant the project variant being built, that we need the context for
 	 * @param buildOrder the build order for the entire build, indicating how cycles etc. have been resolved
 	 */
 	BuildContext(IProjectVariant projectVariant, IProjectVariant[] buildOrder) {
+		this.projectVariant = projectVariant;
+		this.buildOrder = buildOrder;
+		int position = -1;
+		for (int i = 0; i < position; i++) {
+			if (buildOrder[i].equals(projectVariant))
+			{
+				position = i;
+				break;
+			}
+		}
+		buildOrderPosition = position;
+		Assert.isTrue(0 <= buildOrderPosition && buildOrderPosition < buildOrder.length);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.eclipse.core.resources.IBuildContext#getReferencingProjects()
+	 */
+	public IProject[] getAllReferencingProjects() {
+		if (allReferences == null)
+			computeGraphAndReferencingVariants();
+		if (cachedProjects == null) {
+			Set set = new HashSet();
+			for (Iterator it = allReferences.iterator(); it.hasNext();) {
+				set.add(((IProjectVariant) it.next()).getProject());
+			}
+			cachedProjects = new IProject[set.size()];
+			set.toArray(cachedProjects);
+		}
+		return (IProject[]) cachedProjects.clone();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.eclipse.core.resources.IBuildContext#getReferencingProjectVariants()
+	 */
+	public IProjectVariant[] getAllReferencingProjectVariants() {
+		if (cachedProjectVariants == null) {
+			cachedProjectVariants = new IProjectVariant[allReferences.size()];
+			allReferences.toArray(cachedProjectVariants);
+		}
+		return (IProjectVariant[]) cachedProjectVariants.clone();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.eclipse.core.resources.IBuildContext#getReferencingProjectVariants(org.eclipse.core.resources.IProjectVariant)
+	 */
+	public IProjectVariant[] getReferencingProjectVariants(IProjectVariant variant) {
+		if (graph == null)
+			computeGraphAndReferencingVariants();
+		if (!graph.hasVertex(variant))
+			return null;
+		List children = graph.getChildren(variant);
+		IProjectVariant[] result = new IProjectVariant[children.size()];
+		children.toArray(result);
+		return result;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedProjectVariants()
+	 */
+	public IProjectVariant[] getAllReferencedProjectVariants() {
+		if (referencedVariants == null)
+			computeReferencedVariants();
+		return referencedVariants;
+	}
+
+	/** Compute the reference graph and set of all variants that reference this project variant. */
+	private void computeGraphAndReferencingVariants() {
 		graph.addVertex(projectVariant);
 
-		// Get the sets of previous and subsequent variants in the build order
-		Set previousVariants = new HashSet();
+		// Get the sets subsequent variants in the build order
 		Set subsequentVariants = new HashSet();
-		boolean subsequent = false;
-		for (int i = buildOrder.length - 1; i >= 0; i--) {
-			if (buildOrder[i].equals(projectVariant))
-				subsequent = true;
-			else if (subsequent)
-				subsequentVariants.add(buildOrder[i]);
-			else
-				previousVariants.add(buildOrder[i]);
-		}
+		for (int i = buildOrderPosition+1; i < buildOrder.length; i++)
+			subsequentVariants.add(buildOrder[i]);
 
 		// Do a depth first search of the project variants references
 		// to construct the build context tree
@@ -148,61 +238,20 @@ public class BuildContext implements IBuildContext {
 				allReferences.add(ref);
 			}
 		}
+	}
 
-		// Get list of referenced variants that are previous to this in the build order
+	/** Compute the set of all variants that this project variant references. */
+	private void computeReferencedVariants() {
+		// Get the sets previous variants in the build order
+		Set previousVariants = new HashSet();
+		for (int i = 0; i < buildOrderPosition; i++)
+			previousVariants.add(buildOrder[i]);
+
+		// Intersect the set of previous variants and the set of all referencing project variants
 		Set allReferencing = new HashSet();
 		allReferencing.addAll(Arrays.asList(projectVariant.getProject().getReferencingProjectVariants(projectVariant.getVariant())));
 		allReferencing.retainAll(previousVariants);
-		referencedProjectVariants = new IProjectVariant[allReferencing.size()];
-		allReferencing.toArray(referencedProjectVariants);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getReferencingProjects()
-	 */
-	public IProject[] getAllReferencingProjects() {
-		if (cachedProjects == null) {
-			Set set = new HashSet();
-			for (Iterator it = allReferences.iterator(); it.hasNext();) {
-				set.add(((IProjectVariant) it.next()).getProject());
-			}
-			cachedProjects = new IProject[set.size()];
-			set.toArray(cachedProjects);
-		}
-		return (IProject[]) cachedProjects.clone();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getReferencingProjectVariants()
-	 */
-	public IProjectVariant[] getAllReferencingProjectVariants() {
-		if (cachedProjectVariants == null) {
-			cachedProjectVariants = new IProjectVariant[allReferences.size()];
-			allReferences.toArray(cachedProjectVariants);
-		}
-		return (IProjectVariant[]) cachedProjectVariants.clone();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getReferencingProjectVariants(org.eclipse.core.resources.IProjectVariant)
-	 */
-	public IProjectVariant[] getReferencingProjectVariants(IProjectVariant variant) {
-		if (!graph.hasVertex(variant))
-			return null;
-		List children = graph.getChildren(variant);
-		IProjectVariant[] result = new IProjectVariant[children.size()];
-		children.toArray(result);
-		return result;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedProjectVariants()
-	 */
-	public IProjectVariant[] getAllReferencedProjectVariants() {
-		return referencedProjectVariants;
+		referencedVariants = new IProjectVariant[allReferencing.size()];
+		allReferencing.toArray(referencedVariants);
 	}
 }
