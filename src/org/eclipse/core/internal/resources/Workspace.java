@@ -1433,25 +1433,17 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		// see if a particular build order is specified
 		String[] order = description.getBuildOrder(false);
 		if (order != null) {
-			// convert from project names to project handles
+			// convert from project names to active project variants
 			// and eliminate non-existent and closed projects
-			List projectList = new ArrayList(order.length);
+			List variants = new ArrayList(order.length);
 			for (int i = 0; i < order.length; i++) {
 				IProject project = getRoot().getProject(order[i]);
 				if (project.isAccessible()) {
-					// Filter the order and return it
-					projectList.add(project);
+					variants.add(((Project) project).internalGetActiveVariant());
 				}
 			}
-			// convert the list of projects to a list of the projects
-			// active variants
-			List projectVariantList = new ArrayList(projectList.size());
-			for (Iterator it = projectList.iterator(); it.hasNext(); ) {
-				Project project = (Project) it.next();
-				projectVariantList.add(project.internalGetActiveVariant());
-			}
-			buildOrder = new IProjectVariant[projectVariantList.size()];
-			projectVariantList.toArray(buildOrder);
+			buildOrder = new IProjectVariant[variants.size()];
+			variants.toArray(buildOrder);
 		} else {
 			// use default project build order
 			// computed for all accessible projects in workspace
