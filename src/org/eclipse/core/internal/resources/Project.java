@@ -460,10 +460,6 @@ public class Project extends Container implements IProject {
 	/* (non-Javadoc)
 	 * @see IProject#getReferencedProjects()
 	 */
-	/**
-	 * @see #getReferencedProjectVariants(String)
-	 * @deprecated
-	 */
 	public IProject[] getReferencedProjects() throws CoreException {
 		ResourceInfo info = getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
@@ -476,10 +472,6 @@ public class Project extends Container implements IProject {
 
 	/* (non-Javadoc)
 	 * @see IProject#getReferencingProjects()
-	 */
-	/**
-	 * @see #getReferencingProjectVariants(String)
-	 * @deprecated
 	 */
 	public IProject[] getReferencingProjects() {
 		IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
