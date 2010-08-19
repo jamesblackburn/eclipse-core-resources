@@ -333,22 +333,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @see IWorkspace#build(int, IProgressMonitor)
 	 */
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
-		List variants = new ArrayList();
-		variants.addAll(Arrays.asList(getBuildOrder()));
-
-		// Include any projects that were omitted from the build order at the end of the build
-		HashSet/*<IProjectVariant>*/ leftover = new HashSet();
-		IProject[] projects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
-		for (int i = 0; i < projects.length; i++) {
-			IProject project = projects[i];
-			if (project.isAccessible())
-				leftover.add(((Project) project).internalGetActiveVariant());
-		}
-		leftover.removeAll(variants);
-		variants.addAll(leftover);
-
-		IProjectVariant[] ordered = (IProjectVariant[]) variants.toArray(new IProjectVariant[variants.size()]);
-		buildInternal(ordered, trigger, monitor);
+		buildInternal(getBuildOrder(), trigger, monitor);
 	}
 
 	/*
@@ -620,7 +605,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * <p>
 	 * When there are choices, the choice is made in a reasonably stable way. For
 	 * example, given an arbitrary choice between two project variants, the one with the
-	 * lower collating project name and variant name is usually selected.
+	 * lower collating project name and variant name will appear earlier in the list.
 	 * </p>
 	 * <p>
 	 * When the project variant reference graph contains cyclic references, it is
