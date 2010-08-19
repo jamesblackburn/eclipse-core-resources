@@ -142,9 +142,8 @@ public class BuildContext implements IBuildContext {
 			computeReferencesGraph();
 		if (cachedReferencedProjects == null) {
 			Set set = new HashSet();
-			for (Iterator it = referencesGraph.getVertices().iterator(); it.hasNext();) {
+			for (Iterator it = referencesGraph.getVertices().iterator(); it.hasNext();)
 				set.add(((IProjectVariant) it.next()).getProject());
-			}
 			cachedReferencedProjects = new IProject[set.size()];
 			set.toArray(cachedReferencedProjects);
 		}
@@ -173,8 +172,11 @@ public class BuildContext implements IBuildContext {
 		if (referencingGraph == null)
 			computeReferencingGraph();
 		if (cachedReferencingProjects == null) {
-			cachedReferencingProjects = new IProject[referencingGraph.getVertices().size()];
-			referencingGraph.getVertices().toArray(cachedReferencingProjects);
+			Set set = new HashSet();
+			for (Iterator it = referencingGraph.getVertices().iterator(); it.hasNext();)
+				set.add(((IProjectVariant) it.next()).getProject());
+			cachedReferencingProjects = new IProject[set.size()];
+			set.toArray(cachedReferencingProjects);
 		}
 		return (IProject[]) cachedReferencingProjects.clone();
 	}
