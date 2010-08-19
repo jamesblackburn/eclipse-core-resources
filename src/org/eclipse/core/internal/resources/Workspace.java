@@ -1411,9 +1411,14 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * The project variant build order is based on information specified in the workspace
 	 * description. The project variants are built in the order specified by
 	 * <code>IWorkspaceDescription.getBuildOrder</code>; closed or non-existent
-	 * projects are ignored and not included in the result. If
-	 * <code>IWorkspaceDescription.getBuildOrder</code> is non-null, the default
-	 * build order is used; again, only open projects' variants are included in the result.
+	 * projects are ignored and not included in the result. If any open projects are
+	 * not specified in this order, they are appended to the end of the build order
+	 * sorted by project name (to provide a stable ordering).
+	 * </p>
+	 * <p>
+	 * If <code>IWorkspaceDescription.getBuildOrder</code> is non-null, the default
+	 * build order is used (calculated based on references); again, only open projects'
+	 * variants are included in the result.
 	 * </p>
 	 * <p>
 	 * The returned value is cached in the <code>buildOrder</code> field.
@@ -1426,30 +1431,46 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @since 2.1
 	 */
 	public IProjectVariant[] getBuildOrder() {
-		if (buildOrder != null) {
-			// return previously-computed and cached project variant build order
-			return buildOrder;
-		}
-		// see if a particular build order is specified
-		String[] order = description.getBuildOrder(false);
-		if (order != null) {
-			// convert from project names to active project variants
-			// and eliminate non-existent and closed projects
-			List variants = new ArrayList(order.length);
-			for (int i = 0; i < order.length; i++) {
-				IProject project = getRoot().getProject(order[i]);
-				if (project.isAccessible()) {
-					variants.add(((Project) project).internalGetActiveVariant());
+		// if the build order has not been cached, calculate it
+		if (buildOrder == null) {
+			// see if a particular build order is specified
+			String[] order = description.getBuildOrder(false);
+			if (order != null) {
+				// convert from project names to active project variants
+				// and eliminate non-existent and closed projects
+				List variants = new ArrayList(order.length);
+				for (int i = 0; i < order.length; i++) {
+					IProject project = getRoot().getProject(order[i]);
+					if (project.isAccessible()) {
+						variants.add(((Project) project).internalGetActiveVariant());
+					}
 				}
+				buildOrder = new IProjectVariant[variants.size()];
+				variants.toArray(buildOrder);
+			} else {
+				// use default project build order
+				// computed for all accessible projects in workspace
+				buildOrder = vertexOrderToProjectVariantOrder(computeFullProjectVariantOrder()).projectVariants;
 			}
-			buildOrder = new IProjectVariant[variants.size()];
-			variants.toArray(buildOrder);
-		} else {
-			// use default project build order
-			// computed for all accessible projects in workspace
-			buildOrder = vertexOrderToProjectVariantOrder(computeFullProjectVariantOrder()).projectVariants;
 		}
-		return buildOrder;
+
+		// Add projects not mentioned in the build order to the end, in name order
+		LinkedHashSet variants = new LinkedHashSet(Arrays.asList(buildOrder));
+		SortedSet missing = new TreeSet(new Comparator() {
+			public int compare(Object left, Object right) {
+				return ((IProjectVariant) left).getProject().getName().compareTo(
+							((IProjectVariant) right).getProject().getName());
+			}
+		});
+		IProject[] allProjects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
+		for (int i = 0; i < allProjects.length; i++) {
+			IProject project = allProjects[i];
+			if (project.isAccessible()) {
+				missing.add(((Project) project).internalGetActiveVariant());
+			}
+		}
+		variants.addAll(missing);
+		return (IProjectVariant[]) variants.toArray(new IProjectVariant[variants.size()]);
 	}
 
 	public CharsetManager getCharsetManager() {
