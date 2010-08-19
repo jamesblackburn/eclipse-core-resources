@@ -375,7 +375,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		Set variantSet = new HashSet(variants.length);
 		variantSet.addAll(Arrays.asList(variants));
 
-		// Find transitive closure of referencing project variants, not including
+		// Find transitive closure of referenced project variants, not including
 		// the variants that were asked to be built
 		Set refs = new HashSet(variantSet);
 		Set buffer = new HashSet();
@@ -384,7 +384,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			size = refs.size();
 			for (Iterator it = refs.iterator(); it.hasNext();) {
 				IProjectVariant variant = (IProjectVariant) it.next();
-				buffer.addAll(Arrays.asList(variant.getProject().getReferencingProjectVariants(variant.getVariant())));
+				buffer.addAll(Arrays.asList(variant.getProject().getReferencedProjectVariants(variant.getVariant())));
 			}
 			refs.addAll(buffer);
 			buffer.clear();
