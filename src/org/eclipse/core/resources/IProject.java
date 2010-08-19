@@ -514,7 +514,6 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @see IProjectDescription#getReferencedProjects()
 	 * @see IProjectDescription#getDynamicReferences()
 	 * @see #getReferencedProjectVariants(String)
-	 * @deprecated
 	 */
 	public IProject[] getReferencedProjects() throws CoreException;
 
@@ -525,7 +524,6 @@ public interface IProject extends IContainer, IAdaptable {
 	 *
 	 * @return a list of open projects referencing this project
 	 * @see #getReferencingProjectVariants(String)
-	 * @deprecated
 	 */
 	public IProject[] getReferencingProjects();
 
