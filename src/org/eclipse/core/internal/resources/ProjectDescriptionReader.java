@@ -437,9 +437,8 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_VARIANT_NAME :
 				if (elementName.equals(VARIANT)) {
 					// Top of stack is list of variant names
-					// A variant name cannot
-					// have leading/trailing whitespace.
-					((ArrayList) objectStack.peek()).add(charBuffer.toString().trim());
+					// A variant name can have leading/trailing whitespace.
+					((ArrayList) objectStack.peek()).add(charBuffer.toString());
 					state = S_VARIANTS;
 				}
 			case S_REFERENCES :
@@ -1074,6 +1073,12 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			state = S_SNAPSHOT_LOCATION;
 			return;
 		}
+		if (elementName.equals(VARIANTS)) {
+			state = S_VARIANTS;
+			// Push an array list to hold all the variant names.
+			objectStack.push(new ArrayList());
+			return;
+		}
 		if (elementName.equals(REFERENCES)) {
 			state = S_REFERENCES;
 			// Push a map on the object stack to hold the references:
@@ -1267,6 +1272,11 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_VARIABLE_NAME;
 				} else if (elementName.equals(VALUE)) {
 					state = S_VARIABLE_VALUE;
+				}
+				break;
+			case S_VARIANTS:
+				if (elementName.equals(VARIANT)) {
+					state = S_VARIANT_NAME;
 				}
 				break;
 			case S_REFERENCES:
