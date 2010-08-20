@@ -28,6 +28,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	private static final IProjectVariant[] EMPTY_PROJECT_VARIANT_ARRAY = new IProjectVariant[0];
 	private static final String[] EMPTY_STRING_ARRAY = new String[0];
 	private static final String EMPTY_STR = ""; //$NON-NLS-1$
+	private static final String[] DEFAULT_VARIANTS = new String[]{DEFAULT_VARIANT};
 	protected static boolean isReading = false;
 
 	//flags to indicate when we are in the middle of reading or writing a
@@ -79,9 +80,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	// fields
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
-	protected String[] variants = new String[]{};
-	protected String[] dynamicVariants = new String[]{};
-	protected String[] cachedAllVariants = null;
+	protected String[] variants = new String[]{DEFAULT_VARIANT};
+//	protected String[] variants = new String[]{};
+//	protected String[] dynamicVariants = new String[]{};
+//	protected String[] cachedAllVariants = null;
 	protected HashMap/*<String, IProjectVariant[]>*/ staticRefs = new HashMap();
 	protected HashMap/*<String, IProjectVariant[]>*/ dynamicRefs = new HashMap();
 	protected URI snapshotLocation= null;
@@ -247,8 +249,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public boolean hasPrivateChanges(ProjectDescription description) {
 		if (!dynamicRefs.equals(description.dynamicRefs))
 			return true;
-		if (!dynamicVariants.equals(description.dynamicVariants))
-			return true;
+//		if (!dynamicVariants.equals(description.dynamicVariants))
+//			return true;
 		IPath otherLocation = description.getLocation();
 		if (location == null)
 			return otherLocation != null;
@@ -642,53 +644,22 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#setVariants(String[])
 	 */
 	public void setVariants(String[] value) {
-		Assert.isLegal(value != null);
-		variants = (String[]) value.clone();
-		clearCachedVariants();
-	}
+		if (value == null || value.length == 0)
+			variants = DEFAULT_VARIANTS;
+		else {
+			// Filter out nulls and duplicates
+			Set filtered = new LinkedHashSet(value.length);
+			for (int i = 0; i < value.length; i++)
+				if (value[i] != null)
+					filtered.add(value[i]);
 
-	/*
-	 * (non-Javadoc)
-	 * @see IProjectDescription#getDynamicVariants()
-	 */
-	public String[] getDynamicVariants() {
-		return getDynamicVariants(true);
-	}
-
-	public String[] getDynamicVariants(boolean makeCopy) {
-		Assert.isNotNull(dynamicVariants);
-		return makeCopy ? (String[]) dynamicVariants.clone() : dynamicVariants;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see IProjectDescription#setDynamicVariants(java.lang.String[])
-	 */
-	public void setDynamicVariants(String[] value) {
-		Assert.isLegal(value != null);
-		dynamicVariants = (String[]) value.clone();
-		clearCachedVariants();
-	}
-
-	public String[] getAllVariants() {
-		return getAllVariants(false);
-	}
-
-	public String[] getAllVariants(boolean makeCopy) {
-		if (cachedAllVariants == null || cachedAllVariants.length == 0) {
-			String[] statik = getVariants(false);
-			String[] dynamic = getDynamicVariants(false);
-			if (statik.length == 0 && dynamic.length == 0)
-				// Return an array containing the default variant if none are defined
-				cachedAllVariants = new String[]{EMPTY_STR};
+			if (filtered.isEmpty())
+				variants = DEFAULT_VARIANTS;
 			else {
-				LinkedHashSet set = new LinkedHashSet();
-				set.addAll(Arrays.asList(statik));
-				set.addAll(Arrays.asList(dynamic));
-				cachedAllVariants = (String[]) set.toArray(new String[set.size()]);
+				variants = new String[filtered.size()];
+				filtered.toArray(variants);
 			}
 		}
-		return makeCopy ? (String[]) cachedAllVariants.clone() : cachedAllVariants;
 	}
 
 	/* (non-Javadoc)
@@ -697,19 +668,11 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public boolean hasVariant(String variant) {
 		if (variant == null)
 			return false;
-		String[] allVariants = getAllVariants();
-		for (int i = 0; i < allVariants.length; i++) {
-			if (allVariants[i].equals(variant))
+		for (int i = 0; i < variants.length; i++) {
+			if (variants[i].equals(variant))
 				return true;
 		}
 		return false;
-	}
-
-	/**
-	 * Clear the cached union of static and dynamic variants
-	 */
-	private void clearCachedVariants() {
-		cachedAllVariants = null;
 	}
 
 	/**
@@ -781,10 +744,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public void setReferencedProjects(IProject[] projects) {
 		Assert.isLegal(projects != null);
 		// Add all variants in each of the projects as a reference
-		String[] allVariants = getAllVariants(false);
-		for (int i = 0; i < allVariants.length; i++) {
-			setReferencedProjectVariants(allVariants[i], getProjectVariantsFromProjects(projects));
-		}
+		for (int i = 0; i < variants.length; i++)
+			setReferencedProjectVariants(variants[i], getProjectVariantsFromProjects(projects));
 	}
 
 	/* (non-Javadoc)
@@ -809,10 +770,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public void setDynamicReferences(IProject[] projects) {
 		Assert.isLegal(projects != null);
-		String[] allVariants = getAllVariants(false);
-		for (int i = 0; i < allVariants.length; i++) {
-			setDynamicVariantReferences(allVariants[i], getProjectVariantsFromProjects(projects));
-		}
+		for (int i = 0; i < variants.length; i++)
+			setDynamicVariantReferences(variants[i], getProjectVariantsFromProjects(projects));
 	}
 
 	/**
@@ -851,7 +810,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			if (desc == null)
 				variantNames = new String[]{EMPTY_STR};
 			else
-				variantNames = desc.getAllVariants(false);
+				variantNames = desc.getVariants(false);
 			for (int j = 0; j < variantNames.length; j++) {
 				projectVariants.add(new ProjectVariant(projects[i], variantNames[j]));
 			}

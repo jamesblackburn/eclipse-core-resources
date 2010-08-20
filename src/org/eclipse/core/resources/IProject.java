@@ -943,26 +943,23 @@ public interface IProject extends IContainer, IAdaptable {
 	public void setDescription(IProjectDescription description, int updateFlags, IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Returns the specified project variant for this project or <code>null</code> if
-	 * the project variant does not exist in this project.
-	 *
-	 * @param variantName the name of the variant
-	 * @return the project variant object
+	 * Returns the project variant for this project with the specified identifier.
+	 * @param variant the identifier of the variant
+	 * @return a project variant object; or null if the project has no such variant
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
+	 * <li> The project does not contain the specified variant.</p>
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
 	 * </ul>
 	 */
-
-	public IProjectVariant getVariant(String variantName) throws CoreException;
+	public IProjectVariant getVariant(String variant) throws CoreException;
 
 	/**
-	 * Returns whether the project variant specified
-	 * exists in this project.
+	 * Checks whether the project has the a variant with the specified identifier.
 	 *
-	 * @param variantName the variant name
-	 * @return <code>true</code> if the project has the given variant
+	 * @param variantName the identifier of the variant
+	 * @return <code>true</code> if the project has the specified variant, false otherwise
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
 	 * <li> This project does not exist.</li>
@@ -973,8 +970,12 @@ public interface IProject extends IContainer, IAdaptable {
 
 	/**
 	 * Returns the active variant for the project.
-	 * This does not persist.
-	 *
+	 * <p>
+	 * If at any point the active variant is removed from the project, for example
+	 * when updating the projects description, the active variant will be set to
+	 * the first variant specified for the project. If all of the variants are removed,
+	 * it will be set to the default variant.
+	 * </p>
 	 * @return the active variant
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
@@ -986,10 +987,13 @@ public interface IProject extends IContainer, IAdaptable {
 
 	/**
 	 * Sets the active variant for the project.
-	 * This does not persist. If the given variant does not exist
-	 * in the project, the active variant is left unchanged.
+	 * This does not persist.
+	 * <p>
+	 * If the specified variant does not exist in the project, the active
+	 * variant is left unchanged.
+	 * </p>
 	 *
-	 * @param variant the variant to set as the active variant
+	 * @param variant the identifier of the variant to set as the active variant
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
 	 * <li> This project does not exist.</li>

@@ -18,8 +18,9 @@ import org.eclipse.core.runtime.*;
 
 /**
  * The concrete implementation of <tt>ICommand</tt>.  This object
- * stores information about a particular type of builder, including a reference
- * to the instance of the builder for each of a project variants if it has been instantiated.
+ * stores information about a particular type of builder, including references
+ * to the instances of the builder for each of a project variants
+ * (if they have been instantiated).
  */
 public class BuildCommand extends ModelObject implements ICommand {
 	/**
