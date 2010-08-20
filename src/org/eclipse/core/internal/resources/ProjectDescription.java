@@ -668,14 +668,12 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 				filtered.toArray(variants);
 			}
 
-			// Remove references for deleted variants, and clear the caches
-			// if any were removed
-			int size = staticRefs.size() + dynamicRefs.size();
-			staticRefs.values().retainAll(Arrays.asList(variants));
-			dynamicRefs.values().retainAll(Arrays.asList(variants));
-			if (size != staticRefs.size() + dynamicRefs.size()) {
+			// Remove references for deleted variants
+			boolean modified = false;
+			modified |= staticRefs.keySet().retainAll(Arrays.asList(variants));
+			modified |= dynamicRefs.keySet().retainAll(Arrays.asList(variants));
+			if (modified)
 				clearCachedReferences();
-			}
 		}
 	}
 
