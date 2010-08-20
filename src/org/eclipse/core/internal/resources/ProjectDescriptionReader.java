@@ -888,6 +888,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				// so leave the project with the default variant if none
 				// are specified in the project description file
 				return;
+			// Add to existing variants, so that none are removed
 			String[] variantNames = (String[]) variants.toArray(new String[variants.size()]);
 			projectDescription.setVariants(variantNames);
 		}
@@ -909,9 +910,17 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				Entry entry = (Entry) i.next();
 				String variant = (String) entry.getKey();
 				IProjectVariant[] projectVariants = (IProjectVariant[]) entry.getValue();
+
+				// Ensure the variants exist, otherwise adding the references would fail
+				String[] existing = projectDescription.getVariants(false);
+				String[] variantNames = new String[existing.length + 1];
+				System.arraycopy(existing, 0, variantNames, 0, existing.length);
+				variantNames[variantNames.length - 1] = variant;
+				projectDescription.setVariants(variantNames);
+
 				projectDescription.setReferencedProjectVariants(variant, projectVariants);
 			}
-			loadedProjectVariantReferences = false;
+			loadedProjectVariantReferences = true;
 		}
 	}
 
@@ -949,11 +958,11 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			// Pop off the reference
 			ProjectVariant reference = (ProjectVariant) objectStack.pop();
 			// Make sure that you have something reasonable
-			if (reference.getProject() != null && project != null) {
+			if (reference.getProject() == null) {
 				parseProblem(NLS.bind(Messages.projRead_missingReferenceProjectName, project.getName()));
 				return;
 			}
-			if (reference.getVariant() != null && project != null) {
+			if (reference.getVariant() == null) {
 				parseProblem(NLS.bind(Messages.projRead_missingReferenceVariantName, project.getName()));
 				return;
 			}
