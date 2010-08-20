@@ -1513,7 +1513,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			if (!project.isAccessible())
 				continue;
 			ProjectDescription desc = project.internalGetDescription();
-			String[] variants = desc.getAllVariants(false);
+			String[] variants = desc.getVariants(false);
 			for (int j = 0; j < variants.length; j++) {
 				IProjectVariant[] refs = desc.getReferencedProjectVariants(variants[j]);
 				List dangling = new ArrayList(refs.length);

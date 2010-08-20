@@ -33,6 +33,8 @@ public interface IProjectDescription {
 	 */
 	public static final String DESCRIPTION_FILE_NAME = ".project"; //$NON-NLS-1$
 
+	public static final String DEFAULT_VARIANT = ""; //$NON-NLS-1$
+
 	/**
 	 * Returns the list of build commands to run when building the described project.
 	 * The commands are listed in the order in which they are to be run.
@@ -350,7 +352,7 @@ public interface IProjectDescription {
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
-	 * </p>
+	 * 
 	 * @see #getDynamicVariantReferences(String)
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
 	 * @param variant the variant in the described project to add the references to
@@ -361,42 +363,39 @@ public interface IProjectDescription {
 	/**
 	 * Gets the variants for the described project.
 	 * <p>
-	 * The result will not contain duplicates. There is
-	 * always at least one variant.
-	 * <p>
-	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
-	 * before changes made to this description take effect.
-	 * </p>
-	 * @return a list of project variants unique names
+	 * The result will not contain duplicates. There is always at least one variant.
+	 * The default name for this one variant is {@link #DEFAULT_VARIANT}
+	 * 
+	 * @return a list of project variants
 	 * @see #setVariants(String[])
+	 * @see IProject#setActiveVariant(String)
+	 * @see IProject#getActiveVariant()
 	 */
 	public String[] getVariants();
 
 	/**
 	 * Sets the variants for the described project.
-	 * Must be at least one variant name.
-	 * If this removes the currently active variant, the active variant
-	 * is set to the first variant in the supplied list of variants.
+	 * <p>
+	 * Before they are set, duplicates and nulls are removed from the input.
+	 * <p>
+	 * If the input is null, an empty list or a list of nulls the current variants
+	 * are removed and a default variant is added. It is impossible to configure a
+	 * project to have no variants.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
-	 * </p>
-	 * @param variants unique names of the variants
+	 * 
+	 * @param variants identifiers for the variants
 	 * @see #getVariants()
+	 * @see IProject#setActiveVariant(String)
+	 * @see IProject#getActiveVariant()
 	 */
 	public void setVariants(String[] variants);
 
-	public String[] getDynamicVariants();
-
-	public void setDynamicVariants(String[] cfgIds);
-
-	public String[] getAllVariants();
-
 	/**
-	 * Check if the described project has the specified variant.
-	 * This checks both the static and dynamic variants.
-	 * @param variant the variant to check for
-	 * @return true if the described project has the variant
+	 * Checks if the described project has the specified variant.
+	 * @param variant the identifier of the variant to check for
+	 * @return true if the described project has the variant, false otherwise
 	 */
 	public boolean hasVariant(String variant);
 }

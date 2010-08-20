@@ -13,8 +13,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
-import org.eclipse.core.resources.IncrementalProjectBuilder;
-
 import java.util.*;
 import org.eclipse.core.internal.dtree.DeltaDataTree;
 import org.eclipse.core.internal.resources.*;
@@ -396,7 +394,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		ICommand[] commands = desc.getBuildSpec(false);
 		if (commands.length == 0)
 			return null;
-		String[] variants = desc.getAllVariants(false);
+		String[] variants = desc.getVariants(false);
 		if (variants.length == 0)
 			return null;
 
@@ -994,7 +992,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	private String toString(InternalBuilder builder) {
 		String name = builder.getClass().getName();
 		name = name.substring(name.lastIndexOf('.') + 1);
-		return name + "(" + builder.getProject().getName() + ", " + builder.getVariant() + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		return name + "(" + builder.getProjectVariant() + ")"; //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	/**

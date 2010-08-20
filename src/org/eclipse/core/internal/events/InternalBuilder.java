@@ -99,7 +99,7 @@ public abstract class InternalBuilder {
 	protected IResourceDelta getDelta(IProject aProject) {
 		return buildManager.getDelta(aProject);
 	}
-	
+
 	/*
 	 * @see IncrementalProjectBuilder#forgetLastBuiltState
 	 */
@@ -211,7 +211,7 @@ public abstract class InternalBuilder {
 	final void setPluginId(String value) {
 		pluginId = value;
 	}
-	
+
 	/**
 	 * Sets the project variant for which this builder operates.
 	 * @see #getProjectVariant()
