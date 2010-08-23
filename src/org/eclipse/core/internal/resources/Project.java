@@ -43,8 +43,6 @@ public class Project extends Container implements IProject {
 	 */
 	public static final int SNAPSHOT_SET_AUTOLOAD = 2;
 
-	protected String activeVariant = null;
-
 	protected Project(IPath path, Workspace container) {
 		super(path, container);
 	}
@@ -85,6 +83,7 @@ public class Project extends Container implements IProject {
 		current.setBuildSpec(description.getBuildSpec(true));
 
 		current.setVariants(description.getVariants());
+		current.setActiveVariant(description.getActiveVariant());
 
 		// set the references before the natures 
 		boolean flushOrder = false;
@@ -1419,13 +1418,10 @@ public class Project extends Container implements IProject {
 	 * @see IProject#getActiveVariant()
 	 */
 	public IProjectVariant getActiveVariant() throws CoreException {
-		if (!hasVariant(activeVariant)) {
-			ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
-			checkAccessible(getFlags(info));
-			ProjectDescription desc = internalGetDescription();
-			activeVariant = desc.getVariants(false)[0];
-		}
-		return new ProjectVariant(this, activeVariant);
+		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
+		checkAccessible(getFlags(info));
+		ProjectDescription desc = internalGetDescription();
+		return new ProjectVariant(this, desc.getActiveVariant());
 	}
 
 	/**
@@ -1434,18 +1430,9 @@ public class Project extends Container implements IProject {
 	 */
 	public IProjectVariant internalGetActiveVariant() {
 		ProjectDescription desc = internalGetDescription();
+		String activeVariant = desc.getActiveVariant();
 		if (!desc.hasVariant(activeVariant))
 			activeVariant = desc.getVariants(false)[0];
 		return new ProjectVariant(this, activeVariant);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see IProject#setActiveVariant()
-	 */
-	public void setActiveVariant(String variant) throws CoreException {
-		if (hasVariant(variant)) {
-			activeVariant = variant;
-		}
 	}
 }

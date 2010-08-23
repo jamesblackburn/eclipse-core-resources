@@ -13,6 +13,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import org.eclipse.core.resources.IProjectVariant;
+
 import java.net.URI;
 import java.util.*;
 import org.eclipse.core.filesystem.URIUtil;
@@ -81,6 +83,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
 	protected String[] variants = new String[]{DEFAULT_VARIANT};
+	protected String activeVariant = null;
 	protected HashMap/*<String, IProjectVariant[]>*/ staticRefs = new HashMap();
 	protected HashMap/*<String, IProjectVariant[]>*/ dynamicRefs = new HashMap();
 	protected URI snapshotLocation= null;
@@ -244,6 +247,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * file (.project).
 	 */
 	public boolean hasPrivateChanges(ProjectDescription description) {
+		if (!getActiveVariant().equals(description.getActiveVariant()))
+			return true;
 		if (!dynamicRefs.equals(description.dynamicRefs))
 			return true;
 //		if (!dynamicVariants.equals(description.dynamicVariants))
@@ -688,6 +693,27 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 				return true;
 		}
 		return false;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProjectDescription#getActiveVariant()
+	 */
+	public String getActiveVariant() {
+		if (!hasVariant(activeVariant)) {
+			activeVariant = getVariants(false)[0];
+		}
+		return activeVariant;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProjectDescription#setActiveVariant(String)
+	 */
+	public void setActiveVariant(String variant) {
+		if (hasVariant(variant)) {
+			activeVariant = variant;
+		}
 	}
 
 	/**

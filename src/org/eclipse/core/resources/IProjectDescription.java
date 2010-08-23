@@ -378,8 +378,8 @@ public interface IProjectDescription {
 	 * 
 	 * @return a list of project variants
 	 * @see #setVariants(String[])
-	 * @see IProject#setActiveVariant(String)
-	 * @see IProject#getActiveVariant()
+	 * @see IProjectDescription#setActiveVariant(String)
+	 * @see IProjectDescription#getActiveVariant()
 	 */
 	public String[] getVariants();
 
@@ -397,8 +397,8 @@ public interface IProjectDescription {
 	 * 
 	 * @param variants identifiers for the variants
 	 * @see #getVariants()
-	 * @see IProject#setActiveVariant(String)
-	 * @see IProject#getActiveVariant()
+	 * @see IProjectDescription#setActiveVariant(String)
+	 * @see IProjectDescription#getActiveVariant()
 	 */
 	public void setVariants(String[] variants);
 
@@ -408,4 +408,28 @@ public interface IProjectDescription {
 	 * @return true if the described project has the variant, false otherwise
 	 */
 	public boolean hasVariant(String variant);
+
+	/**
+	 * Returns the active variant for the described project.
+	 * <p>
+	 * If at any point the active variant is removed from the project, for example
+	 * when updating the projects description, the active variant will be set to
+	 * the first variant specified for the project. If all of the variants are removed,
+	 * it will be set to the default variant.
+	 * </p>
+	 * @return the active variant
+	 */
+	public String getActiveVariant();
+
+	/**
+	 * Sets the active variant for the described project.
+	 * This does not persist.
+	 * <p>
+	 * If the specified variant does not exist in the project, the active
+	 * variant is left unchanged.
+	 * </p>
+	 *
+	 * @param variant the identifier of the variant to set as the active variant
+	 */
+	public void setActiveVariant(String variant);
 }
