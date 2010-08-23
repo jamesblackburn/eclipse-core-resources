@@ -247,12 +247,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * file (.project).
 	 */
 	public boolean hasPrivateChanges(ProjectDescription description) {
-		if (!getActiveVariant().equals(description.getActiveVariant()))
-			return true;
 		if (!dynamicRefs.equals(description.dynamicRefs))
 			return true;
-//		if (!dynamicVariants.equals(description.dynamicVariants))
-//			return true;
 		IPath otherLocation = description.getLocation();
 		if (location == null)
 			return otherLocation != null;
