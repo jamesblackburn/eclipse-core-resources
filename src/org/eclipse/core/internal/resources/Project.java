@@ -1200,6 +1200,8 @@ public class Project extends Container implements IProject {
 				//if nothing has changed, we don't need to do anything
 				ProjectDescription oldDescription = internalGetDescription();
 				ProjectDescription newDescription = (ProjectDescription) description;
+				// Silently update the active variant
+				internalGetDescription().setActiveVariant(newDescription.getActiveVariant());
 				boolean hasPublicChanges = oldDescription.hasPublicChanges(newDescription);
 				boolean hasPrivateChanges = oldDescription.hasPrivateChanges(newDescription);
 				if (!hasPublicChanges && !hasPrivateChanges)
