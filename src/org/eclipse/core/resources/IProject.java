@@ -984,21 +984,4 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 */
 	public IProjectVariant getActiveVariant() throws CoreException;
-
-	/**
-	 * Sets the active variant for the project.
-	 * This does not persist.
-	 * <p>
-	 * If the specified variant does not exist in the project, the active
-	 * variant is left unchanged.
-	 * </p>
-	 *
-	 * @param variant the identifier of the variant to set as the active variant
-	 * @exception CoreException if this method fails. Reasons include:
-	 * <ul>
-	 * <li> This project does not exist.</li>
-	 * <li> This project is not open.</li>
-	 * </ul>
-	 */
-	public void setActiveVariant(String variant) throws CoreException;
 }
