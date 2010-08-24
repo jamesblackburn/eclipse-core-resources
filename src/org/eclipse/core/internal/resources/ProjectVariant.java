@@ -18,6 +18,19 @@ public class ProjectVariant implements IProjectVariant {
 	/** if null, the variant is the projects active variant */
 	private String variant;
 
+	/**
+	 * Create a project variant that represents a reference
+	 * to a projects active variant.
+	 */
+	public ProjectVariant(IProject project) {
+		this.project = project;
+		this.variant = null;
+	}
+
+	/**
+	 * Create a project variant that represents a reference
+	 * to a specific variant of a project.
+	 */
 	public ProjectVariant(IProject project, String variant) {
 		Assert.isLegal(project != null);
 		this.project = project;
@@ -30,10 +43,12 @@ public class ProjectVariant implements IProjectVariant {
 	}
 
 	void setProject(IProject project) {
+		Assert.isLegal(project != null);
 		this.project = project;
 	}
 
 	void setVariant(String variant) {
+		Assert.isLegal(variant != null);
 		this.variant = variant;
 	}
 
