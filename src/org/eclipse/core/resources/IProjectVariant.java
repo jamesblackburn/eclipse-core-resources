@@ -24,7 +24,15 @@ public interface IProjectVariant {
 	public IProject getProject();
 
 	/**
-	 * @return the name of the variant within the project
+	 * @return the name of the variant within the project. Returns
+	 * null if this project variant refers to the active variant of a project.
+	 * @see #isActiveVariant()
 	 */
 	public String getVariant();
+
+	/**
+	 * @return true if this project variant refers to the active
+	 *         variant of a project.
+	 */
+	public boolean isActiveVariant();
 }

@@ -408,8 +408,4 @@ public final class ResourcesPlugin extends Plugin {
 			getLog().log(result);
 		workspaceRegistration = context.registerService(IWorkspace.SERVICE_NAME, workspace, null);
 	}
-
-	public static IProjectVariant getProjectVariant(IProject refProject, String value) {
-		return new ProjectVariant(refProject, value);
-	}
 }

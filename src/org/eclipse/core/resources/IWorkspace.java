@@ -1867,4 +1867,12 @@ public interface IWorkspace extends IAdaptable {
 	 * @since 2.1
 	 */
 	public IPathVariableManager getPathVariableManager();
+
+	/**
+	 * Returns the project variant manager for this workspace.
+	 * 
+	 * @return the project variant manager
+	 * @see IProjectVariantManager
+	 */
+	public IProjectVariantManager getProjectVariantManager();
 }
