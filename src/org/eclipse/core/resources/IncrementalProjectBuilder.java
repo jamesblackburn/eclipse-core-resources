@@ -177,9 +177,22 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * previously built states. Typically this means that the next time the
 	 * builder runs, it will have to do a full build since it does not have any
 	 * state upon which to base an incremental build.
+	 * This supersedes a call to rememberLastBuiltState.
 	 */
 	public final void forgetLastBuiltState() {
 		super.forgetLastBuiltState();
+	}
+
+	/**
+	 * Requests that this builder remember any state it may be retaining regarding
+	 * previously built states. This means that the next time the builder runs,
+	 * it will receive the same delta. This can be used to indicate that a builder
+	 * didn't run, even though there are changes, and it wants the delta to be preserved
+	 * until the next time it is called.
+	 * A call to forgetLastBuiltState supersedes this.
+	 */
+	public final void rememberLastBuiltState() {
+		super.rememberLastBuiltState();
 	}
 
 	/**

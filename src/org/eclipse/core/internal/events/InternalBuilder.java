@@ -30,6 +30,7 @@ public abstract class InternalBuilder {
 	static BuildManager buildManager;
 	private ICommand command;
 	private boolean forgetStateRequested = false;
+	private boolean rememberStateRequested = false;
 	private IProject[] interestingProjects = ICoreConstants.EMPTY_PROJECT_ARRAY;
 	/**
 	 * Human readable builder name for progress reporting.
@@ -72,10 +73,11 @@ public abstract class InternalBuilder {
 	protected abstract void clean(IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Clears the request to forget last built states.
+	 * Clears the requests for forgetting or remembering last built states.
 	 */
-	final void clearForgetLastBuiltState() {
+	final void clearLastBuiltStateRequests() {
 		forgetStateRequested = false;
+		rememberStateRequested = false;
 	}
 
 	/*
@@ -84,6 +86,14 @@ public abstract class InternalBuilder {
 	protected void forgetLastBuiltState() {
 		oldState = null;
 		forgetStateRequested = true;
+		rememberStateRequested = false;
+	}
+
+	/*
+	 * @see IncrementalProjectBuilder#rememberLastBuiltState
+	 */
+	protected void rememberLastBuiltState() {
+		rememberStateRequested = !forgetStateRequested;
 	}
 
 	/*
@@ -243,5 +253,13 @@ public abstract class InternalBuilder {
 	 */
 	final boolean wasForgetStateRequested() {
 		return forgetStateRequested;
+	}
+
+	/**
+	 * Returns true if the builder requested that its last built state be
+	 * remembered, and false otherwise.
+	 */
+	final boolean wasRememberStateRequested() {
+		return rememberStateRequested;
 	}
 }

@@ -134,7 +134,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		try {
 			currentBuilder = builder;
 			//clear any old requests to forget built state
-			currentBuilder.clearForgetLastBuiltState();
+			currentBuilder.clearLastBuiltStateRequests();
 			// Figure out want kind of build is needed
 			boolean clean = trigger == IncrementalProjectBuilder.CLEAN_BUILD;
 			currentLastBuiltTree = currentBuilder.getLastBuiltTree();
@@ -181,6 +181,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				// Be sure to clean up after ourselves.
 				if (clean || currentBuilder.wasForgetStateRequested()) {
 					currentBuilder.setLastBuiltTree(null);
+				} else if (currentBuilder.wasRememberStateRequested()) {
+					// Don't modify the last built tree
 				} else {
 					// remember the current state as the last built state.
 					ElementTree lastTree = workspace.getElementTree();
