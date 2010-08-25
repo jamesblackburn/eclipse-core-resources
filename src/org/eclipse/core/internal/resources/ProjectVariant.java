@@ -67,6 +67,13 @@ public class ProjectVariant implements IProjectVariant {
 	}
 
 	/* (non-Javadoc)
+	 * @see IProjectVariant#isActiveVariant()
+	 */
+	public boolean isActiveVariant() {
+		return variant == null;
+	}
+
+	/* (non-Javadoc)
 	 * @see Object#hashCode()
 	 */
 	public int hashCode() {
@@ -114,7 +121,7 @@ public class ProjectVariant implements IProjectVariant {
 		if (project != null)
 			result.append(project.getName());
 		else
-			result.append("?"); //$NON-NLS-1$
+			result.append("<active>"); //$NON-NLS-1$
 		result.append(";"); //$NON-NLS-1$
 		if (variant != null)
 			result.append(variant);

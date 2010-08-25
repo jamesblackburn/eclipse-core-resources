@@ -1372,8 +1372,9 @@ public class Project extends Container implements IProject {
 			String[] variants = description.getVariants(false);
 			for (int j = 0; j < variants.length; j++) {
 				IProjectVariant[] references = description.getAllVariantReferences(variants[j], false);
-				for (int k = 0; k < references.length; k++) {
-					if (references[k].getProject().equals(this) && references[k].getVariant().equals(variant)) {
+				IProjectVariant[] translatedReferences = ResourcesPlugin.getWorkspace().getProjectVariantManager().translateActiveVariants(references);
+				for (int k = 0; k < translatedReferences.length; k++) {
+					if (translatedReferences[k].getProject().equals(this) && translatedReferences[k].getVariant().equals(variant)) {
 						result.add(project.internalGetVariant(variants[j]));
 						break;
 					}

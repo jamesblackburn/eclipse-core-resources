@@ -89,6 +89,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	protected IProjectVariant[] buildOrder = null;
 	protected CharsetManager charsetManager;
 	protected ContentDescriptionManager contentDescriptionManager;
+	protected ProjectVariantManager projectVariantManager;
 	/** indicates if the workspace crashed in a previous session */
 	protected boolean crashed = false;
 	protected final IWorkspaceRoot defaultRoot = new WorkspaceRoot(Path.ROOT, this);
@@ -372,6 +373,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		if (variants.length == 0)
 			return;
 
+		variants = projectVariantManager.translateActiveVariants(variants);
+
 		Set variantSet = new HashSet(variants.length);
 		variantSet.addAll(Arrays.asList(variants));
 
@@ -384,7 +387,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			size = refs.size();
 			for (Iterator it = refs.iterator(); it.hasNext();) {
 				IProjectVariant variant = (IProjectVariant) it.next();
-				buffer.addAll(Arrays.asList(variant.getProject().getReferencedProjectVariants(variant.getVariant())));
+				IProjectVariant[] refVariants = variant.getProject().getReferencedProjectVariants(variant.getVariant());
+				buffer.addAll(Arrays.asList(projectVariantManager.translateActiveVariants(refVariants)));
 			}
 			refs.addAll(buffer);
 			buffer.clear();
@@ -665,7 +669,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					// (it is guaranteed to be accessible as it was pushed onto the stack)
 					Project subProject = (Project) projectVariant.getProject();
 					ProjectDescription subDesc = subProject.internalGetDescription();
-					IProjectVariant[] refs = subDesc.getAllVariantReferences(projectVariant.getVariant(), false);
+					IProjectVariant[] refs = projectVariantManager.translateActiveVariants(subDesc.getAllVariantReferences(projectVariant.getVariant(), false));
 					for (int j = 0; j < refs.length; j++) {
 						IProjectVariant ref = refs[j];
 
@@ -1400,6 +1404,13 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 */
 	public BuildManager getBuildManager() {
 		return buildManager;
+	}
+
+	/**
+	 * Returns this workspace's project variant manager
+	 */
+	public IProjectVariantManager getProjectVariantManager() {
+		return projectVariantManager;
 	}
 
 	/**
@@ -2293,7 +2304,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	protected void shutdown(IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		try {
-			IManager[] managers = {buildManager, propertyManager, pathVariableManager, charsetManager, fileSystemManager, markerManager, _workManager, aliasManager, refreshManager, contentDescriptionManager, natureManager, filterManager};
+			IManager[] managers = {buildManager, propertyManager, pathVariableManager, charsetManager, fileSystemManager, markerManager, _workManager, aliasManager, refreshManager, contentDescriptionManager, natureManager, filterManager, projectVariantManager};
 			monitor.beginTask("", managers.length); //$NON-NLS-1$
 			String message = Messages.resources_shutdownProblems;
 			MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, message, null);
@@ -2324,6 +2335,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			refreshManager = null;
 			charsetManager = null;
 			contentDescriptionManager = null;
+			projectVariantManager = null;
 			if (!status.isOK())
 				throw new CoreException(status);
 		} finally {
@@ -2374,6 +2386,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			charsetManager.startup(null);
 			contentDescriptionManager = new ContentDescriptionManager();
 			contentDescriptionManager.startup(null);
+			projectVariantManager = new ProjectVariantManager();
+			projectVariantManager.startup(null);
 		} finally {	
 			//unlock tree even in case of failure, otherwise shutdown will also fail
 			treeLocked = null;	
