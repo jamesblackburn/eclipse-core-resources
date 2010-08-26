@@ -11,6 +11,7 @@
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group and Project Path Variable Support
  * Francis Lynch (Wind River) - [301563] Save and load tree snapshots
  * Martin Oberhuber (Wind River) - [306575] Save snapshot location with project
+ * Alex Collins (Broadcom) - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.utils;
 

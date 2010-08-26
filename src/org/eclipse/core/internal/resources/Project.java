@@ -11,6 +11,7 @@
  *     Anton Leherbauer (Wind River) - [198591] Allow Builder to specify scheduling rule
  *     Francis Lynch (Wind River) - [301563] Save and load tree snapshots
  *     Markus Schorn (Wind River) - [306575] Save snapshot location with project
+ *     Alex Collins (Broadcom) - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -42,7 +43,7 @@ public class Project extends Container implements IProject {
 	 * @since 3.6
 	 */
 	public static final int SNAPSHOT_SET_AUTOLOAD = 2;
-
+	
 	protected Project(IPath path, Workspace container) {
 		super(path, container);
 	}

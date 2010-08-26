@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- * Alex Collins (Broadcom Corp.) - initial implementation
+ * Alex Collins (Broadcom) - initial API and implementation
  *******************************************************************************/
 package org.eclipse.core.resources;
 

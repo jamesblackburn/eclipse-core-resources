@@ -10,10 +10,9 @@
  *     Martin Oberhuber (Wind River) - [245937] setLinkLocation() detects non-change
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
+ * Alex Collins (Broadcom) - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
-
-import org.eclipse.core.resources.IProjectVariant;
 
 import java.net.URI;
 import java.util.*;

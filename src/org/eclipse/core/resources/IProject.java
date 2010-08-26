@@ -7,7 +7,8 @@
  * 
  *  Contributors:
  *     IBM Corporation - initial API and implementation
- * Francis Lynch (Wind River) - [301563] Save and load tree snapshots
+ *     Francis Lynch (Wind River) - [301563] Save and load tree snapshots
+ *     Alex Collins (Broadcom) - project variants and references
  *******************************************************************************/
 package org.eclipse.core.resources;
 

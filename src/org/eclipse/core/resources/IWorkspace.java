@@ -8,6 +8,7 @@
  *  Contributors:
  *     IBM Corporation - initial API and implementation
  *     Red Hat Incorporated - loadProjectDescription(InputStream)
+ *     Alex Collins (Broadcom) - project variants and references
  *******************************************************************************/
 package org.eclipse.core.resources;
 
@@ -508,7 +509,7 @@ public interface IWorkspace extends IAdaptable {
 	 * the outcome: creating, renaming, or deleting a project; opening or
 	 * closing a project; adding or removing a project reference.
 	 * </p>
-	 *
+	 * 
 	 * @param projects the projects to order
 	 * @return result describing the project order
 	 * @since 2.1
