@@ -8,6 +8,7 @@
  * Contributors:
  *     IBM - Initial API and implementation
  * Francis Lynch (Wind River) - [305718] Allow reading snapshot into renamed project
+ * Alex Collins (Broadcom) - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 

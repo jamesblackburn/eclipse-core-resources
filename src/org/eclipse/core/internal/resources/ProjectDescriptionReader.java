@@ -9,7 +9,7 @@
  *     IBM Corporation - initial API and implementation
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
- * Alex Collins (Broadcom Corp.) - project variants
+ * Alex Collins (Broadcom) - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -53,9 +53,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	protected static final int S_PROJECT_COMMENT = 17;
 	protected static final int S_PROJECT_DESC = 18;
 	protected static final int S_PROJECT_NAME = 19;
-	/** @deprecated */
 	protected static final int S_PROJECTS = 20;
-	/** @deprecated */
 	protected static final int S_REFERENCED_PROJECT_NAME = 21;
 	
 	protected static final int S_FILTERED_RESOURCES = 23;

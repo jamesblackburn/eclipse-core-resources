@@ -10,6 +10,7 @@
  *     Serge Beauchamp (Freescale Semiconductor) - [252996] add resource filtering
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group and Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
+ * Alex Collins (Broadcom) - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -47,7 +48,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		super();
 	}
 
-	/** @deprecated */
 	protected String[] getReferencedProjects(ProjectDescription description) {
 		IProject[] projects = description.getReferencedProjects();
 		String[] result = new String[projects.length];
