@@ -239,40 +239,7 @@ public interface IWorkspace extends IAdaptable {
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Build the given project's active variant along with its references.
-	 * This is equivalent to calling {@link #build(IProject[], int, IProgressMonitor)} with
-	 * an array containing a single project.
-	 * 
-	 * @see #build(IProject[], int, IProgressMonitor)
-	 * @see #build(IProjectVariant, int, IProgressMonitor)
-	 * @see #build(IProjectVariant[], int, IProgressMonitor)
-	 */
-	public void build(IProject project, int kind, IProgressMonitor monitor) throws CoreException;
-
-	/**
-	 * Builds each projects' active variant in the given list along with their references.
-	 * This is equivalent to calling {@link #build(IProjectVariant[], int, IProgressMonitor)} with
-	 * all the project's active variants.
-	 * 
-	 * @see #build(IProject, int, IProgressMonitor)
-	 * @see #build(IProjectVariant, int, IProgressMonitor)
-	 * @see #build(IProjectVariant[], int, IProgressMonitor)
-	 */
-	public void build(IProject[] projects, int kind, IProgressMonitor monitor) throws CoreException;
-
-	/**
-	 * Build the given project variant along with its references.
-	 * This is equivalent to calling {@link #build(IProjectVariant[], int, IProgressMonitor)} with
-	 * an array containing a single project variant.
-	 * 
-	 * @see #build(IProject, int, IProgressMonitor)
-	 * @see #build(IProject[], int, IProgressMonitor)
-	 * @see #build(IProjectVariant[], int, IProgressMonitor)
-	 */
-	public void build(IProjectVariant projectVariant, int kind, IProgressMonitor monitor) throws CoreException;
-
-	/**
-	 * Builds all project variants in the given list along with their references.
+	 * Build all project variants in the given list along with their references.
 	 * The project variants are built in the order specified in the list.
 	 * Any referenced project variants that do not appear in the list are built before any
 	 * of the variants in the list, in an order specified in the workspace description.
@@ -301,11 +268,8 @@ public interface IWorkspace extends IAdaptable {
 	 *		code, but it could also be any other status code; it might
 	 *		also be a {@link MultiStatus}.
 	 * @exception OperationCanceledException if the operation is canceled. 
-	 * Cancelation can occur even if no progress monitor is provided.
+	 * Cancellation can occur even if no progress monitor is provided.
 	 * 
-	 * @see #build(IProject, int, IProgressMonitor)
-	 * @see #build(IProject[], int, IProgressMonitor)
-	 * @see #build(IProjectVariant, int, IProgressMonitor)
 	 * @see IProject#build(int, IProgressMonitor)
 	 * @see #computeProjectVariantOrder(IProjectVariant[])
 	 * @see IncrementalProjectBuilder#FULL_BUILD
@@ -313,7 +277,7 @@ public interface IWorkspace extends IAdaptable {
 	 * @see IncrementalProjectBuilder#CLEAN_BUILD
 	 * @see IResourceRuleFactory#buildRule()
 	 */
-	public void build(IProjectVariant projectsVariants[], int kind, IProgressMonitor monitor) throws CoreException;
+	public void build(IProjectVariant projectVariants[], int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
 	 * Checkpoints the operation currently in progress. This method is used in

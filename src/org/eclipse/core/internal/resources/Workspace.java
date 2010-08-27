@@ -339,34 +339,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 
 	/*
 	 * (non-Javadoc)
-	 * @see IWorkspace#build(IProject, int, IProgressMonitor)
-	 */
-	public void build(IProject project, int trigger, IProgressMonitor monitor) throws CoreException {
-		build(new IProject[]{project}, trigger, monitor);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see IWorkspace#build(IProject[], int, IProgressMonitor)
-	 */
-	public void build(IProject[] projects, int trigger, IProgressMonitor monitor) throws CoreException {
-		IProjectVariant[] variants = new IProjectVariant[projects.length];
-		for (int i = 0; i < projects.length; i++) {
-			variants[i] = projects[i].getActiveVariant();
-		}
-		build(variants, trigger, monitor);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see IWorkspace#build(IProjectVariant, int, IProgressMonitor)
-	 */
-	public void build(IProjectVariant variant, int trigger, IProgressMonitor monitor) throws CoreException {
-		build(new IProjectVariant[]{variant}, trigger, monitor);
-	}
-
-	/*
-	 * (non-Javadoc)
 	 * @see IWorkspace#build(IProjectVariant[], int, IProgressMonitor)
 	 */
 	public void build(IProjectVariant[] variants, int trigger, IProgressMonitor monitor) throws CoreException {
