@@ -1749,6 +1749,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 * int - number of builders
 	 * for each builder:
 	 *    UTF - project name
+	 *    UTF - project variant name
 	 *    UTF - fully qualified builder extension name
 	 *    int - number of interesting projects for builder
 	 *    For each interesting project:
