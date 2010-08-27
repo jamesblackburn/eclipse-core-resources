@@ -83,23 +83,23 @@ public class Project extends Container implements IProject {
 		// set the build order before setting the references or the natures
 		current.setBuildSpec(description.getBuildSpec(true));
 
-		current.setVariants(description.getVariants());
-		current.setActiveVariant(description.getActiveVariant());
+		current.setVariants(description.internalGetVariants(true));
+		current.setActiveVariant(description.internalGetActiveVariant().getVariantName());
 
 		// set the references before the natures 
 		boolean flushOrder = false;
-		String[] variants = description.getVariants(false);
+		IProjectVariant[] variants = description.internalGetVariants(false);
 		for (int i = 0; i < variants.length; i++) {
-			IProjectVariant[] oldReferences = current.getReferencedProjectVariants(variants[i]);
-			IProjectVariant[] newReferences = description.getReferencedProjectVariants(variants[i]);
+			IProjectVariantReference[] oldReferences = current.getReferencedProjectVariants(variants[i].getVariantName());
+			IProjectVariantReference[] newReferences = description.getReferencedProjectVariants(variants[i].getVariantName());
 			if (!Arrays.equals(oldReferences, newReferences)) {
-				current.setReferencedProjectVariants(variants[i], newReferences);
+				current.setReferencedProjectVariants(variants[i].getVariantName(), newReferences);
 				flushOrder = true;
 			}
-			oldReferences = current.getDynamicVariantReferences(variants[i]);
-			newReferences = description.getDynamicVariantReferences(variants[i]);
+			oldReferences = current.getDynamicVariantReferences(variants[i].getVariantName());
+			newReferences = description.getDynamicVariantReferences(variants[i].getVariantName());
 			if (!Arrays.equals(oldReferences, newReferences)) {
-				current.setDynamicVariantReferences(variants[i], newReferences);
+				current.setDynamicVariantReferences(variants[i].getVariantName(), newReferences);
 				flushOrder = true;
 			}
 		}
@@ -543,6 +543,7 @@ public class Project extends Container implements IProject {
 					} finally {
 						workspace.endOperation(rule, false, innerMonitor);
 					}
+					//TODO: Set build context and current variant before getRule
 					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(getActiveVariant(), trigger, builderName, args);
 					try {
 						IStatus result;
@@ -1195,7 +1196,7 @@ public class Project extends Container implements IProject {
 				ProjectDescription oldDescription = internalGetDescription();
 				ProjectDescription newDescription = (ProjectDescription) description;
 				// Silently update the active variant
-				internalGetDescription().setActiveVariant(newDescription.getActiveVariant());
+				internalGetDescription().setActiveVariant(newDescription.internalGetActiveVariant().getVariantName());
 				boolean hasPublicChanges = oldDescription.hasPublicChanges(newDescription);
 				boolean hasPrivateChanges = oldDescription.hasPrivateChanges(newDescription);
 				if (!hasPublicChanges && !hasPrivateChanges)
@@ -1338,22 +1339,38 @@ public class Project extends Container implements IProject {
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#getReferencedProjectVariants(String)
+	 * @see IProject#getReferencedProjectVariants(IProjectVariant)
 	 */
-	public IProjectVariant[] getReferencedProjectVariants(String variant) throws CoreException {
+	public IProjectVariant[] getReferencedProjectVariants(IProjectVariant variant) throws CoreException {
 		ResourceInfo info = getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		ProjectDescription description = ((ProjectInfo) info).getDescription();
 		//if the project is currently in the middle of being created, the description might not be available yet
 		if (description == null)
 			checkAccessible(NULL_FLAG);
-		return description.getAllVariantReferences(variant, true);
+		if (!hasVariant(variant))
+			throw new ResourceException(IResourceStatus.PROJECT_VARIANT_NOT_FOUND, getFullPath(), null, null);
+		return internalGetReferencedProjectVariants(variant);
+	}
+
+	public IProjectVariant[] internalGetReferencedProjectVariants(IProjectVariant variant) {
+		ProjectDescription description = internalGetDescription();
+		IProjectVariantReference[] refs = description.getAllVariantReferences(variant.getVariantName(), true);
+		ArrayList variants = new ArrayList(refs.length);
+		for (int i = 0; i < refs.length; i++) {
+			try {
+				variants.add(refs[i].getVariant());
+			} catch (CoreException e) {
+				// Ignore non-existant variant reference
+			}
+		}
+		return (IProjectVariant[]) variants.toArray(new IProjectVariant[variants.size()]);
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#getReferencingProjectVariants(String)
+	 * @see IProject#getReferencingProjectVariants(IProjectVariant)
 	 */
-	public IProjectVariant[] getReferencingProjectVariants(String variant) {
+	public IProjectVariant[] getReferencingProjectVariants(IProjectVariant variant) {
 		IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
 		List result = new ArrayList(projects.length);
 		for (int i = 0; i < projects.length; i++) {
@@ -1363,14 +1380,17 @@ public class Project extends Container implements IProject {
 			ProjectDescription description = project.internalGetDescription();
 			if (description == null)
 				continue;
-			String[] variants = description.getVariants(false);
+			IProjectVariant[] variants = project.internalGetVariants();
 			for (int j = 0; j < variants.length; j++) {
-				IProjectVariant[] references = description.getAllVariantReferences(variants[j], false);
-				IProjectVariant[] translatedReferences = ResourcesPlugin.getWorkspace().getProjectVariantManager().translateActiveVariants(references);
-				for (int k = 0; k < translatedReferences.length; k++) {
-					if (translatedReferences[k].getProject().equals(this) && translatedReferences[k].getVariant().equals(variant)) {
-						result.add(project.internalGetVariant(variants[j]));
-						break;
+				IProjectVariantReference[] refs = description.getAllVariantReferences(variants[j].getVariantName(), false);
+				for (int k = 0; k < refs.length; k++) {
+					try {
+						if (refs[k].getVariant().equals(variant)) {
+							result.add(variants[j]);
+							break;
+						}
+					} catch (CoreException e) {
+						// Ignore active variants to projects that aren't accessible
 					}
 				}
 			}
@@ -1378,43 +1398,53 @@ public class Project extends Container implements IProject {
 		return (IProjectVariant[]) result.toArray(new IProjectVariant[result.size()]);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see IProject#getVariant(java.lang.String)
+	/* (non-Javadoc)
+	 * @see IProject#getVariants()
 	 */
-	public IProjectVariant getVariant(String variantName) throws CoreException {
+	public IProjectVariant[] getVariants() throws CoreException {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
-		if (!hasVariant(variantName))
-			throw new CoreException(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, IStatus.ERROR,
-					"Project does not have variant", null)); //$NON-NLS-1$
-		return new ProjectVariant(this, variantName);
+		return internalGetVariants();
 	}
 
-	/**
-	 * This is an internal helper method. This implementation is different from the API
-	 * method {@link #getVariant(String)}. This one does not check the project accessibility.
-	 * @param variant the variant to get
-	 * @return the variant object for the named variant; or null if a variant with that name
-	 * does not exist
-	 */
-	public IProjectVariant internalGetVariant(String variant) {
+	public IProjectVariant[] internalGetVariants() {
 		ProjectDescription desc = internalGetDescription();
-		if (!desc.hasVariant(variant))
-			return null;
-		return new ProjectVariant(this, variant);
+		IProjectVariant[] variants = desc.internalGetVariants(true);
+		updateVariants(variants);
+		return variants;
+	}
+
+	/* (non-Javadoc)
+	 * @see IProject#getVariant(String)
+	 */
+	public IProjectVariant getVariant(String name) throws CoreException {
+		IProjectVariant[] variants = getVariants();
+		for (int i = 0; i < variants.length; i++) {
+			if (variants[i].getVariantName().equals(name)) {
+				return (IProjectVariant) variants[i].clone();
+			}
+		}
+		throw new ResourceException(IResourceStatus.PROJECT_VARIANT_NOT_FOUND, getFullPath(), null, null);
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see IProject#hasVariant(java.lang.String)
+	 * @see IProject#hasVariant(IProjectVariant)
 	 */
-	public boolean hasVariant(String variantName) throws CoreException {
-		checkAccessible(getFlags(getResourceInfo(false, false)));
-		IProjectDescription desc = internalGetDescription();
-		if (desc == null)
-			checkAccessible(NULL_FLAG);
-		return desc.hasVariant(variantName);
+	public boolean hasVariant(IProjectVariant variant) throws CoreException {
+		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
+		checkAccessible(getFlags(info));
+		return internalHasVariant(variant);
+	}
+
+	public boolean internalHasVariant(IProjectVariant variant) {
+		if (variant == null)
+			return false;
+		IProjectVariant[] variants = internalGetVariants();
+		for (int i = 0; i < variants.length; i++)
+			if (variants[i].equals(variant))
+				return true;
+		return false;
 	}
 
 	/*
@@ -1425,18 +1455,34 @@ public class Project extends Container implements IProject {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		ProjectDescription desc = internalGetDescription();
-		return new ProjectVariant(this, desc.getActiveVariant());
+		IProjectVariant variant = desc.internalGetActiveVariant();
+		updateVariant(variant);
+		return variant;
 	}
 
-	/**
-	 * This is an internal helper method. This implementation is different from the API
-	 * method {@link #getActiveVariant()}. This one does not check the project accessibility.
-	 */
 	public IProjectVariant internalGetActiveVariant() {
 		ProjectDescription desc = internalGetDescription();
-		String activeVariant = desc.getActiveVariant();
-		if (!desc.hasVariant(activeVariant))
-			activeVariant = desc.getVariants(false)[0];
-		return new ProjectVariant(this, activeVariant);
+		IProjectVariant variant = desc.internalGetActiveVariant();
+		updateVariant(variant);
+		return variant;
+	}
+
+	private void updateVariant(IProjectVariant value) {
+		ProjectVariant variant = (ProjectVariant) value;
+		if (variant.internalGetProject() == null)
+			variant.setProject(this);
+	}
+
+	private void updateVariants(IProjectVariant[] variants) {
+		for (int i = 0; i < variants.length; i++)
+			updateVariant(variants[i]);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProject#newReference()
+	 */
+	public IProjectVariantReference newReference() {
+		return new ProjectVariantReference(this);
 	}
 }

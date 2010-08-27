@@ -154,13 +154,6 @@ public abstract class InternalBuilder {
 	}
 
 	/**
-	 * Returns the variant for this builder
-	 */
-	protected String getVariant() {
-		return projectVariant.getVariant();
-	}
-
-	/**
 	 * Returns the project variant for this builder
 	 */
 	protected IProjectVariant getProjectVariant() {
@@ -229,7 +222,7 @@ public abstract class InternalBuilder {
 	 */
 	final void setProjectVariant(IProjectVariant value) {
 		Assert.isTrue(projectVariant == null);
-		Assert.isNotNull(value.getVariant());
+		Assert.isNotNull(value);
 		projectVariant = value;
 		if (context == null)
 			context = new BuildContext(projectVariant);

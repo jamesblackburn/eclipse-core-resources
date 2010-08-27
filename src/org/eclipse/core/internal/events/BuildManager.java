@@ -402,7 +402,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		ICommand[] commands = desc.getBuildSpec(false);
 		if (commands.length == 0)
 			return null;
-		String[] variants = desc.getVariants(false);
+		IProjectVariant[] variants = project.getVariants();
 		if (variants.length == 0)
 			return null;
 
@@ -411,19 +411,19 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		for (int i = 0; i < commands.length; i++) {
 			String builderName = commands[i].getBuilderName();
 			for (int j = 0; j < variants.length; j++) {
-				String variant = variants[j];
+				IProjectVariant variant = variants[j];
 				BuilderPersistentInfo info = null;
 				IncrementalProjectBuilder builder = ((BuildCommand) commands[i]).getBuilder(variant);
 				if (builder == null) {
 					// if the builder was not instantiated, use the old info if any.
 					if (oldInfos != null)
-						info = getBuilderInfo(oldInfos, builderName, variant, i);
+						info = getBuilderInfo(oldInfos, builderName, variant.getVariantName(), i);
 				} else if (!(builder instanceof MissingBuilder)) {
 					ElementTree oldTree = ((InternalBuilder) builder).getLastBuiltTree();
 					//don't persist build state for builders that have no last built state
 					if (oldTree != null) {
 						// if the builder was instantiated, construct a memento with the important info
-						info = new BuilderPersistentInfo(project.getName(), variant, builderName, i);
+						info = new BuilderPersistentInfo(project.getName(), variant.getVariantName(), builderName, i);
 						info.setLastBuildTree(oldTree);
 						info.setInterestingProjects(((InternalBuilder) builder).getInterestingProjects());
 					}
@@ -492,10 +492,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * @param status MultiStatus for collecting errors
 	 */
 	private IncrementalProjectBuilder getBuilder(IProjectVariant projectVariant, ICommand command, int buildSpecIndex, MultiStatus status) throws CoreException {
-		InternalBuilder result = ((BuildCommand) command).getBuilder(projectVariant.getVariant());
+		InternalBuilder result = ((BuildCommand) command).getBuilder(projectVariant);
 		if (result == null) {
 			result = initializeBuilder(command.getBuilderName(), projectVariant, buildSpecIndex, status);
-			((BuildCommand) command).addBuilder(projectVariant.getVariant(), (IncrementalProjectBuilder) result);
+			((BuildCommand) command).addBuilder(projectVariant, (IncrementalProjectBuilder) result);
 			result.setCommand(command);
 			result.setProjectVariant(projectVariant);
 			result.startupOnInitialize();
@@ -584,7 +584,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	IResourceDelta getDelta(IProject project) {
 		if (!project.isAccessible())
 			return null;
-		return getDelta(((Project)project).internalGetActiveVariant());
+		return getDelta(((Project) project).internalGetActiveVariant());
 	}
 
 	IResourceDelta getDelta(IProjectVariant projectVariant) {
@@ -706,6 +706,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * Returns true if the active variant in the given project has been built during this build cycle, and
 	 * false otherwise.
 	 */
+	//TODO: Check all referenced project variants in the specified project
 	boolean hasBeenBuilt(IProject project) {
 		if (!project.isAccessible())
 			return false;
@@ -797,7 +798,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		// get the map of builders to get the last built tree
 		ArrayList infos = getBuildersPersistentInfo(project);
 		if (infos != null) {
-			BuilderPersistentInfo info = getBuilderInfo(infos, builderName, projectVariant.getVariant(), buildSpecIndex);
+			BuilderPersistentInfo info = getBuilderInfo(infos, builderName, projectVariant.getVariantName(), buildSpecIndex);
 			if (info != null) {
 				infos.remove(info);
 				ElementTree tree = info.getLastBuiltTree();

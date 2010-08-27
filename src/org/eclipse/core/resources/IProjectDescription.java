@@ -251,7 +251,7 @@ public interface IProjectDescription {
 	 *
 	 * @param projects a list of projects
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @see #setReferencedProjectVariants(String, IProjectVariant[])
+	 * @see #setReferencedProjectVariants(String, IProjectVariantReference[])
 	 */
 	public void setReferencedProjects(IProject[] projects);
 
@@ -289,76 +289,77 @@ public interface IProjectDescription {
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
 	 * @param projects list of projects
 	 * @since 3.0
-	 * @see #setDynamicVariantReferences(String, IProjectVariant[])
+	 * @see #setDynamicVariantReferences(String, IProjectVariantReference[])
 	 */
 	public void setDynamicReferences(IProject[] projects);
 
 	/**
-	 * Returns the project variants referenced by the specified variant for the
+	 * Returns the project variants references for the specified variant in the
 	 * described project. These references are persisted in the project description
 	 * file (&quot;.project&quot;) and as such will be shared whenever the project 
-	 * s exported to another workspace. For references that are likely to change from
+	 * is exported to another workspace. For references that are likely to change from
 	 * one workspace to another, dynamic references should be used instead.
 	 * <p>
-	 * The referenced projects and variants need not exist in the workspace.
+	 * The referenced project variants need not exist in the workspace.
 	 * The result will not contain duplicates. The order of the references is preserved
-	 * from the call to {@link #setReferencedProjectVariants(String, IProjectVariant[])}.
-	 * Returns an empty array if there are not referenced project variants on this
-	 * description for the given variant. Returns null if the given variant does not exist.
+	 * from the call to {@link #setReferencedProjectVariants(String, IProjectVariantReference[])}.
+	 * Returns an empty array if there are no referenced project variants in this
+	 * description for the given variant, or the given variant does not exist in this description.
 	 *
 	 * @param variant the variant in the described project to get the references for
 	 * @return a list of project variants; or null if the variant does not exist.
-	 * @see #setReferencedProjectVariants(String, IProjectVariant[])
+	 * @see #setReferencedProjectVariants(String, IProjectVariantReference[])
 	 */
-	public IProjectVariant[] getReferencedProjectVariants(String variant);
+	public IProjectVariantReference[] getReferencedProjectVariants(String variant);
 
 	/**
-	 * Sets the referenced project variants for the specified variant.
+	 * Sets the referenced project variants for the specified variant in this description.
 	 * <p>
 	 * The variant to which references are being added needs to exist in this
 	 * description, but the referenced projects and variants need not exist.
-	 * Duplicates will be removed, The order of the referenced project variants
-	 * is preserved.
+	 * Duplicates will be removed. The order of the referenced project variants
+	 * is preserved. If the given variant does not exist in this description then this
+	 * has no effect.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
 	 * </p>
 	 *
 	 * @param variant the variant in the described project to add the references for
-	 * @param variants a list of project variants
+	 * @param references a list of project variant references
 	 * @see #getReferencedProjectVariants(String)
 	 */
-	public void setReferencedProjectVariants(String variant, IProjectVariant[] variants);
+	public void setReferencedProjectVariants(String variant, IProjectVariantReference[] references);
 
 	/**
-	 * Returns the dynamic project variants referenced by the specified variant for the
-	 * described project. Dynamic project variant references can be used instead of simple
-	 * project variant references in cases where the reference information is computed
-	 * dynamically be a third party. These references are persisted by the workspace in
-	 * a private location outside the project description file, and as such will not be
-	 * shared when a project is exported or persisted in a repository.  A client using
-	 * project variant references is always responsible for setting these references when
-	 * a project is created or recreated.
+	 * Returns the project variants referenced dynamically by the specified variant for the
+	 * described project. Dynamic references can be used instead of simple references
+	 * in cases where the reference information is computed dynamically by a third party.
+	 * These references are persisted by the workspace in a private location outside the
+	 * project description file, and as such will not be shared when a project is exported
+	 * or persisted in a repository.  A client using dynamic references is always
+	 * responsible for setting these references when a project is created or recreated.
 	 * <p>
-	 * The referenced projects and variants need not exist in the workspace.
+	 * The referenced project variants need not exist in the workspace.
 	 * The result will not contain duplicates. The order of the references is preserved
-	 * from the call to {@link #setDynamicVariantReferences(String, IProjectVariant[])}.
+	 * from the call to {@link #setDynamicVariantReferences(String, IProjectVariantReference[])}.
 	 * Returns an empty array if there are no dynamically referenced project variants on this
-	 * description for the given variant. Returns null if the given variant does not exist.
+	 * description for the given variant, or the given variant does not exist in this description..
 	 * 
 	 * @param variant the variant in the described project to get the references for
 	 * @return a list of dynamic project variants; or null if the variant does not exist.
 	 * @see #getReferencedProjectVariants(String)
-	 * @see #setDynamicVariantReferences(String, IProjectVariant[])
+	 * @see #setDynamicVariantReferences(String, IProjectVariantReference[])
 	 */
-	public IProjectVariant[] getDynamicVariantReferences(String variant);
+	public IProjectVariantReference[] getDynamicVariantReferences(String variant);
 
 	/**
 	 * Sets the dynamically referenced project variants for the specified variant.
 	 * <p>
 	 * The variant to which references are being added needs to exist in this
 	 * description, but the referenced projects and variants need not exist.
-	 * Duplicates will be removed, The order of the referenced project variants is preserved.
+	 * Duplicates will be removed. The order of the referenced project variants is preserved.
+	 * If the given variant does not exist in this description then this has no effect.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
@@ -366,71 +367,52 @@ public interface IProjectDescription {
 	 * 
 	 * @see #getDynamicVariantReferences(String)
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @param variant the variant in the described project to add the references to
-	 * @param variants list of project variants
+	 * @param variant the variant in the described project to set the references for
+	 * @param references list of project variant references
 	 */
-	public void setDynamicVariantReferences(String variant, IProjectVariant[] variants);
+	public void setDynamicVariantReferences(String variant, IProjectVariantReference[] references);
 
 	/**
-	 * Gets the variants for the described project.
+	 * Returns a new project variant for the described project, with the given name.
 	 * <p>
-	 * The result will not contain duplicates. There is always at least one variant.
-	 * The default name for this one variant is {@link #DEFAULT_VARIANT}
-	 * 
-	 * @return a list of project variants
-	 * @see #setVariants(String[])
-	 * @see IProjectDescription#setActiveVariant(String)
-	 * @see IProjectDescription#getActiveVariant()
+	 * Note that the new project variant does not become part of this project
+	 * description until it is installed via the {@link #setVariants(IProjectVariant[])}
+	 * method.
+	 * </p>
+	 *
+	 * @param name the name for the variant
+	 * @return a project variant
+	 * @see #setVariants(IProjectVariant[])
 	 */
-	public String[] getVariants();
+	public IProjectVariant newVariant(String name);
 
 	/**
 	 * Sets the variants for the described project.
 	 * <p>
-	 * Before they are set, duplicates and nulls are removed from the input.
+	 * Before they are set, duplicates are removed from the input.
 	 * <p>
-	 * If the input is null, an empty list or a list of nulls the current variants
-	 * are removed and a default variant is added. It is impossible to configure a
-	 * project to have no variants.
+	 * If the input is null or an empty list, the current variants are removed
+	 * and a default variant is added. It is impossible to configure a project
+	 * to have no variants.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
 	 * 
-	 * @param variants identifiers for the variants
-	 * @see #getVariants()
+	 * @param variants the variants to set for the described project
+	 * @see IProject#getVariants()
 	 * @see IProjectDescription#setActiveVariant(String)
-	 * @see IProjectDescription#getActiveVariant()
+	 * @see IProject#getActiveVariant()
 	 */
-	public void setVariants(String[] variants);
-
-	/**
-	 * Checks if the described project has the specified variant.
-	 * @param variant the identifier of the variant to check for
-	 * @return true if the described project has the variant, false otherwise
-	 */
-	public boolean hasVariant(String variant);
-
-	/**
-	 * Returns the active variant for the described project.
-	 * <p>
-	 * If at any point the active variant is removed from the project, for example
-	 * when updating the projects description, the active variant will be set to
-	 * the first variant specified for the project. If all of the variants are removed,
-	 * it will be set to the default variant.
-	 * </p>
-	 * @return the active variant
-	 */
-	public String getActiveVariant();
+	public void setVariants(IProjectVariant[] variants);
 
 	/**
 	 * Sets the active variant for the described project.
-	 * This does not persist.
 	 * <p>
-	 * If the specified variant does not exist in the project, the active
-	 * variant is left unchanged.
+	 * If a variant with the specified name does not exist in the project then this has
+	 * no effect.
 	 * </p>
 	 *
-	 * @param variant the identifier of the variant to set as the active variant
+	 * @param variantName the variant to set as the active variant
 	 */
-	public void setActiveVariant(String variant);
+	public void setActiveVariant(String variantName);
 }

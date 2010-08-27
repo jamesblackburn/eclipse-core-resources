@@ -879,16 +879,18 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	private void endVariantsElement(String elementName) {
 		if (elementName.equals(VARIANTS)) {
 			// Pop the array list of variant names off the stack
-			List variants = (List) objectStack.pop();
+			List variantNames = (List) objectStack.pop();
 			state = S_PROJECT_DESC;
-			if (variants.size() == 0)
+			if (variantNames.size() == 0)
 				// A project should have more than one variant name,
 				// so leave the project with the default variant if none
 				// are specified in the project description file
 				return;
-			// Add to existing variants, so that none are removed
-			String[] variantNames = (String[]) variants.toArray(new String[variants.size()]);
-			projectDescription.setVariants(variantNames);
+			IProjectVariant[] variants = new IProjectVariant[variantNames.size()];
+			int i = 0;
+			for (Iterator it = variantNames.iterator(); it.hasNext(); i++)
+				variants[i] = projectDescription.newVariant((String) it.next());
+			projectDescription.setVariants(variants);
 		}
 	}
 
@@ -899,24 +901,34 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	 */
 	private void endReferencesElement(String elementName) {
 		if (elementName.equals(REFERENCES)) {
-			Map/*<String, IProjectVariant[]>*/ references = (Map) objectStack.pop();
+			Map/*<String, List<ReferenceContainer.Reference>>*/ references = (Map) objectStack.pop();
 			state = S_PROJECT_DESC;
 			if (references.entrySet().isEmpty())
 				return;
 			Iterator i = references.entrySet().iterator();
 			while (i.hasNext()) {
 				Entry entry = (Entry) i.next();
-				String variant = (String) entry.getKey();
-				IProjectVariant[] projectVariants = (IProjectVariant[]) entry.getValue();
+				String variantName = (String) entry.getKey();
 
-				// Ensure the variants exist, otherwise adding the references would fail
-				String[] existing = projectDescription.getVariants(false);
-				String[] variantNames = new String[existing.length + 1];
-				System.arraycopy(existing, 0, variantNames, 0, existing.length);
-				variantNames[variantNames.length - 1] = variant;
-				projectDescription.setVariants(variantNames);
+				// Ensure the variant exists, otherwise adding the references would fail
+				IProjectVariant[] existing = projectDescription.internalGetVariants(false);
+				IProjectVariant[] variants = new IProjectVariant[existing.length + 1];
+				System.arraycopy(existing, 0, variants, 0, existing.length);
+				IProjectVariant variant = projectDescription.newVariant(variantName);
+				variants[variants.length - 1] = variant;
+				projectDescription.setVariants(variants);
 
-				projectDescription.setReferencedProjectVariants(variant, projectVariants);
+				// Convert the List<ReferencesContainer.Reference> to an IProjectVariantReference[]
+				List refs = new ArrayList();
+				IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
+				for (Iterator it = ((List) entry.getValue()).iterator(); it.hasNext();) {
+					ReferencesContainer.Reference ref = (ReferencesContainer.Reference) it.next();
+					refs.add(new ProjectVariantReference(root.getProject(ref.projectName), ref.variantName));
+				}
+				IProjectVariantReference[] refsArray = new IProjectVariantReference[refs.size()];
+				refs.toArray(refsArray);
+
+				projectDescription.setReferencedProjectVariants(variantName, refsArray);
 			}
 			loadedProjectVariantReferences = true;
 		}
@@ -942,10 +954,9 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			if (refsMap.containsKey(data.variant)) {
 				references = (List) refsMap.get(data.variant);
 				references.addAll(data.refs);
-			} else {
+			} else
 				references = data.refs;
-			}
-			refsMap.put(data.variant, references.toArray(new IProjectVariant[references.size()]));
+			refsMap.put(data.variant, references);
 		}
 	}
 
@@ -954,16 +965,16 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		if (elementName.equals(REFERENCE)) {
 			state = S_REFERENCES_VARIANT;
 			// Pop off the reference
-			ProjectVariant reference = (ProjectVariant) objectStack.pop();
+			ReferencesContainer.Reference reference = (ReferencesContainer.Reference) objectStack.pop();
 			// Make sure that you have something reasonable
-			if (reference.getProject() == null) {
+			if (reference.projectName == null) {
 				parseProblem(NLS.bind(Messages.projRead_missingReferenceProjectName, project.getName()));
 				return;
 			}
-			if (reference.getVariant() == null) {
-				parseProblem(NLS.bind(Messages.projRead_missingReferenceVariantName, project.getName()));
-				return;
-			}
+//			if (reference.variantName == null && project != null) {
+//				parseProblem(NLS.bind(Messages.projRead_missingReferenceVariantName, project.getName()));
+//				return;
+//			}
 
 			// The references container is the next thing on the stack
 			((ReferencesContainer) objectStack.peek()).refs.add(reference);
@@ -974,10 +985,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	private void endReferenceProjectName(String elementName) {
 		if (elementName.equals(PROJECT)) {
 			String value = charBuffer.toString();
-			// objectStack has a ProjectVariant on it. Set the project
-			// of this ProjectVariant.
-			IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-			((ProjectVariant) objectStack.peek()).setProject(root.getProject(value));
+			((ReferencesContainer.Reference) objectStack.peek()).projectName = value;
 			state = S_REFERENCE;
 		}
 	}
@@ -986,9 +994,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	private void endReferenceVariantName(String elementName) {
 		if (elementName.equals(VARIANT)) {
 			String value = charBuffer.toString();
-			// objectStack has a ProjectVariant on it. Set the variant
-			// of this ProjectVariant.
-			((ProjectVariant) objectStack.peek()).setVariant(value);
+			((ReferencesContainer.Reference) objectStack.peek()).variantName = value;
 			state = S_REFERENCE;
 		}
 	}
@@ -1300,7 +1306,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				} else if (elementName.equals(REFERENCE)) {
 					state = S_REFERENCE;
 					// Push place holder for the project variant target of this reference.
-					objectStack.push(new ProjectVariant());
+					objectStack.push(new ReferencesContainer.Reference());
 				}
 				break;
 			case S_REFERENCE:
@@ -1315,9 +1321,13 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 
 	// Container for a reference name and list of references, for storage on the object stack
 	private static class ReferencesContainer {
+		public static class Reference {
+			public String projectName;
+			public String variantName;
+		}
 		public ReferencesContainer() {}
 		public String variant = null;
-		public List refs = new ArrayList();
+		public List/*<Reference>*/ refs = new ArrayList();
 	}
 
 	/**

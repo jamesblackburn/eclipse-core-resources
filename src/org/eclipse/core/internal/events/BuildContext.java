@@ -112,10 +112,9 @@ public class BuildContext implements IBuildContext {
 		// Do a depth first search of the project variant's references to construct
 		// the references graph.
 		return computeReachable(projectVariant, previousVariants, new GetChildrenFunctor() {
-			IProjectVariantManager mngr = ResourcesPlugin.getWorkspace().getProjectVariantManager();
 			public IProjectVariant[] run(IProjectVariant variant) {
 				try {
-					return mngr.translateActiveVariants(variant.getProject().getReferencedProjectVariants(variant.getVariant()));
+					return variant.getProject().getReferencedProjectVariants(variant);
 				} catch (CoreException e) {
 					return EMPTY_PROJECT_VARIANT_ARRAY;
 				}
@@ -131,9 +130,8 @@ public class BuildContext implements IBuildContext {
 		// Do a depth first search of the project variant's referencing variants
 		// to construct the referencing graph.
 		return computeReachable(projectVariant, subsequentVariants, new GetChildrenFunctor() {
-			IProjectVariantManager mngr = ResourcesPlugin.getWorkspace().getProjectVariantManager();
 			public IProjectVariant[] run(IProjectVariant variant) {
-				return mngr.translateActiveVariants(variant.getProject().getReferencingProjectVariants(variant.getVariant()));
+				return variant.getProject().getReferencingProjectVariants(variant);
 			}
 		});
 	}
