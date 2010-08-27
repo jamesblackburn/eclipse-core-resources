@@ -10,8 +10,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IProjectVariant;
-
 import org.eclipse.core.runtime.*;
 import org.eclipse.core.resources.*;
 
@@ -21,6 +19,8 @@ import org.eclipse.core.resources.*;
  * This allows references to project variants that do not exist in the workspace,
  * or variants that do not exist in the project.
  * @since 3.2
+ * @noextend This class is not intended to be subclassed by clients.
+ * @noinstantiate This class is not intended to be instantiated by clients.
  */
 public class ProjectVariantReference implements IProjectVariantReference {
 	private final IProject project;

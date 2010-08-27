@@ -93,6 +93,9 @@ public abstract class InternalBuilder {
 	/*
 	 * @see IncrementalProjectBuilder#rememberLastBuiltState
 	 */
+	/**
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
 	protected void rememberLastBuiltState() {
 		rememberStateRequested = !forgetStateRequested;
 	}
@@ -112,6 +115,9 @@ public abstract class InternalBuilder {
 		return buildManager.getDelta(aProject);
 	}
 
+	/**
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
 	protected IBuildContext getContext() {
 		return context;
 	}
@@ -149,6 +155,7 @@ public abstract class InternalBuilder {
 
 	/**
 	 * Returns the project variant for this builder
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	protected IProjectVariant getProjectVariant() {
 		return projectVariant;
@@ -163,6 +170,9 @@ public abstract class InternalBuilder {
 
 	/*
 	 * @see IncrementalProjectBuilder#hasBeenBuilt
+	 */
+	/**
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	protected boolean hasBeenBuilt(IProjectVariant aProjectVariant) {
 		return buildManager.hasBeenBuilt(aProjectVariant);

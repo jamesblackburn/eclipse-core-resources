@@ -13,6 +13,10 @@ package org.eclipse.core.internal.resources;
 import org.eclipse.core.runtime.*;
 import org.eclipse.core.resources.*;
 
+/**
+ * @noextend This class is not intended to be subclassed by clients.
+ * @noinstantiate This class is not intended to be instantiated by clients.
+ */
 public class ProjectVariant implements IProjectVariant {
 	private static final String DEFAULT_NAME = ""; //$NON-NLS-1$
 

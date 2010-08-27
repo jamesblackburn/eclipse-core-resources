@@ -14,6 +14,9 @@ import java.util.*;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 
+/**
+ * @noextend This class is not intended to be subclassed by clients.
+ */
 public class BuildContext implements IBuildContext {
 	/** The project variant for which this context applies. */
 	private final IProjectVariant projectVariant;

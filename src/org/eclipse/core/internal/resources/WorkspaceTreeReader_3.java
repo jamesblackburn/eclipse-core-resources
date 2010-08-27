@@ -20,6 +20,9 @@ import org.eclipse.core.resources.IProject;
  * This version differs from version 2 in the amount of information persisted
  * for each builder. It reads which project variant a builder is for, along
  * with all the other information read by version 2.
+ * 
+ * @noextend This class is not intended to be subclassed by clients.
+ * @noinstantiate This class is not intended to be instantiated by clients.
  */
 public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 
