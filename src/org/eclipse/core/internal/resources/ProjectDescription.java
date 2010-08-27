@@ -560,6 +560,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * for the variant with the given name, with duplicates omitted. The calculation is
 	 * optimized by caching the result.
 	 * Returns an empty array if the given variant does not exist in the description.
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	public IProjectVariantReference[] getAllVariantReferences(String variant, boolean makeCopy) {
 		if (!hasVariant(variant))
@@ -591,6 +592,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		return getReferencedProjectVariants(variant, true);
 	}
 
+	/**
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
 	public IProjectVariantReference[] getReferencedProjectVariants(String variant, boolean makeCopy) {
 		if (!hasVariant(variant) || !staticRefs.containsKey(variant))
 			return EMPTY_PROJECT_VARIANT_REFERENCE_ARRAY;
@@ -616,6 +620,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		return getDynamicVariantReferences(variant, true);
 	}
 
+	/**
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
 	public IProjectVariantReference[] getDynamicVariantReferences(String variant, boolean makeCopy) {
 		if (!hasVariant(variant) || !dynamicRefs.containsKey(variant))
 			return EMPTY_PROJECT_VARIANT_REFERENCE_ARRAY;
@@ -678,6 +685,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 	/**
 	 * Used by Project to get the variants on the description
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	public IProjectVariant[] internalGetVariants(boolean makeCopy) {
 		if (variants == null || variants.length == 0)
@@ -687,6 +695,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 	/**
 	 * Used by Project to get the active variant.
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	public IProjectVariant internalGetActiveVariant() {
 		if (!hasVariant(activeVariant)) {
@@ -761,6 +770,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Returns the union of the description's static and dynamic project references,
 	 * with duplicates omitted. The calculation is optimized by caching the result
 	 * @see #getAllVariantReferences(String, boolean)
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	public IProject[] getAllReferences(boolean makeCopy) {
 		if (cachedProjectRefs == null) {
@@ -788,6 +798,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		return getReferencedProjects(true);
 	}
 
+	/**
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
 	public IProject[] getReferencedProjects(boolean makeCopy) {
 		if (staticRefs == null)
 			return EMPTY_PROJECT_ARRAY;
@@ -816,6 +829,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		return getDynamicReferences(true);
 	}
 
+	/**
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
 	public IProject[] getDynamicReferences(boolean makeCopy) {
 		if (dynamicRefs == null)
 			return EMPTY_PROJECT_ARRAY;
