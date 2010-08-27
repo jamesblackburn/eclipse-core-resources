@@ -90,7 +90,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	protected IProjectVariant[] buildOrder = null;
 	protected CharsetManager charsetManager;
 	protected ContentDescriptionManager contentDescriptionManager;
-	protected ProjectVariantManager projectVariantManager;
 	/** indicates if the workspace crashed in a previous session */
 	protected boolean crashed = false;
 	protected final IWorkspaceRoot defaultRoot = new WorkspaceRoot(Path.ROOT, this);
@@ -374,8 +373,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		if (variants.length == 0)
 			return;
 
-		variants = projectVariantManager.translateActiveVariants(variants);
-
 		Set variantSet = new HashSet(variants.length);
 		variantSet.addAll(Arrays.asList(variants));
 
@@ -388,8 +385,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			size = refs.size();
 			for (Iterator it = refs.iterator(); it.hasNext();) {
 				IProjectVariant variant = (IProjectVariant) it.next();
-				IProjectVariant[] refVariants = variant.getProject().getReferencedProjectVariants(variant.getVariant());
-				buffer.addAll(Arrays.asList(projectVariantManager.translateActiveVariants(refVariants)));
+				buffer.addAll(Arrays.asList(variant.getProject().getReferencedProjectVariants(variant)));
 			}
 			refs.addAll(buffer);
 			buffer.clear();
@@ -400,7 +396,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		// Filter out inaccessible projects, or variants that do not exist
 		for (ListIterator it = refsList.listIterator(); it.hasNext();) {
 			IProjectVariant variant = (IProjectVariant) it.next();
-			if (!variant.getProject().isAccessible() || !variant.getProject().hasVariant(variant.getVariant()))
+			if (!variant.getProject().isAccessible() || !variant.getProject().hasVariant(variant))
 				it.remove();
 		}
 
@@ -638,7 +634,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 				IProjectVariant py = (IProjectVariant) y;
 				int cmp = py.getProject().getName().compareTo(px.getProject().getName());
 				if (cmp == 0)
-					cmp = py.getVariant().compareTo(px.getVariant());
+					cmp = py.getVariantName().compareTo(px.getVariantName());
 				return cmp;
 			}
 		});
@@ -669,8 +665,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					// Add all referenced variants from the current variant
 					// (it is guaranteed to be accessible as it was pushed onto the stack)
 					Project subProject = (Project) projectVariant.getProject();
-					ProjectDescription subDesc = subProject.internalGetDescription();
-					IProjectVariant[] refs = projectVariantManager.translateActiveVariants(subDesc.getAllVariantReferences(projectVariant.getVariant(), false));
+					IProjectVariant[] refs = subProject.internalGetReferencedProjectVariants(projectVariant);
 					for (int j = 0; j < refs.length; j++) {
 						IProjectVariant ref = refs[j];
 
@@ -679,8 +674,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 							continue;
 
 						// Ignore variants that do not exist
-						ProjectDescription refDesc = ((Project) ref.getProject()).internalGetDescription();
-						if (!refDesc.hasVariant(ref.getVariant()))
+						if (!((Project) ref.getProject()).internalHasVariant(ref))
 							continue;
 
 						// Add the referenced accessible variant
@@ -1408,13 +1402,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	}
 
 	/**
-	 * Returns this workspace's project variant manager
-	 */
-	public IProjectVariantManager getProjectVariantManager() {
-		return projectVariantManager;
-	}
-
-	/**
 	 * Returns the order in which open projects in this workspace will be built.
 	 * The result returned is a list of project variants, that need to be built
 	 * in order to successfully build the active variant of every project in this
@@ -1522,23 +1509,26 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		Map result = new HashMap(projects.length);
 		for (int i = 0; i < projects.length; i++) {
 			Project project = (Project) projects[i];
+			ProjectDescription desc = project.internalGetDescription();
 			if (!project.isAccessible())
 				continue;
-			ProjectDescription desc = project.internalGetDescription();
-			String[] variants = desc.getVariants(false);
+			IProjectVariant[] variants = project.internalGetVariants();
 			for (int j = 0; j < variants.length; j++) {
-				IProjectVariant[] refs = desc.getReferencedProjectVariants(variants[j]);
+				IProjectVariantReference[] refs = desc.getReferencedProjectVariants(variants[j].getVariantName());
 				List dangling = new ArrayList(refs.length);
 				for (int k = 0; k < refs.length; k++) {
 					// Check the referenced project and variant exists
-					if (!refs[k].getProject().exists() ||
-						!((Project) refs[k].getProject()).internalGetDescription().hasVariant(refs[k].getVariant()))
+					try {
+						if (!refs[k].getProject().exists() ||
+							!((Project) refs[k].getProject()).internalHasVariant(refs[k].getVariant()))
+							dangling.add(refs[k]);
+					} catch (CoreException e) {
+						// Project did not exist, as the active variant could not be found
 						dangling.add(refs[k]);
+					}
 				}
-				if (!dangling.isEmpty()) {
-					ProjectVariant variant = new ProjectVariant(projects[i], variants[j]);
-					result.put(variant, dangling.toArray(new IProjectVariant[dangling.size()]));
-				}
+				if (!dangling.isEmpty())
+					result.put(variants[j], dangling.toArray(new IProjectVariantReference[dangling.size()]));
 			}
 		}
 		return result;
@@ -2305,7 +2295,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	protected void shutdown(IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		try {
-			IManager[] managers = {buildManager, propertyManager, pathVariableManager, charsetManager, fileSystemManager, markerManager, _workManager, aliasManager, refreshManager, contentDescriptionManager, natureManager, filterManager, projectVariantManager};
+			IManager[] managers = {buildManager, propertyManager, pathVariableManager, charsetManager, fileSystemManager, markerManager, _workManager, aliasManager, refreshManager, contentDescriptionManager, natureManager, filterManager};
 			monitor.beginTask("", managers.length); //$NON-NLS-1$
 			String message = Messages.resources_shutdownProblems;
 			MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, message, null);
@@ -2336,7 +2326,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			refreshManager = null;
 			charsetManager = null;
 			contentDescriptionManager = null;
-			projectVariantManager = null;
 			if (!status.isOK())
 				throw new CoreException(status);
 		} finally {
@@ -2387,8 +2376,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			charsetManager.startup(null);
 			contentDescriptionManager = new ContentDescriptionManager();
 			contentDescriptionManager.startup(null);
-			projectVariantManager = new ProjectVariantManager();
-			projectVariantManager.startup(null);
 		} finally {	
 			//unlock tree even in case of failure, otherwise shutdown will also fail
 			treeLocked = null;	

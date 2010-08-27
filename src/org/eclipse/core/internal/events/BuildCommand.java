@@ -51,7 +51,7 @@ public class BuildCommand extends ModelObject implements ICommand {
 	 * The builder instance for this command. Null if the builder has
 	 * not yet been instantiated.
 	 */
-	protected HashMap/*<String, IncrementalProjectBuilder>*/ builders;
+	protected HashMap/*<IProjectVariant, IncrementalProjectBuilder>*/ builders;
 
 	/**
 	 * The triggers that this builder will respond to.  Since build triggers are not 
@@ -143,7 +143,7 @@ public class BuildCommand extends ModelObject implements ICommand {
 		return builders == null ? null : (makeCopy ? (Map) builders.clone() : builders);
 	}
 
-	public IncrementalProjectBuilder getBuilder(String variant) {
+	public IncrementalProjectBuilder getBuilder(IProjectVariant variant) {
 		return (IncrementalProjectBuilder) builders.get(variant);
 	}
 
@@ -188,7 +188,7 @@ public class BuildCommand extends ModelObject implements ICommand {
 		builders = value == null ? new HashMap(1) : new HashMap(value);
 	}
 
-	public void addBuilder(String variant, IncrementalProjectBuilder builder) {
+	public void addBuilder(IProjectVariant variant, IncrementalProjectBuilder builder) {
 		this.builders.put(variant, builder);
 	}
 

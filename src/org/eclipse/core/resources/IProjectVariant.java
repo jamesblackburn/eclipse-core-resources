@@ -19,20 +19,17 @@ package org.eclipse.core.resources;
  */
 public interface IProjectVariant {
 	/**
-	 * @return the project that this variant belongs to.
+	 * @return the project that the variant is for; never null.
 	 */
 	public IProject getProject();
 
 	/**
-	 * @return the name of the variant within the project. Returns
-	 * null if this project variant refers to the active variant of a project.
-	 * @see #isActiveVariant()
+	 * @return the name of the variant; never null.
 	 */
-	public String getVariant();
+	public String getVariantName();
 
 	/**
-	 * @return true if this project variant refers to the active
-	 *         variant of a project.
+	 * @return a copy of the project variant, of type IProjectVariant
 	 */
-	public boolean isActiveVariant();
+	public Object clone();
 }

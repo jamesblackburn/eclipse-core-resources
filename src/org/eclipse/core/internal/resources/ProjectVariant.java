@@ -14,77 +14,77 @@ import org.eclipse.core.runtime.*;
 import org.eclipse.core.resources.*;
 
 public class ProjectVariant implements IProjectVariant {
+	private static final String DEFAULT_NAME = ""; //$NON-NLS-1$
+
+	private final String name;
 	private IProject project;
-	/** if null, the variant is the projects active variant */
-	private String variant;
 
-	/**
-	 * Create a project variant that represents a reference
-	 * to a projects active variant.
+	public ProjectVariant(IProject project, String name) {
+		this.project = project;
+		this.name = name;
+	}
+
+	public ProjectVariant(String name) {
+		this(null, name);
+	}
+
+	public ProjectVariant() {
+		this(null, DEFAULT_NAME);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProjectVariant#getVariantName()
 	 */
-	public ProjectVariant(IProject project) {
-		this.project = project;
-		this.variant = null;
+	public String getVariantName() {
+		return name;
 	}
 
-	/**
-	 * Create a project variant that represents a reference
-	 * to a specific variant of a project.
-	 */
-	public ProjectVariant(IProject project, String variant) {
-		Assert.isLegal(project != null);
-		this.project = project;
-		this.variant = variant;
-	}
-
-	ProjectVariant() {
-		project = null;
-		variant = null;
-	}
-
-	void setProject(IProject project) {
-		Assert.isLegal(project != null);
-		this.project = project;
-	}
-
-	void setVariant(String variant) {
-		Assert.isLegal(variant != null);
-		this.variant = variant;
-	}
-
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
 	 * @see IProjectVariant#getProject()
 	 */
 	public IProject getProject() {
+		Assert.isNotNull(project);
 		return project;
 	}
 
-	/* (non-Javadoc)
-	 * @see IProjectVariant#getVariant()
-	 */
-	public String getVariant() {
-		return variant;
+	IProject internalGetProject() {
+		return project;
 	}
 
-	/* (non-Javadoc)
-	 * @see IProjectVariant#isActiveVariant()
-	 */
-	public boolean isActiveVariant() {
-		return variant == null;
+	void setProject(IProject project) {
+		Assert.isNotNull(project);
+		Assert.isTrue(this.project == null);
+		this.project = project;
 	}
 
-	/* (non-Javadoc)
+	void clearProject() {
+		project = null;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see Object#clone()
+	 */
+	public Object clone() {
+		return new ProjectVariant(project, name);
+	}
+
+	/*
+	 * (non-Javadoc)
 	 * @see Object#hashCode()
 	 */
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		result = prime * result + ((project == null) ? 0 : project.hashCode());
-		result = prime * result + ((variant == null) ? 0 : variant.hashCode());
 		return result;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
 	 * @see Object#equals(Object)
 	 */
 	public boolean equals(Object obj) {
@@ -95,38 +95,32 @@ public class ProjectVariant implements IProjectVariant {
 		if (getClass() != obj.getClass())
 			return false;
 		ProjectVariant other = (ProjectVariant) obj;
+		if (name == null) {
+			if (other.name != null)
+				return false;
+		} else if (!name.equals(other.name))
+			return false;
 		if (project == null) {
 			if (other.project != null)
 				return false;
 		} else if (!project.equals(other.project))
-			return false;
-		if (variant == null) {
-			if (other.variant != null)
-				return false;
-		} else if (!variant.equals(other.variant))
 			return false;
 		return true;
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see java.lang.Object#toString()
+	 * @see Object#toString()
 	 */
-	/**
-	 * For debugging purposes only.
-	 */
-	public String toString()
-	{
+	/** For debugging purposes only. */
+	public String toString() {
 		StringBuffer result = new StringBuffer();
 		if (project != null)
 			result.append(project.getName());
 		else
-			result.append("<active>"); //$NON-NLS-1$
-		result.append(";"); //$NON-NLS-1$
-		if (variant != null)
-			result.append(variant);
-		else
 			result.append("?"); //$NON-NLS-1$
+		result.append(";"); //$NON-NLS-1$
+		result.append(name);
 		return result.toString();
 	}
- }
+}

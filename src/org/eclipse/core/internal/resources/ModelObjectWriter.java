@@ -131,13 +131,18 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		writer.endTag(VARIABLE);
 	}
 
-	protected void write(IProjectVariant projectVariant, XMLWriter writer) {
+	protected void write(IProjectVariantReference ref, XMLWriter writer) {
 		writer.startTag(REFERENCE, null);
-		if (projectVariant != null) {
-			writer.printSimpleTag(PROJECT, projectVariant.getProject().getName());
-			writer.printSimpleTag(VARIANT, projectVariant.getVariant());
+		if (ref != null) {
+			writer.printSimpleTag(PROJECT, ref.getProject().getName());
+			if (ref.getVariantName() != null)
+				writer.printSimpleTag(VARIANT, ref.getVariantName());
 		}
 		writer.endTag(REFERENCE);
+	}
+
+	protected void write(IProjectVariant projectVariant, XMLWriter writer) {
+		writer.printSimpleTag(VARIANT, projectVariant.getVariantName());
 	}
 
 	/**
@@ -210,14 +215,18 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			write((VariableDescription) obj, writer);
 			return;
 		}
-		if (obj instanceof IProjectVariant[]) {
-			IProjectVariant[] array = (IProjectVariant[]) obj;
+		if (obj instanceof IProjectVariantReference[]) {
+			IProjectVariantReference[] array = (IProjectVariantReference[]) obj;
 			for (int i = 0; i < array.length; i++)
 				write(array[i], writer);
 			return;
 		}
 		if (obj instanceof IProjectVariant) {
 			write((IProjectVariant) obj, writer);
+			return;
+		}
+		if (obj instanceof IProjectVariantReference) {
+			write((IProjectVariantReference) obj, writer);
 			return;
 		}
 		writer.printTabulation();
@@ -239,7 +248,7 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
 			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);
-			write(VARIANTS, VARIANT, description.getVariants(false), writer);
+			write(VARIANTS, Arrays.asList(description.internalGetVariants(false)), writer);
 			HashMap links = description.getLinks();
 			if (links != null) {
 				// ensure consistent order of map elements

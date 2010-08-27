@@ -274,16 +274,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	}
 
 	/**
-	 * Returns the variant for which this builder is defined.
-	 * 
-	 * @return the variant
-	 */
-	public final String getVariant() {
-		return super.getVariant();
-	}
-
-	/**
-	 * Returns the project variant for which this builder is defined.
+	 * Returns the project variant for which this build invocation.
 	 * 
 	 * @return the project variant
 	 */
