@@ -7,7 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
- *     Alex Collins (Broadcom) - project variants and references
+ *     Broadcom Corporation - project variants and references
  *******************************************************************************/
 
 package org.eclipse.core.internal.resources;
