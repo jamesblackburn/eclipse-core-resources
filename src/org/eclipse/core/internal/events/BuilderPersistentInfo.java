@@ -7,7 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
- *     Alex Collins (Broadcom) - project variants
+ *     Broadcom Corporation - project variants
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 

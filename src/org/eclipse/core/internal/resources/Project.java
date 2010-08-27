@@ -11,7 +11,7 @@
  *     Anton Leherbauer (Wind River) - [198591] Allow Builder to specify scheduling rule
  *     Francis Lynch (Wind River) - [301563] Save and load tree snapshots
  *     Markus Schorn (Wind River) - [306575] Save snapshot location with project
- *     Alex Collins (Broadcom) - project variants and references
+ *     Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 

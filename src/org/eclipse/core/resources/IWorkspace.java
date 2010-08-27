@@ -8,7 +8,7 @@
  *  Contributors:
  *     IBM Corporation - initial API and implementation
  *     Red Hat Incorporated - loadProjectDescription(InputStream)
- *     Alex Collins (Broadcom) - project variants and references
+ *     Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.resources;
 
