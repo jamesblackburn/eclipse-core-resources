@@ -769,7 +769,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		// Compute the full project order for all accessible projects
 		VertexOrder fullProjectVariantOrder = computeFullProjectVariantOrder();
 
-		// Create a filter to remove all project variant that are not in the list asked for
+		// Create a filter to remove all project variants that are not in the list asked for
 		final Set projectVariantSet = new HashSet(projectVariants.length);
 		projectVariantSet.addAll(Arrays.asList(projectVariants));
 		VertexFilter filter = new VertexFilter() {
