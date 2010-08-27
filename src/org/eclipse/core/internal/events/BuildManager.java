@@ -576,14 +576,25 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		return result;
 	}
 
+	/**
+	 * Gets a workspace delta for a given project, based on the state of the workspace
+	 * tree the last time the current builder was run.
+	 * <p>
+	 * Returns null if:
+	 * <ul>
+	 * <li> The state of the workspace is unknown. </li>
+	 * <li> The current builder has not indicated that it is interested in deltas
+	 * for the given project. </li>
+	 * <li> If the project does not exist. </li>
+	 * </ul>
+	 * <p>
+	 * Deltas are computed once and cached for efficiency.
+	 * 
+	 * @param project the project to get a delta for
+	 */
 	IResourceDelta getDelta(IProject project) {
 		if (!project.isAccessible())
 			return null;
-		return getDelta(((Project) project).internalGetActiveVariant());
-	}
-
-	IResourceDelta getDelta(IProjectVariant projectVariant) {
-		IProject project = projectVariant.getProject();
 		try {
 			lock.acquire();
 			if (currentTree == null) {

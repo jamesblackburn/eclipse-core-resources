@@ -104,18 +104,12 @@ public abstract class InternalBuilder {
 		return (ICommand)((BuildCommand)command).clone();
 	}
 	
-	/*
-	 * @see IncrementalProjectBuilder#forgetLastBuiltState
+	/**
+	 * @see IncrementalProjectBuilder#forgetLastBuiltState()
+	 * @see IncrementalProjectBuilder#rememberLastBuiltState()
 	 */
 	protected IResourceDelta getDelta(IProject aProject) {
 		return buildManager.getDelta(aProject);
-	}
-
-	/*
-	 * @see IncrementalProjectBuilder#forgetLastBuiltState
-	 */
-	protected IResourceDelta getDelta(IProjectVariant aProjectVariant) {
-		return buildManager.getDelta(aProjectVariant);
 	}
 
 	protected IBuildContext getContext() {

@@ -258,13 +258,6 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	}
 
 	/**
-	 * @see #getDelta(IProject)
-	 */
-	public final IResourceDelta getDelta(IProjectVariant projectVariant) {
-		return super.getDelta(projectVariant);
-	}
-
-	/**
 	 * Returns the project for which this builder is defined.
 	 * 
 	 * @return the project
