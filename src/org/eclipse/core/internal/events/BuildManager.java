@@ -714,14 +714,19 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Returns true if the active variant in the given project has been built during this build cycle, and
+	 * Returns true if all the variants in the given project that are referenced by
+	 * the variant currently being built have been built during this build cycle, and
 	 * false otherwise.
 	 */
-	//TODO: Check all referenced project variants in the specified project
 	boolean hasBeenBuilt(IProject project) {
 		if (!project.isAccessible())
 			return false;
-		return builtProjectVariants.contains(((Project) project).internalGetActiveVariant());
+		try {
+			IProjectVariant[] variants = currentBuilder.getProject().getReferencedProjectVariants(currentBuilder.getProjectVariant());
+			return builtProjectVariants.containsAll(Arrays.asList(variants));
+		} catch (CoreException e) {
+			return false;
+		}
 	}
 
 	/**
