@@ -17,9 +17,9 @@ import org.eclipse.core.resources.IProject;
 /**
  * Reads version 3 of the workspace tree file format. 
  * 
- * This version differs from version 2 as this reads and writes which project
- * variant a builder is for, and the list of interesting projects is now a list
- * of interesting project variants.
+ * This version differs from version 2 in the amount of information persisted
+ * for each builder. It reads which project variant a builder is for, along
+ * with all the other information read by version 2.
  */
 public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 
@@ -35,9 +35,8 @@ public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 	 * overrides WorkspaceTreeReader_1#readBuilderInfo
 	 */
 	protected BuilderPersistentInfo readBuilderInfo(IProject project, DataInputStream input, int index) throws IOException {
-		//read the project name
 		String projectName = input.readUTF();
-		//use the name of the project handle if available
+		// Use the name of the project handle if available
 		if (project != null)
 			projectName = project.getName();
 		String variantName = input.readUTF();
