@@ -543,7 +543,6 @@ public class Project extends Container implements IProject {
 					} finally {
 						workspace.endOperation(rule, false, innerMonitor);
 					}
-					//TODO: Set build context and current variant before getRule
 					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(getActiveVariant(), trigger, builderName, args);
 					try {
 						IStatus result;

@@ -468,7 +468,11 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	}
 
 	/**
-	 * @return the context for the most recent invocation of the builder.
+	 * Get the context for the most recent invocation of the builder.
+	 * This is only valid in the context of a call to
+	 * {@link #build(int, Map, IProgressMonitor)}
+	 * 
+	 * @return the context for the most recent invocation of the builder
 	 */
 	public final IBuildContext getContext() {
 		return super.getContext();
