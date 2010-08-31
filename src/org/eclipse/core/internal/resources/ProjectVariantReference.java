@@ -103,9 +103,8 @@ public class ProjectVariantReference implements IProjectVariantReference {
 	 */
 	public int hashCode() {
 		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((project == null) ? 0 : project.hashCode());
-		result = prime * result + ((variantName == null) ? 0 : variantName.hashCode());
+		int result = prime + project.hashCode();
+		result = prime * result + (variantName == null ? 0 : variantName.hashCode());
 		return result;
 	}
 
@@ -120,16 +119,12 @@ public class ProjectVariantReference implements IProjectVariantReference {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		ProjectVariantReference other = (ProjectVariantReference) obj;
-		if (project == null) {
-			if (other.project != null)
-				return false;
-		} else if (!project.equals(other.project))
+		ProjectVariantReference ref = (ProjectVariantReference) obj;
+		if (!project.equals(ref.project))
 			return false;
-		if (variantName == null) {
-			if (other.variantName != null)
-				return false;
-		} else if (!variantName.equals(other.variantName))
+		if ((variantName == null) != (ref.variantName == null))
+			return false;
+		if (variantName != null && !variantName.equals(ref.variantName))
 			return false;
 		return true;
 	}
