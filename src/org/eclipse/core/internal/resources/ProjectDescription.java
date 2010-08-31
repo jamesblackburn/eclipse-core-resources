@@ -661,6 +661,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 				IProjectVariant variant = (IProjectVariant) value[i].clone();
 				// Ensure the project is not set
 				((ProjectVariant) variant).clearProject();
+				Assert.isTrue(((ProjectVariant) variant).internalGetProject() == null);
 				filtered.add(variant);
 			}
 
@@ -690,26 +691,37 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public IProjectVariant[] internalGetVariants(boolean makeCopy) {
 		if (variants == null || variants.length == 0)
 			variants = DEFAULT_VARIANTS;
-		return makeCopy ? (IProjectVariant[]) variants.clone() : variants;
+		for (int i = 0; i < variants.length; i++)
+			Assert.isTrue(((ProjectVariant) variants[i]).internalGetProject() == null);
+		return makeCopy ? copyVariants(variants) : variants;
+	}
+
+	private IProjectVariant[] copyVariants(IProjectVariant[] variants) {
+		IProjectVariant[] result = new IProjectVariant[variants.length];
+		for (int i = 0; i < variants.length; i++)
+			result[i] = (IProjectVariant) variants[i].clone();
+		return result;
 	}
 
 	/**
 	 * Used by Project to get the active variant.
 	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
-	public IProjectVariant internalGetActiveVariant() {
+	public IProjectVariant internalGetActiveVariant(boolean makeCopy) {
+		IProjectVariant result = null;
 		if (!hasVariant(activeVariant)) {
 			activeVariant = variants[0].getVariantName();
-			return variants[0];
+			result = variants[0];
 		}
 		for (int i = 0; i < variants.length; i++) {
 			if (variants[i].getVariantName().equals(activeVariant)) {
-				return (IProjectVariant) variants[i].clone();
+				result = variants[i];
+				break;
 			}
 		}
-		// Should never reach here
-		Assert.isLegal(false);
-		return null;
+		Assert.isTrue(result != null);
+		Assert.isTrue(((ProjectVariant) result).internalGetProject() == null);
+		return makeCopy ? (IProjectVariant) result.clone() : result;
 	}
 
 	/*
