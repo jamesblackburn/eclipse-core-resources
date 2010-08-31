@@ -119,7 +119,7 @@ public class Project extends Container implements IProject {
 	 * @see IProject#build(int, IProgressMonitor)
 	 */
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
-		internalBuild(trigger, null, null, monitor);
+		internalBuild(getActiveVariant(), trigger, null, null, monitor);
 	}
 
 	/* (non-Javadoc)
@@ -127,7 +127,14 @@ public class Project extends Container implements IProject {
 	 */
 	public void build(int trigger, String builderName, Map args, IProgressMonitor monitor) throws CoreException {
 		Assert.isNotNull(builderName);
-		internalBuild(trigger, builderName, args, monitor);
+		internalBuild(getActiveVariant(), trigger, builderName, args, monitor);
+	}
+
+	/* (non-Javadoc)
+	 * @see IProject#build(IProjectVariant, int, String, Map, IProgressMonitor)
+	 */
+	public void build(IProjectVariant variant, int trigger, IProgressMonitor monitor) throws CoreException {
+		internalBuild(variant, trigger, null, null, monitor);
 	}
 
 	/**
@@ -527,7 +534,7 @@ public class Project extends Container implements IProject {
 	/**
 	 * Implements all build methods on IProject.
 	 */
-	protected void internalBuild(final int trigger, final String builderName, final Map args, IProgressMonitor monitor) throws CoreException {
+	protected void internalBuild(final IProjectVariant variant, final int trigger, final String builderName, final Map args, IProgressMonitor monitor) throws CoreException {
 		workspace.run(new IWorkspaceRunnable() {
 			public void run(IProgressMonitor innerMonitor) throws CoreException {
 				innerMonitor = Policy.monitorFor(innerMonitor);
@@ -543,7 +550,6 @@ public class Project extends Container implements IProject {
 					} finally {
 						workspace.endOperation(rule, false, innerMonitor);
 					}
-					IProjectVariant variant = getActiveVariant();
 					workspace.getBuildManager().setBuildOrder(new IProjectVariant[]{variant});
 					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(variant, trigger, builderName, args);
 					try {
