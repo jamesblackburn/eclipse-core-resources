@@ -96,7 +96,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	//the job for performing background autobuild
 	final AutoBuildJob autoBuildJob;
 	private boolean building = false;
-	private final ArrayList builtProjectVariants = new ArrayList();
+	private final Set builtProjects = new HashSet();
+	private final Set builtProjectVariants = new HashSet();
 
 	//the following four fields only apply for the lifetime of a single builder invocation.
 	protected InternalBuilder currentBuilder;
@@ -316,11 +317,13 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		rebuildRequested = true;
 		for (int iter = 0; rebuildRequested && iter < maxIterations; iter++) {
 			rebuildRequested = false;
+			builtProjects.clear();
 			builtProjectVariants.clear();
 			for (int i = 0; i < variants.length; i++) {
 				if (variants[i].getProject().isAccessible()) {
 					IBuildContext context = new BuildContext(variants[i], variants);
 					basicBuild(variants[i], trigger, context, status, Policy.subMonitorFor(monitor, projectWork));
+					builtProjects.add(variants[i].getProject());
 					builtProjectVariants.add(variants[i]);
 				}
 			}
@@ -714,19 +717,13 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Returns true if all the variants in the given project that are referenced by
-	 * the variant currently being built have been built during this build cycle, and
-	 * false otherwise.
+	 * Returns true if at least one of the given project's variants have been built
+	 * during this build cycle; and false otherwise.
 	 */
 	boolean hasBeenBuilt(IProject project) {
 		if (!project.isAccessible())
 			return false;
-		try {
-			IProjectVariant[] variants = currentBuilder.getProject().getReferencedProjectVariants(currentBuilder.getProjectVariant());
-			return builtProjectVariants.containsAll(Arrays.asList(variants));
-		} catch (CoreException e) {
-			return false;
-		}
+		return builtProjects.contains(project);
 	}
 
 	/**
