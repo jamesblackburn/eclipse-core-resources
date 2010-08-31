@@ -20,10 +20,11 @@ import org.eclipse.core.resources.*;
 public class ProjectVariant implements IProjectVariant {
 	private static final String DEFAULT_NAME = ""; //$NON-NLS-1$
 
-	private final String name;
 	private IProject project;
+	private final String name;
 
 	public ProjectVariant(IProject project, String name) {
+		Assert.isNotNull(name);
 		this.project = project;
 		this.name = name;
 	}
@@ -81,9 +82,8 @@ public class ProjectVariant implements IProjectVariant {
 	 */
 	public int hashCode() {
 		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
-		result = prime * result + ((project == null) ? 0 : project.hashCode());
+		int result = prime + name.hashCode();
+		result = prime * result + (project == null ? 0 : project.hashCode());
 		return result;
 	}
 
@@ -98,16 +98,12 @@ public class ProjectVariant implements IProjectVariant {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		ProjectVariant other = (ProjectVariant) obj;
-		if (name == null) {
-			if (other.name != null)
-				return false;
-		} else if (!name.equals(other.name))
+		ProjectVariant variant = (ProjectVariant) obj;
+		if (!name.equals(variant.name))
 			return false;
-		if (project == null) {
-			if (other.project != null)
-				return false;
-		} else if (!project.equals(other.project))
+		if ((project == null) != (variant.project == null))
+			return false;
+		if (project != null && !project.equals(variant.project))
 			return false;
 		return true;
 	}
