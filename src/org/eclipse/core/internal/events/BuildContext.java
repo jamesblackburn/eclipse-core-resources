@@ -60,7 +60,7 @@ public class BuildContext implements IBuildContext {
 			}
 		}
 		buildOrderPosition = position;
-		Assert.isTrue(0 <= buildOrderPosition && buildOrderPosition < buildOrder.length);
+		Assert.isTrue(-1 <= buildOrderPosition && buildOrderPosition < buildOrder.length);
 	}
 
 	/*
@@ -187,5 +187,38 @@ public class BuildContext implements IBuildContext {
 		for (int i = 0; i < projectVariants.length; i++)
 			set.add(projectVariants[i].getProject());
 		return (IProject[]) set.toArray(new IProject[set.size()]);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see Object#hashCode()
+	 */
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + buildOrderPosition;
+		result = prime * result + projectVariant.hashCode();
+		for (int i = 0; i < buildOrder.length; i++)
+			result = prime * result + buildOrder[i].hashCode();
+		return result;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see Object#equals(Object)
+	 */
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		BuildContext context = (BuildContext) obj;
+		if (buildOrderPosition != context.buildOrderPosition)
+			return false;
+		if (!projectVariant.equals(context.projectVariant))
+			return false;
+		if (!Arrays.equals(buildOrder, context.buildOrder))
+			return false;
+		return true;
 	}
 }
