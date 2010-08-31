@@ -84,7 +84,7 @@ public class Project extends Container implements IProject {
 		current.setBuildSpec(description.getBuildSpec(true));
 
 		current.setVariants(description.internalGetVariants(true));
-		current.setActiveVariant(description.internalGetActiveVariant().getVariantName());
+		current.setActiveVariant(description.internalGetActiveVariant(false).getVariantName());
 
 		// set the references before the natures 
 		boolean flushOrder = false;
@@ -1202,7 +1202,7 @@ public class Project extends Container implements IProject {
 				ProjectDescription oldDescription = internalGetDescription();
 				ProjectDescription newDescription = (ProjectDescription) description;
 				// Silently update the active variant
-				internalGetDescription().setActiveVariant(newDescription.internalGetActiveVariant().getVariantName());
+				internalGetDescription().setActiveVariant(newDescription.internalGetActiveVariant(false).getVariantName());
 				boolean hasPublicChanges = oldDescription.hasPublicChanges(newDescription);
 				boolean hasPrivateChanges = oldDescription.hasPrivateChanges(newDescription);
 				if (!hasPublicChanges && !hasPrivateChanges)
@@ -1470,7 +1470,7 @@ public class Project extends Container implements IProject {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		ProjectDescription desc = internalGetDescription();
-		IProjectVariant variant = desc.internalGetActiveVariant();
+		IProjectVariant variant = desc.internalGetActiveVariant(true);
 		updateVariant(variant);
 		return variant;
 	}
@@ -1480,15 +1480,14 @@ public class Project extends Container implements IProject {
 	 */
 	public IProjectVariant internalGetActiveVariant() {
 		ProjectDescription desc = internalGetDescription();
-		IProjectVariant variant = desc.internalGetActiveVariant();
+		IProjectVariant variant = desc.internalGetActiveVariant(true);
 		updateVariant(variant);
 		return variant;
 	}
 
 	private void updateVariant(IProjectVariant value) {
 		ProjectVariant variant = (ProjectVariant) value;
-		if (variant.internalGetProject() == null)
-			variant.setProject(this);
+		variant.setProject(this);
 	}
 
 	private void updateVariants(IProjectVariant[] variants) {
