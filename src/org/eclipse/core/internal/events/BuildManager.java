@@ -99,6 +99,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	private final Set builtProjects = new HashSet();
 	private final Set builtProjectVariants = new HashSet();
 
+	//the build order for a subsequent call to #build(). Allows context information to be available
+	//before build is run.
+	private IProjectVariant[] buildOrder = new IProjectVariant[0];
+
 	//the following four fields only apply for the lifetime of a single builder invocation.
 	protected InternalBuilder currentBuilder;
 	private DeltaDataTree currentDelta;
@@ -1040,9 +1044,22 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		}
 		return project.isNatureEnabled(nature);
 	}
-	
+
+	/**
+	 * Set the build order that is going to be built. This ensures that context information
+	 * retrieved when overloading {@link #getRule(IProjectVariant, int, String, Map)}
+	 * is available.
+	 * @param buildOrder
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
+	public void setBuildOrder(IProjectVariant[] buildOrder) {
+		this.buildOrder = buildOrder;
+	}
+
 	/**
 	 * Returns the scheduling rule that is required for building the project.
+	 * {@link #setBuildOrder(IProjectVariant[])} should be called before this method
+	 * is called so that build context information is available.
 	 */
 	public ISchedulingRule getRule(IProjectVariant projectVariant, int trigger, String builderName, Map args) {
 		IProject project = projectVariant.getProject();
@@ -1056,7 +1073,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				for (int i = 0; i < commands.length; i++) {
 					BuildCommand command = (BuildCommand) commands[i];
 					try {
-						IncrementalProjectBuilder builder = getBuilder(projectVariant, command, i, status);
+						BuildContext context = new BuildContext(projectVariant, buildOrder);
+						IncrementalProjectBuilder builder = getBuilder(projectVariant, command, i, status, context);
 						if (builder != null) {
 							ISchedulingRule builderRule = builder.getRule(trigger, args);
 							if (builderRule != null)

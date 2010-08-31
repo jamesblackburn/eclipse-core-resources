@@ -543,7 +543,9 @@ public class Project extends Container implements IProject {
 					} finally {
 						workspace.endOperation(rule, false, innerMonitor);
 					}
-					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(getActiveVariant(), trigger, builderName, args);
+					IProjectVariant variant = getActiveVariant();
+					workspace.getBuildManager().setBuildOrder(new IProjectVariant[]{variant});
+					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(variant, trigger, builderName, args);
 					try {
 						IStatus result;
 						workspace.prepareOperation(buildRule, innerMonitor);
