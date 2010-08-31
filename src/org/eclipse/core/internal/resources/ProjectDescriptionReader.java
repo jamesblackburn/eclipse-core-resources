@@ -852,14 +852,14 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			// project descriptor.
 			return;
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-		IProject[] projects = new IProject[referencedProjects.size()];
-		for (int i = 0; i < projects.length; i++) {
-			projects[i] = root.getProject((String) referencedProjects.get(i));
-		}
+		IProjectVariantReference[] variants = new IProjectVariantReference[referencedProjects.size()];
+		for (int i = 0; i < variants.length; i++)
+			variants[i] = root.getProject((String) referencedProjects.get(i)).newReference();
 		// If no project variant references were loaded, they weren't specified in the
 		// config file. For backwards compatibility, load the project references.
-		if (!loadedProjectVariantReferences)
-			projectDescription.setReferencedProjects(projects);
+		if (!loadedProjectVariantReferences) {
+			projectDescription.setReferencedProjectVariants(IProjectDescription.DEFAULT_VARIANT, variants);
+		}
 	}
 
 	private void endSnapshotLocation(String elementName) {
