@@ -81,10 +81,9 @@ public class ProjectVariantReference implements IProjectVariantReference {
 	 * @see IProjectVariantReference#getVariant()
 	 */
 	public IProjectVariant getVariant() throws CoreException {
-		ProjectDescription desc = ((Project) project).internalGetDescription();
 		IProjectVariant variant = null;
 		if (variantName == null)
-			variant = desc.internalGetActiveVariant();
+			variant = project.getActiveVariant();
 		else {
 			IProjectVariant[] variants = project.getVariants();
 			for (int i = 0; i < variants.length; i++)
@@ -95,8 +94,6 @@ public class ProjectVariantReference implements IProjectVariantReference {
 		}
 		if (variant == null)
 			throw new ResourceException(IResourceStatus.PROJECT_VARIANT_NOT_FOUND, project.getFullPath(), null, null);
-		if (((ProjectVariant) variant).internalGetProject() == null)
-			((ProjectVariant) variant).setProject(project);
 		return variant;
 	}
 
