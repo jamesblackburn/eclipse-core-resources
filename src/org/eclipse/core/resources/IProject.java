@@ -59,7 +59,8 @@ public interface IProject extends IContainer, IAdaptable {
 	 * Invokes the <code>build</code> method of the specified builder 
 	 * for this project. Does nothing if this project is closed.  If this project
 	 * has multiple builders on its build spec matching the given name, only
-	 * the first matching builder will be run.
+	 * the first matching builder will be run. The build is run for the project's
+	 * active variant.
 	 * <p>
 	 * The builder name is declared in the extension that plugs in
 	 * to the standard <code>org.eclipse.core.resources.builders</code> 
@@ -107,7 +108,8 @@ public interface IProject extends IContainer, IAdaptable {
 	 * Builds this project. Does nothing if the project is closed.
 	 * <p>
 	 * Building a project involves executing the commands found
-	 * in this project's build spec.
+	 * in this project's build spec. The build is run for the project's
+	 * active variant.
 	 * </p>
 	 * <p>
 	 * This method may change resources; these changes will be reported
@@ -140,6 +142,46 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @see IResourceRuleFactory#buildRule()
 	 */
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
+
+	/** 
+	 * Builds a specific variant of this project. Does nothing if the project is closed
+	 * or the variant does not exist.
+	 * <p>
+	 * Building a project involves executing the commands found
+	 * in this project's build spec. The build is run for the specific project
+	 * variant.
+	 * </p>
+	 * <p>
+	 * This method may change resources; these changes will be reported
+	 * in a subsequent resource change event.
+	 * </p>
+	 * <p>
+	 * This method is long-running; progress and cancellation are provided
+	 * by the given progress monitor.
+	 * </p>
+	 *
+	 * @param kind the kind of build being requested. Valid values are:
+	 *		<ul>
+	 *		<li> <code>IncrementalProjectBuilder.FULL_BUILD</code> - indicates a full build.</li>
+	 *		<li> <code>IncrementalProjectBuilder.INCREMENTAL_BUILD</code> - indicates an incremental build.</li>
+	 * 		<li><code>CLEAN_BUILD</code>- indicates a clean request. Clean does
+	 * 		not actually build anything, but rather discards all problems and build states.
+	 *		</ul>
+	 * @param monitor a progress monitor, or <code>null</code> if progress
+	 *		reporting is not desired
+	 * @exception CoreException if the build fails.
+	 *		The status contained in the exception may be a generic <code>BUILD_FAILED</code>
+	 *		code, but it could also be any other status code; it might
+	 *		also be a multi-status.
+	 * @exception OperationCanceledException if the operation is canceled.
+	 * Cancelation can occur even if no progress monitor is provided.
+	 *
+	 * @see IProjectDescription
+	 * @see IncrementalProjectBuilder#FULL_BUILD
+	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
+	 * @see IResourceRuleFactory#buildRule()
+	 */
+	public void build(IProjectVariant variant, int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
 	 * Closes this project.  The project need not be open.  Closing
