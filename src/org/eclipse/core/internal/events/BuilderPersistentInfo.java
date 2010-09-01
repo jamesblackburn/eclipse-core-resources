@@ -31,19 +31,24 @@ public class BuilderPersistentInfo {
 		this(projectName, null, builderName, buildSpecIndex);
 	}
 
+	public void setVariantName(String variantName) {
+		this.variantName = variantName;
+	}
+
 	public BuilderPersistentInfo(String projectName, String variantName, String builderName, int buildSpecIndex) {
 		this.projectName = projectName;
 		this.variantName = variantName;
 		this.builderName = builderName;
 		this.buildSpecIndex = buildSpecIndex;
 	}
+
 	public String getBuilderName() {
 		return builderName;
 	}
 
 	/**
-	 * @return the name of the variant for which this information refers. May be null if reading persistent data
-	 * in an older version.
+	 * @return the name of the variant for which this information refers. May return
+	 * null if reading persistent data from an old workspace tree.
 	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	public String getVariantName() {
