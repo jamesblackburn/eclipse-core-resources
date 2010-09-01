@@ -119,6 +119,8 @@ public class Project extends Container implements IProject {
 	 * @see IProject#build(int, IProgressMonitor)
 	 */
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
+		if (!isAccessible())
+			return;
 		internalBuild(getActiveVariant(), trigger, null, null, monitor);
 	}
 
@@ -126,6 +128,8 @@ public class Project extends Container implements IProject {
 	 * @see IProject#build(int, String, Map, IProgressMonitor)
 	 */
 	public void build(int trigger, String builderName, Map args, IProgressMonitor monitor) throws CoreException {
+		if (!isAccessible())
+			return;
 		Assert.isNotNull(builderName);
 		internalBuild(getActiveVariant(), trigger, builderName, args, monitor);
 	}
@@ -134,6 +138,8 @@ public class Project extends Container implements IProject {
 	 * @see IProject#build(IProjectVariant, int, String, Map, IProgressMonitor)
 	 */
 	public void build(IProjectVariant variant, int trigger, IProgressMonitor monitor) throws CoreException {
+		if (!isAccessible())
+			return;
 		internalBuild(variant, trigger, null, null, monitor);
 	}
 
