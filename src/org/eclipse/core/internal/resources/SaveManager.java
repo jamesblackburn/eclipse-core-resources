@@ -13,17 +13,11 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.runtime.OperationCanceledException;
-
-import org.eclipse.core.filesystem.IFileStore;
-
-import org.eclipse.core.filesystem.EFS;
-
-import java.net.URI;
-
 import java.io.*;
+import java.net.URI;
 import java.util.*;
 import java.util.zip.*;
+import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.events.*;
 import org.eclipse.core.internal.localstore.*;
 import org.eclipse.core.internal.utils.*;
@@ -1282,7 +1276,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			FileOutputStream fis = new FileOutputStream(tmpTree);
 			DataOutputStream output = new DataOutputStream(fis);
 			try {
-				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
+				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
 				writeTree(project, output, monitor);
 			} finally {
 				output.close();
@@ -1326,7 +1320,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			IPath tempLocation = workspace.getMetaArea().getBackupLocationFor(treeLocation);
 			DataOutputStream output = new DataOutputStream(new SafeFileOutputStream(treeLocation.toOSString(), tempLocation.toOSString()));
 			try {
-				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
+				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
 				writeTree(computeStatesToSave(contexts, workspace.getElementTree()), output, monitor);
 			} finally {
 				output.close();
@@ -1756,6 +1750,22 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 *       UTF - interesting project name
 	 */
 	protected void writeBuilderPersistentInfo(DataOutputStream output, List builders, List trees, IProgressMonitor monitor) throws IOException {
+		writeBuilderPersistentInfo(ICoreConstants.WORKSPACE_TREE_VERSION_2, output, builders, trees, monitor);
+	}
+
+	/**
+	 * Writes out persistent information about all builders for which a last built
+	 * tree is available. File format is:
+	 * int - number of builders
+	 * for each builder:
+	 *    UTF - project name
+	 *    UTF - project variant name (for version 3 and above)
+	 *    UTF - fully qualified builder extension name
+	 *    int - number of interesting projects for builder
+	 *    For each interesting project:
+	 *       UTF - interesting project name
+	 */
+	private void writeBuilderPersistentInfo(int version, DataOutputStream output, List builders, List trees, IProgressMonitor monitor) throws IOException {
 		monitor = Policy.monitorFor(monitor);
 		try {
 			// write the number of builders we are saving
@@ -1764,7 +1774,8 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			for (int i = 0; i < numBuilders; i++) {
 				BuilderPersistentInfo info = (BuilderPersistentInfo) builders.get(i);
 				output.writeUTF(info.getProjectName());
-				output.writeUTF(info.getVariantName());
+				if (version >= ICoreConstants.WORKSPACE_TREE_VERSION_3)
+					output.writeUTF(info.getVariantName());
 				output.writeUTF(info.getBuilderName());
 				// write interesting projects
 				IProject[] interestingProjects = info.getInterestingProjects();
@@ -1794,68 +1805,129 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 		info.writeTo(output);
 	}
 
+	/**
+	 * Attempts to save plugin info, builder info and build states for all projects
+	 * in the workspace.
+	 * 
+	 * The following is written to the output stream:
+	 * <ul>
+	 * <li> Workspace information </li>
+	 * <li> A list of plugin info </li>
+	 * <li> Builder info for all the builders for each project's active variant </li>
+	 * <li> Workspace trees for those plugins and builders </li>
+	 * <li> A version 3 marker </li>
+	 * <li> The names of the variants for each of the builders </li>
+	 * <li> Builder info for all the builders of all the other project's variants </li>
+	 * <li> Workspace trees for those builders </li>
+	 * </ul>
+	 * This format is designed to work with WorkspaceTreeReader versions 2 and 3.
+	 * The first two items constitute a version 2 file, and the additional information
+	 * is read as part of version 3.
+	 * 
+	 * @see WorkspaceTreeReader_2
+	 * @see WorkspaceTreeReader_3
+	 */
 	protected void writeTree(Map statesToSave, DataOutputStream output, IProgressMonitor monitor) throws IOException, CoreException {
-		monitor = Policy.monitorFor(monitor);
+		boolean wasImmutable = false;
 		try {
-			monitor.beginTask("", Policy.totalWork); //$NON-NLS-1$
-			boolean wasImmutable = false;
-			try {
-				// Create an array of trees to save. Ensure that the current one is in the list
-				ElementTree current = workspace.getElementTree();
-				wasImmutable = current.isImmutable();
-				current.immutable();
-				ArrayList trees = new ArrayList(statesToSave.size() * 2); // pick a number
-				monitor.worked(Policy.totalWork * 10 / 100);
+			// Create an array of trees to save. Ensure that the current one is in the list
+			ElementTree current = workspace.getElementTree();
+			wasImmutable = current.isImmutable();
+			current.immutable();
+			ArrayList trees = new ArrayList(statesToSave.size() * 2); // pick a number
+			monitor.worked(Policy.totalWork * 10 / 100);
 
-				// write out the workspace fields
-				writeWorkspaceFields(output, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
+			// Save the workspace fields
+			writeWorkspaceFields(output, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
 
-				// save plugin info
-				output.writeInt(statesToSave.size()); // write the number of plugins we are saving
-				for (Iterator i = statesToSave.entrySet().iterator(); i.hasNext();) {
-					Map.Entry entry = (Map.Entry) i.next();
-					String pluginId = (String) entry.getKey();
-					output.writeUTF(pluginId);
-					trees.add(entry.getValue()); // tree
-					updateDeltaExpiration(pluginId);
-				}
-				monitor.worked(Policy.totalWork * 10 / 100);
+			// Save plugin info
+			output.writeInt(statesToSave.size()); // write the number of plugins we are saving
+			for (Iterator i = statesToSave.entrySet().iterator(); i.hasNext();) {
+				Map.Entry entry = (Map.Entry) i.next();
+				String pluginId = (String) entry.getKey();
+				output.writeUTF(pluginId);
+				trees.add(entry.getValue()); // tree
+				updateDeltaExpiration(pluginId);
+			}
+			monitor.worked(Policy.totalWork * 10 / 100);
 
-				// add builders' trees
-				IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
-				List builders = new ArrayList(projects.length * 2);
-				for (int i = 0; i < projects.length; i++) {
-					IProject project = projects[i];
-					if (project.isOpen()) {
-						ArrayList infos = workspace.getBuildManager().createBuildersPersistentInfo(project);
-						if (infos != null)
-							builders.addAll(infos);
+			// Write the builder info for versions 2 and 3, and get the associated workspace trees and variant names
+			IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
+			List activeVariantNames = new ArrayList(projects.length);
+			List builderInfosVersion2 = new ArrayList(projects.length * 2);
+			List builderInfosVersion3 = new ArrayList(projects.length * 2);
+			for (int i = 0; i < projects.length; i++) {
+				IProject project = projects[i];
+				if (project.isOpen()) {
+					ArrayList infos = workspace.getBuildManager().createBuildersPersistentInfo(project);
+					if (infos != null) {
+						for (Iterator it = infos.iterator(); it.hasNext();) {
+							BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
+							if (info.getVariantName().equals(project.getActiveVariant().getVariantName())) {
+								builderInfosVersion2.add(info);
+								activeVariantNames.add(info.getVariantName());
+							} else
+								builderInfosVersion3.add(info);
+						}
 					}
 				}
-				writeBuilderPersistentInfo(output, builders, trees, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
-
-				// add the current tree in the list as the last element
-				trees.add(current);
-
-				/* save the forest! */
-				ElementTreeWriter writer = new ElementTreeWriter(this);
-				ElementTree[] treesToSave = (ElementTree[]) trees.toArray(new ElementTree[trees.size()]);
-				writer.writeDeltaChain(treesToSave, Path.ROOT, ElementTreeWriter.D_INFINITE, output, ResourceComparator.getSaveComparator());
-				monitor.worked(Policy.totalWork * 50 / 100);
-			} finally {
-				if (!wasImmutable)
-					workspace.newWorkingTree();
 			}
+			writeBuilderPersistentInfo(ICoreConstants.WORKSPACE_TREE_VERSION_2, output, builderInfosVersion2, trees, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
+
+			// Add the current tree in the list as the last element
+			trees.add(current);
+
+			// Save the trees
+			ElementTreeWriter writer = new ElementTreeWriter(this);
+			ElementTree[] treesToSave = (ElementTree[]) trees.toArray(new ElementTree[trees.size()]);
+			writer.writeDeltaChain(treesToSave, Path.ROOT, ElementTreeWriter.D_INFINITE, output, ResourceComparator.getSaveComparator());
+			monitor.worked(Policy.totalWork * 40 / 100);
+
+			// Start of version 3 information
+			trees.clear();
+			output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
+
+			// Save variant names for the builders
+			output.writeInt(activeVariantNames.size());
+			for (Iterator it = activeVariantNames.iterator(); it.hasNext();)
+				output.writeUTF((String) it.next());
+
+			// Save the version 3 builders info
+			writeBuilderPersistentInfo(ICoreConstants.WORKSPACE_TREE_VERSION_3, output, builderInfosVersion3, trees, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
+
+			// Save the trees 
+			trees.add(current);
+			writer = new ElementTreeWriter(this);
+			treesToSave = (ElementTree[]) trees.toArray(new ElementTree[trees.size()]);
+			writer.writeDeltaChain(treesToSave, Path.ROOT, ElementTreeWriter.D_INFINITE, output, ResourceComparator.getSaveComparator());
+			monitor.worked(Policy.totalWork * 40 / 100);
 		} finally {
-			monitor.done();
+			if (!wasImmutable)
+				workspace.newWorkingTree();
 		}
 	}
 
 	/**
-	 * Attempts to save all the trees for this project (the current tree
-	 * plus a tree for each builder with a previously built state).  Throws
-	 * an IOException if anything went wrong during save.  Attempts to close
+	 * Attempts to save all the trees for the given project. This includes the current
+	 * workspace tree and a tree for each builder that has previously built state information.
+	 * 
+	 * The following is written to the output stream:
+	 * <ul>
+	 * <li> Builder info for all the builders for the project's active variant </li>
+	 * <li> Workspace trees for those builders </li>
+	 * <li> A version 3 marker </li>
+	 * <li> Name of the project's active variant </li>
+	 * <li> Builder info for all the builders of all the other project's variants </li>
+	 * <li> Workspace trees for those builders </li>
+	 * </ul>
+	 * This format is designed to work with WorkspaceTreeReader versions 2 and 3.
+	 * The first two items constitute a version 2 file, and the additional information
+	 * is read as part of version 3.
+	 * 
+	 * @throws IOException if anything went wrong during save. Attempts to close
 	 * the provided stream at all costs.
+	 * @see WorkspaceTreeReader_2
+	 * @see WorkspaceTreeReader_3
 	 */
 	protected void writeTree(Project project, DataOutputStream output, IProgressMonitor monitor) throws IOException, CoreException {
 		monitor = Policy.monitorFor(monitor);
@@ -1864,30 +1936,58 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			boolean wasImmutable = false;
 			try {
 				/**
-				 * Obtain a list of BuilderPersistentInfo.
+				 * Obtain two lists of BuilderPersistentInfo, one for version 2 and
+				 * one for version 3.
 				 * This list includes builders that have never been instantiated
 				 * but already had a last built state.
 				 */
 				ArrayList builderInfos = workspace.getBuildManager().createBuildersPersistentInfo(project);
-				if (builderInfos == null)
-					builderInfos = new ArrayList(5);
-				List trees = new ArrayList(builderInfos.size() + 1);
+				ArrayList builderInfosVersion2 = new ArrayList(5);
+				ArrayList builderInfosVersion3 = new ArrayList(5);
+				if (builderInfos != null)
+				{
+					for (Iterator it = builderInfos.iterator(); it.hasNext();) {
+						BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
+						if (info.getVariantName().equals(project.getActiveVariant().getVariantName()))
+							builderInfosVersion2.add(info);
+						else
+							builderInfosVersion3.add(info);
+					}
+				}
+				List trees = new ArrayList(builderInfosVersion3.size() + 1);
 				monitor.worked(1);
 
-				/* Make sure the most recent tree is in the array */
+				// Make sure the most recent tree is in the array
 				ElementTree current = workspace.getElementTree();
 				wasImmutable = current.isImmutable();
 				current.immutable();
 
-				/* add the tree for each builder to the array */
-				writeBuilderPersistentInfo(output, builderInfos, trees, Policy.subMonitorFor(monitor, 1));
+				// Save the version 2 builder info and get the workspace trees associated with the builders
+				writeBuilderPersistentInfo(ICoreConstants.WORKSPACE_TREE_VERSION_2, output, builderInfosVersion2, trees, Policy.subMonitorFor(monitor, 1));
 				trees.add(current);
 
-				/* save the forest! */
+				// Save the trees
 				ElementTreeWriter writer = new ElementTreeWriter(this);
 				ElementTree[] treesToSave = (ElementTree[]) trees.toArray(new ElementTree[trees.size()]);
 				writer.writeDeltaChain(treesToSave, project.getFullPath(), ElementTreeWriter.D_INFINITE, output, ResourceComparator.getSaveComparator());
-				monitor.worked(8);
+				monitor.worked(4);
+
+				// Start of version 3 information
+				trees.clear();
+				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
+
+				// Save the active variant name for the project
+				output.writeUTF(project.getActiveVariant().getVariantName());
+
+				// Save the version 3 builder info and get the workspace trees associated with those builders
+				writeBuilderPersistentInfo(ICoreConstants.WORKSPACE_TREE_VERSION_3, output, builderInfosVersion3, trees, Policy.subMonitorFor(monitor, 1));
+
+				// Save the trees
+				trees.add(current);
+				writer = new ElementTreeWriter(this);
+				treesToSave = (ElementTree[]) trees.toArray(new ElementTree[trees.size()]);
+				writer.writeDeltaChain(treesToSave, project.getFullPath(), ElementTreeWriter.D_INFINITE, output, ResourceComparator.getSaveComparator());
+				monitor.worked(4);
 			} finally {
 				if (output != null)
 					output.close();
@@ -1907,7 +2007,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			SafeFileOutputStream safe = new SafeFileOutputStream(treeLocation.toOSString(), tempLocation.toOSString());
 			try {
 				DataOutputStream output = new DataOutputStream(safe);
-				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
+				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
 				writeTree(project, output, null);
 			} finally {
 				safe.close();
