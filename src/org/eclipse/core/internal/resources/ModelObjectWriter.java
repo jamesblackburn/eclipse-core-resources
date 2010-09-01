@@ -141,8 +141,16 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		writer.endTag(REFERENCE);
 	}
 
-	protected void write(IProjectVariant projectVariant, XMLWriter writer) {
-		writer.printSimpleTag(VARIANT, projectVariant.getVariantName());
+	protected void write(IProjectVariant projectVariant, boolean isActive, XMLWriter writer) {
+		if (!isActive)
+			writer.printSimpleTag(VARIANT, projectVariant.getVariantName());
+		else {
+			HashMap params = new HashMap(1);
+			params.put(ACTIVE_VARIANT, Boolean.toString(true));
+			writer.printTag(VARIANT, params, true, false);
+			writer.print(XMLWriter.getEscaped(projectVariant.getVariantName()));
+			writer.printTag('/' + VARIANT, null, false, true);
+		}
 	}
 
 	/**
@@ -221,10 +229,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 				write(array[i], writer);
 			return;
 		}
-		if (obj instanceof IProjectVariant) {
-			write((IProjectVariant) obj, writer);
-			return;
-		}
 		if (obj instanceof IProjectVariantReference) {
 			write((IProjectVariantReference) obj, writer);
 			return;
@@ -248,7 +252,7 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
 			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);
-			write(VARIANTS, Arrays.asList(description.internalGetVariants(false)), writer);
+			write(VARIANTS, Arrays.asList(description.internalGetVariants(false)), description.internalGetActiveVariant(false), writer);
 			HashMap links = description.getLinks();
 			if (links != null) {
 				// ensure consistent order of map elements
@@ -280,6 +284,15 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		writer.startTag(name, null);
 		for (Iterator it = collection.iterator(); it.hasNext();)
 			write(it.next(), writer);
+		writer.endTag(name);
+	}
+
+	protected void write(String name, Collection collection, IProjectVariant activeVariant, XMLWriter writer) throws IOException {
+		writer.startTag(name, null);
+		for (Iterator it = collection.iterator(); it.hasNext();) {
+			IProjectVariant variant = (IProjectVariant) it.next();
+			write(variant, variant.equals(activeVariant), writer);
+		}
 		writer.endTag(name);
 	}
 

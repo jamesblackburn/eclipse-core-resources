@@ -50,6 +50,7 @@ public interface IModelObjectConstants {
 	public static final String REFERENCE = "reference"; //$NON-NLS-1$
 	public static final String VARIANTS = "variants"; //$NON-NLS-1$
 	public static final String VARIANT = "variant"; //$NON-NLS-1$
+	public static final String ACTIVE_VARIANT = "active"; //$NON-NLS-1$
 	public static final String TYPE = "type"; //$NON-NLS-1$
 	public static final String VALUE = "value"; //$NON-NLS-1$
 	public static final String WORKSPACE_DESCRIPTION = "workspaceDescription"; //$NON-NLS-1$

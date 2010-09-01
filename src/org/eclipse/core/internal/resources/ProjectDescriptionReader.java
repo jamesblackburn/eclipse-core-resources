@@ -434,9 +434,16 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				break;
 			case S_VARIANT_NAME :
 				if (elementName.equals(VARIANT)) {
-					// Top of stack is list of variant names
+					// Top of stack is a boolean indicating if the variant is active.
+					boolean isActive = ((Boolean) objectStack.pop()).booleanValue();
+					// Top of stack is the active variant name.
+					String activeVariant = (String) objectStack.pop();
+					// Top of stack is a list of variant names.
 					// A variant name can have leading/trailing whitespace.
-					((ArrayList) objectStack.peek()).add(charBuffer.toString());
+					String variantName = charBuffer.toString();
+					((ArrayList) objectStack.peek()).add(variantName);
+					// Put the active variant name back on the stack
+					objectStack.push(isActive ? variantName : activeVariant);
 					state = S_VARIANTS;
 				}
 			case S_REFERENCES :
@@ -878,6 +885,8 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	/** End of a variants list */
 	private void endVariantsElement(String elementName) {
 		if (elementName.equals(VARIANTS)) {
+			// Pop the active variant name off the stack
+			String activeVariant = (String) objectStack.pop();
 			// Pop the array list of variant names off the stack
 			List variantNames = (List) objectStack.pop();
 			state = S_PROJECT_DESC;
@@ -891,6 +900,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			for (Iterator it = variantNames.iterator(); it.hasNext(); i++)
 				variants[i] = projectDescription.newVariant((String) it.next());
 			projectDescription.setVariants(variants);
+			projectDescription.setActiveVariant(activeVariant);
 		}
 	}
 
@@ -1090,6 +1100,8 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			state = S_VARIANTS;
 			// Push an array list to hold all the variant names.
 			objectStack.push(new ArrayList());
+			// Push a place holder that will be replaced with the active variant name.
+			objectStack.push(null);
 			return;
 		}
 		if (elementName.equals(REFERENCES)) {
@@ -1290,6 +1302,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_VARIANTS:
 				if (elementName.equals(VARIANT)) {
 					state = S_VARIANT_NAME;
+					objectStack.push(new Boolean(attributes.getValue(ACTIVE_VARIANT)));
 				}
 				break;
 			case S_REFERENCES:
