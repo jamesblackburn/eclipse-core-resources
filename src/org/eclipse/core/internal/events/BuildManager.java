@@ -542,7 +542,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
 			//match on name, variant name and build spec index if known
 			// Note: the variant name may return null if the builder info is loaded from an older version
-			if (info.getBuilderName().equals(builderName) && info.getVariantName() == null || info.getVariantName().equals(variantName)) {
+			if (info.getBuilderName().equals(builderName) && (info.getVariantName() == null || info.getVariantName().equals(variantName))) {
 				//we have found a match on name alone
 				if (nameMatch == null)
 					nameMatch = info;
