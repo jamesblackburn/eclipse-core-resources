@@ -34,7 +34,6 @@ import org.eclipse.core.internal.events.BuilderPersistentInfo;
  * @noinstantiate This class is not intended to be instantiated by clients.
  */
 public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
-	private int version;
 	private List builderInfos;
 
 	public WorkspaceTreeReader_3(Workspace workspace) {
@@ -47,38 +46,45 @@ public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 
 	/**
 	 * Read a workspace tree storing information about multiple projects.
+	 * Overrides {@link WorkspaceTreeReader_1#readTree(DataInputStream, IProgressMonitor)}
 	 */
 	public void readTree(DataInputStream input, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		String message;
 		try {
 			message = Messages.resources_reading;
-			monitor.beginTask(message, 10);
+			monitor.beginTask(message, Policy.totalWork);
 
-			version = ICoreConstants.WORKSPACE_TREE_VERSION_2;
-			builderInfos = new ArrayList();
+			builderInfos = new ArrayList(20);
 
 			// Read the version 2 part of the file, but don't set the builder info in
-			// the projects. It is stored in builderInfos instead.
-			super.readTree(input, monitor);
+			// the projects. Store it in builderInfos instead.
+			readWorkspaceFields(input, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
+
+			HashMap savedStates = new HashMap(20);
+			List pluginsToBeLinked = new ArrayList(20);
+			readPluginsSavedStates(input, savedStates, pluginsToBeLinked, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
+			workspace.getSaveManager().setPluginsSavedState(savedStates);
+
+			List buildersToBeLinked = new ArrayList(20);
+			readBuildersPersistentInfo(null, input, buildersToBeLinked, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
+
+			final ElementTree[] trees = readTrees(Path.ROOT, input, Policy.subMonitorFor(monitor, Policy.opWork * 40 / 100));
+			linkPluginsSavedStateToTrees(pluginsToBeLinked, trees, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
+			linkBuildersToTrees(buildersToBeLinked, trees, pluginsToBeLinked.size(), Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 
 			// Read the version 3 information if available
 			if (input.available() > 0 && input.readInt() == ICoreConstants.WORKSPACE_TREE_VERSION_3) {
-				version = ICoreConstants.WORKSPACE_TREE_VERSION_3;
 
-				// Read the variant names and set them in the version 2 builder infos
-				int numVariants = input.readInt();
-				for (int i = 0; i < numVariants; i++)
-					((BuilderPersistentInfo) builderInfos.get(i)).setVariantName(input.readUTF());
-
-				// Read the builder info and trees
-				List buildersToBeLinked = new ArrayList(20);
+				buildersToBeLinked.clear();
 				readBuildersPersistentInfo(null, input, buildersToBeLinked, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
-				ElementTree[] trees = readTrees(Path.ROOT, input, Policy.subMonitorFor(monitor, Policy.opWork * 40 / 100));
 				linkBuildersToTrees(buildersToBeLinked, trees, 0, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
+
+				for (Iterator it = builderInfos.iterator(); it.hasNext();)
+					((BuilderPersistentInfo) it.next()).setVariantName(input.readUTF());
 			}
 
-			// Set the builder info on the projects
+			// Set the builder infos on the projects
 			setBuilderInfos(builderInfos);
 
 		} catch (IOException e) {
@@ -89,6 +95,10 @@ public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 		}
 	}
 
+	/**
+	 * Read a workspace tree storing information about a single project.
+	 * Overrides {@link WorkspaceTreeReader_2#readTree(IProject, DataInputStream, IProgressMonitor)}
+	 */
 	public void readTree(IProject project, DataInputStream input, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		String message;
@@ -96,27 +106,26 @@ public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 			message = Messages.resources_reading;
 			monitor.beginTask(message, 10);
 
-			version = ICoreConstants.WORKSPACE_TREE_VERSION_2;
-			builderInfos = new ArrayList(2);
+			builderInfos = new ArrayList(20);
 
 			// Read the version 2 part of the file, but don't set the builder info in
 			// the projects. It is stored in builderInfos instead.
-			super.readTree(project, input, Policy.subMonitorFor(monitor, 8));
+
+			List buildersToBeLinked = new ArrayList(20);
+			readBuildersPersistentInfo(project, input, buildersToBeLinked, Policy.subMonitorFor(monitor, 1));
+
+			ElementTree[] trees = readTrees(project.getFullPath(), input, Policy.subMonitorFor(monitor, 8));
+			linkBuildersToTrees(buildersToBeLinked, trees, 0, Policy.subMonitorFor(monitor, 1));
 
 			// Read the version 3 information if available
 			if (input.available() > 0 && input.readInt() == ICoreConstants.WORKSPACE_TREE_VERSION_3) {
-				version = ICoreConstants.WORKSPACE_TREE_VERSION_3;
 
-				// Read the active variant name and set it in the version 2 builder infos
-				String activeVariant = input.readUTF();
-				for (Iterator it = builderInfos.iterator(); it.hasNext();)
-					((BuilderPersistentInfo) it.next()).setVariantName(activeVariant);
-
-				// Read the builder info and trees
 				List infos = new ArrayList(5);
 				readBuildersPersistentInfo(project, input, infos, Policy.subMonitorFor(monitor, 1));
-				ElementTree[] trees = readTrees(project.getFullPath(), input, Policy.subMonitorFor(monitor, 8));
 				linkBuildersToTrees(infos, trees, 0, Policy.subMonitorFor(monitor, 1));
+
+				for (Iterator it = builderInfos.iterator(); it.hasNext();)
+					((BuilderPersistentInfo) it.next()).setVariantName(input.readUTF());
 			}
 
 			// Set the builder info on the projects
@@ -130,26 +139,10 @@ public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 		}
 	}
 
-	/*
-	 * overrides WorkspaceTreeReader_1#readBuilderInfo
-	 * Reads builder info optionally with or without the variant name, depending on the version.
-	 */
-	protected BuilderPersistentInfo readBuilderInfo(IProject project, DataInputStream input, int index) throws IOException {
-		if (version <= ICoreConstants.WORKSPACE_TREE_VERSION_2)
-			return super.readBuilderInfo(project, input, index);
-		String projectName = input.readUTF();
-		// Use the name of the project handle if available
-		if (project != null)
-			projectName = project.getName();
-		String variantName = input.readUTF();
-		String builderName = input.readUTF();
-		return new BuilderPersistentInfo(projectName, variantName, builderName, index);
-	}
-
-	/*
-	 * overrides WorkspaceTreeReader_1#linkBuildersToTrees
+	/**
 	 * This implementation allows version 2 and version 3 information to be loaded in separate passes.
 	 * Links trees with the given builders, but does not add them to the projects.
+	 * Overrides {@link WorkspaceTreeReader_1#linkBuildersToTrees(List, ElementTree[], int, IProgressMonitor)}
 	 */
 	protected void linkBuildersToTrees(List buildersToBeLinked, ElementTree[] trees, int index, IProgressMonitor monitor) {
 		monitor = Policy.monitorFor(monitor);
