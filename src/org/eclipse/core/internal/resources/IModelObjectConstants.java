@@ -45,7 +45,6 @@ public interface IModelObjectConstants {
 	public static final String PROJECT = "project"; //$NON-NLS-1$
 	public static final String PROJECT_DESCRIPTION = "projectDescription"; //$NON-NLS-1$
 	public static final String PROJECTS = "projects"; //$NON-NLS-1$
-	//TODO: Persist the active variant
 	public static final String REFERENCES = "references"; //$NON-NLS-1$
 	public static final String REFERENCE = "reference"; //$NON-NLS-1$
 	public static final String VARIANTS = "variants"; //$NON-NLS-1$
