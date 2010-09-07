@@ -15,7 +15,7 @@ package org.eclipse.core.resources;
  * When a project is built, a specific variant is built. This variant
  * is passed to the builders so that they can adapt their behavior
  * for different variants of the project.
- * @since 3.2
+ * @since 3.6
  */
 public interface IProjectVariant {
 	/**
