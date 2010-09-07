@@ -16,6 +16,7 @@ package org.eclipse.core.resources;
  * build (i.e. was explicitly asked to be built by the UI), or the result of
  * building a reference, and if so the portion of the reference graph that led
  * to it being built.
+ * @since 3.6
  */
 public interface IBuildContext {
 	/**
