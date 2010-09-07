@@ -1839,17 +1839,19 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				for (int i = 0; i < projects.length; i++) {
 					IProject project = projects[i];
 					if (project.isOpen()) {
+						String activeVariantName = project.getActiveVariant().getVariantName();
 						List infos = workspace.getBuildManager().createBuildersPersistentInfo(project);
 						if (infos != null) {
 							for (Iterator it = infos.iterator(); it.hasNext();) {
 								BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
 								// Add to the correct list of builders info and add to the variant names
-								if (info.getVariantName().equals(project.getActiveVariant().getVariantName())) {
+								String variantName = info.getVariantName() == null ? activeVariantName : info.getVariantName();
+								if (variantName.equals(activeVariantName)) {
 									builderInfosVersion2.add(info);
-									variantNamesVersion2.add(info.getVariantName());
+									variantNamesVersion2.add(variantName);
 								} else {
 									builderInfosVersion3.add(info);
-									variantNamesVersion3.add(info.getVariantName());
+									variantNamesVersion3.add(variantName);
 								}
 								// Add the builder's tree
 								ElementTree tree = info.getLastBuiltTree();
