@@ -177,6 +177,18 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 */
 	protected IFileModificationValidator validator = null;
 
+	// Comparator used to provide a stable ordering of project variants
+	private static class ProjectVariantComparator implements Comparator {
+		public int compare(Object x, Object y) {
+			IProjectVariant px = (IProjectVariant) x;
+			IProjectVariant py = (IProjectVariant) y;
+			int cmp = py.getProject().getName().compareTo(px.getProject().getName());
+			if (cmp == 0)
+				cmp = py.getVariantName().compareTo(px.getVariantName());
+			return cmp;
+		}
+	}
+
 	/**
 	 * Deletes all the files and directories from the given root down (inclusive).
 	 * Returns false if we could not delete some file or an exception occurred
@@ -590,26 +602,17 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * complete details of any cycles present.
 	 * </p>
 	 *
-	 * @return result describing the global project variant order
+	 * @return result describing the global active project variant order
 	 * @since 2.1
 	 */
-	private VertexOrder computeFullProjectVariantOrder() {
+	private VertexOrder computeActiveProjectVariantOrder() {
 		// Determine the full set of accessible active project variants in the workspace,
 		// and all the accessible project variants that they reference. This forms a set
 		// of all the project variants that will be returned.
 		// Order the set in descending alphabetical order of project name then variant name,
 		// as a secondary sort applied after sorting based on references, to achieve a stable
 		// ordering.
-		SortedSet allAccessibleProjectVariants = new TreeSet(new Comparator() {
-			public int compare(Object x, Object y) {
-				IProjectVariant px = (IProjectVariant) x;
-				IProjectVariant py = (IProjectVariant) y;
-				int cmp = py.getProject().getName().compareTo(px.getProject().getName());
-				if (cmp == 0)
-					cmp = py.getVariantName().compareTo(px.getVariantName());
-				return cmp;
-			}
-		});
+		SortedSet allAccessibleProjectVariants = new TreeSet(new ProjectVariantComparator());
 
 		// For each projects active variant, perform a depth first search in the reference graph
 		// rooted at that variant.
@@ -661,6 +664,67 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 						// Push the referenced variant onto the stack so that it is explored by the depth first search
 						stack.push(ref);
 					}
+				}
+			}
+		}
+		return ComputeVertexOrder.computeVertexOrder(allAccessibleProjectVariants, edges);
+	}
+
+	/**
+	 * Computes the global total ordering of all project variants in the workspace based
+	 * on project variant references. If an existing and open project variant P
+	 * references another existing and open project variant Q, then Q should come before P
+	 * in the resulting ordering. Closed and non-existent projects/variants are
+	 * ignored, and will not appear in the result. References to non-existent or closed
+	 * projects/variants are also ignored, as are any self-references.
+	 * <p>
+	 * When there are choices, the choice is made in a reasonably stable way. For
+	 * example, given an arbitrary choice between two project variants, the one with the
+	 * lower collating project name and variant name will appear earlier in the list.
+	 * </p>
+	 * <p>
+	 * When the project variant reference graph contains cyclic references, it is
+	 * impossible to honor all of the relationships. In this case, the result
+	 * ignores as few relationships as possible.  For example, if P2 references P1,
+	 * P4 references P3, and P2 and P3 reference each other, then exactly one of the
+	 * relationships between P2 and P3 will have to be ignored. The outcome will be
+	 * either [P1, P2, P3, P4] or [P1, P3, P2, P4]. The result also contains
+	 * complete details of any cycles present.
+	 * </p>
+	 *
+	 * @return result describing the global project variant order
+	 */
+	private VertexOrder computeFullProjectVariantOrder() {
+		// Compute the order for all accessible project variants
+		SortedSet allAccessibleProjectVariants = new TreeSet(new ProjectVariantComparator());
+
+		IProject[] allProjects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
+		List/*<IProjectVariant[]>*/ edges = new ArrayList(allProjects.length);
+
+		for (int i = 0; i < allProjects.length; i++) {
+			Project project = (Project) allProjects[i];
+			// Ignore projects that are not accessible
+			if (!project.isAccessible())
+				continue;
+
+			IProjectVariant[] variants = project.internalGetVariants();
+			for (int j = 0; j < variants.length; j++) {
+				IProjectVariant variant = variants[j];
+				allAccessibleProjectVariants.add(variants[j]);
+				IProjectVariant[] refs = project.internalGetReferencedProjectVariants(variants[j]);
+				for (int k = 0; k < refs.length; k++) {
+					IProjectVariant ref = refs[k];
+
+					// Ignore self references and references to projects that are not accessible
+					if (!ref.getProject().isAccessible() || ref.equals(variant))
+						continue;
+
+					// Ignore variants that do not exist
+					if (!((Project) ref.getProject()).internalHasVariant(ref))
+						continue;
+
+					// Add the referenced accessible variant
+					edges.add(new IProjectVariant[] {variant, ref});
 				}
 			}
 		}
@@ -1421,7 +1485,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			} else {
 				// use default project build order
 				// computed for all accessible projects in workspace
-				buildOrder = vertexOrderToProjectVariantOrder(computeFullProjectVariantOrder()).projectVariants;
+				buildOrder = vertexOrderToProjectVariantOrder(computeActiveProjectVariantOrder()).projectVariants;
 			}
 		}
 
