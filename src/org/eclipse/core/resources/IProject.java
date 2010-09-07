@@ -8,6 +8,7 @@
  *  Contributors:
  *     IBM Corporation - initial API and implementation
  * Francis Lynch (Wind River) - [301563] Save and load tree snapshots
+ * Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.resources;
 
@@ -30,7 +31,8 @@ import org.eclipse.core.runtime.content.IContentTypeMatcher;
  * <li>A project can carry session and persistent properties.</li>
  * <li>A project can be open or closed; a closed project is
  * 		passive and has a minimal in-memory footprint.</li>
- * <li>A project can carry references to other projects.</li>
+ * <li>A project can have one or more project variants.</li>
+ * <li>A project can carry references to other project variants.</li>
  * <li>A project can have one or more project natures.</li>
  * </ul>
  * </p>
@@ -57,7 +59,8 @@ public interface IProject extends IContainer, IAdaptable {
 	 * Invokes the <code>build</code> method of the specified builder 
 	 * for this project. Does nothing if this project is closed.  If this project
 	 * has multiple builders on its build spec matching the given name, only
-	 * the first matching builder will be run.
+	 * the first matching builder will be run. The build is run for the project's
+	 * active variant.
 	 * <p>
 	 * The builder name is declared in the extension that plugs in
 	 * to the standard <code>org.eclipse.core.resources.builders</code> 
@@ -105,7 +108,8 @@ public interface IProject extends IContainer, IAdaptable {
 	 * Builds this project. Does nothing if the project is closed.
 	 * <p>
 	 * Building a project involves executing the commands found
-	 * in this project's build spec.
+	 * in this project's build spec. The build is run for the project's
+	 * active variant.
 	 * </p>
 	 * <p>
 	 * This method may change resources; these changes will be reported
@@ -138,6 +142,46 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @see IResourceRuleFactory#buildRule()
 	 */
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
+
+	/** 
+	 * Builds a specific variant of this project. Does nothing if the project is closed
+	 * or the variant does not exist.
+	 * <p>
+	 * Building a project involves executing the commands found
+	 * in this project's build spec. The build is run for the specific project
+	 * variant.
+	 * </p>
+	 * <p>
+	 * This method may change resources; these changes will be reported
+	 * in a subsequent resource change event.
+	 * </p>
+	 * <p>
+	 * This method is long-running; progress and cancellation are provided
+	 * by the given progress monitor.
+	 * </p>
+	 *
+	 * @param kind the kind of build being requested. Valid values are:
+	 *		<ul>
+	 *		<li> <code>IncrementalProjectBuilder.FULL_BUILD</code> - indicates a full build.</li>
+	 *		<li> <code>IncrementalProjectBuilder.INCREMENTAL_BUILD</code> - indicates an incremental build.</li>
+	 * 		<li><code>CLEAN_BUILD</code>- indicates a clean request. Clean does
+	 * 		not actually build anything, but rather discards all problems and build states.
+	 *		</ul>
+	 * @param monitor a progress monitor, or <code>null</code> if progress
+	 *		reporting is not desired
+	 * @exception CoreException if the build fails.
+	 *		The status contained in the exception may be a generic <code>BUILD_FAILED</code>
+	 *		code, but it could also be any other status code; it might
+	 *		also be a multi-status.
+	 * @exception OperationCanceledException if the operation is canceled.
+	 * Cancelation can occur even if no progress monitor is provided.
+	 *
+	 * @see IProjectDescription
+	 * @see IncrementalProjectBuilder#FULL_BUILD
+	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
+	 * @see IResourceRuleFactory#buildRule()
+	 */
+	public void build(IProjectVariant variant, int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
 	 * Closes this project.  The project need not be open.  Closing
@@ -512,6 +556,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @see IProjectDescription#getReferencedProjects()
 	 * @see IProjectDescription#getDynamicReferences()
+	 * @see #getReferencedProjectVariants(IProjectVariant)
 	 */
 	public IProject[] getReferencedProjects() throws CoreException;
 
@@ -521,8 +566,49 @@ public interface IProject extends IContainer, IAdaptable {
 	 * an empty array if there are no referencing projects.
 	 *
 	 * @return a list of open projects referencing this project
+	 * @see #getReferencingProjectVariants(IProjectVariant)
 	 */
 	public IProject[] getReferencingProjects();
+
+	/**
+	 * Returns the project variant references for one of this project's variants.
+	 * This includes both the static and dynamic references of this project.
+	 * The returned projects and variants need not exist in the workspace.
+	 * The result will not contain duplicates. Returns an empty
+	 * array if there are no referenced project variants.
+	 * <p>
+	 * References to active variants will be translated to references to actual
+	 * project variants, if the project is accessible. If the referenced project
+	 * is not accessible the reference will be omitted from the result.
+	 * </p>
+	 *
+	 * @param variant the variant to get the references for
+	 * @return a list of project variants
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * <li> The project variant does not exist in this project.</li>
+	 * </ul>
+	 * @see IProjectDescription#getReferencedProjectVariants(String)
+	 * @see IProjectDescription#getDynamicVariantReferences(String)
+	 */
+	public IProjectVariant[] getReferencedProjectVariants(IProjectVariant variant) throws CoreException;
+
+	/**
+	 * Returns the list of all open projects' existing variants which reference
+	 * this project and the specified variant. This project and variant may
+	 * or may not exist. Returns an empty array if there are no
+	 * referencing project variants.
+	 * <p>
+	 * If this variant is the projects active variant, then the result will include
+	 * variants that reference the active variant of ths project.
+	 * </p>
+	 *
+	 * @param variant the variant to get the references to
+	 * @return a list of open projects and their existing variant referencing this project
+	 */
+	public IProjectVariant[] getReferencingProjectVariants(IProjectVariant variant);
 
 	/** 
 	 * Returns whether the project nature specified by the given
@@ -908,4 +994,71 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @since 2.0
 	 */
 	public void setDescription(IProjectDescription description, int updateFlags, IProgressMonitor monitor) throws CoreException;
+
+	/**
+	 * Returns the project variants for this project. A project always has at
+	 * least one variant, so this will never return an empty list or null.
+	 * The result will not contain duplicates.
+	 * @return a list of project variants
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * </ul>
+	 */
+	public IProjectVariant[] getVariants() throws CoreException;
+
+	/**
+	 * Returns the project variant with the given name for this project.
+	 * @param name the name of the variant to get
+	 * @return a project variants
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * <li> The variant does not exist in this project.</li>
+	 * </ul>
+	 * @see #getVariants()
+	 */
+	public IProjectVariant getVariant(String name) throws CoreException;
+
+	/**
+	 * Checks whether the project has the specified variant.
+	 *
+	 * @param variant the variant
+	 * @return <code>true</code> if the project has the specified variant, false otherwise
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * </ul>
+	 */
+	public boolean hasVariant(IProjectVariant variant) throws CoreException;
+
+	/**
+	 * Returns the active variant for the project.
+	 * <p>
+	 * If at any point the active variant is removed from the project, for example
+	 * when updating the list of variants, the active variant will be set to
+	 * the first variant specified by {@link IProjectDescription#setVariants(IProjectVariant[])}.
+	 * If all of the variants are removed, the active variant will be set to the
+	 * default variant.
+	 * </p>
+	 * @return the active variant
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * </ul>
+	 */
+	public IProjectVariant getActiveVariant() throws CoreException;
+
+	/**
+	 * Returns a new project variant reference that points to this project.
+	 * The reference points to the project's active variant by default,
+	 * but this can be set using {@link IProjectVariantReference#setVariantName(String)}.
+	 *
+	 * @return a project variant reference to this project
+	 */
+	public IProjectVariantReference newReference();
 }

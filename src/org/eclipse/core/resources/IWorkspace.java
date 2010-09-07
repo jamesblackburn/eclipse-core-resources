@@ -8,6 +8,7 @@
  *  Contributors:
  *     IBM Corporation - initial API and implementation
  *     Red Hat Incorporated - loadProjectDescription(InputStream)
+ *     Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.resources;
 
@@ -229,13 +230,54 @@ public interface IWorkspace extends IAdaptable {
 	 * Cancelation can occur even if no progress monitor is provided.
 	 * 
 	 * @see IProject#build(int, IProgressMonitor)
-	 * @see #computeProjectOrder(IProject[])
+	 * @see #computeProjectVariantOrder(IProjectVariant[])
 	 * @see IncrementalProjectBuilder#FULL_BUILD
 	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
 	 * @see IncrementalProjectBuilder#CLEAN_BUILD
 	 * @see IResourceRuleFactory#buildRule()
 	 */
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
+
+	/**
+	 * Build all project variants in the given list along with their references.
+	 * The project variants are built in the order specified in the list.
+	 * Any referenced project variants that do not appear in the list are built before any
+	 * of the variants in the list, in an order specified in the workspace description.
+	 * If no order is specified, the workspace computes an order determined by project variant
+	 * references.
+	 * <p>
+	 * This method may change resources; these changes will be reported in a
+	 * subsequent resource change event.
+	 * </p>
+	 * <p>
+	 * This method is long-running; progress and cancellation are provided by
+	 * the given progress monitor.
+	 * </p>
+	 * 
+	 * @param kind the kind of build being requested. Valid values are
+	 *	<ul>
+	 * <li>{@link IncrementalProjectBuilder#FULL_BUILD}- indicates a full build.</li>
+	 * <li>{@link IncrementalProjectBuilder#INCREMENTAL_BUILD}- indicates a incremental build.</li>
+	 * <li>{@link IncrementalProjectBuilder#CLEAN_BUILD}- indicates a clean request.  Clean does
+	 * not actually build anything, but rather discards all problems and build states.</li>
+	 *	</ul>
+	 * @param monitor a progress monitor, or <code>null</code> if progress
+	 * reporting is not desired
+	 * @exception CoreException if the build fails.
+	 *		The status contained in the exception may be a generic {@link IResourceStatus#BUILD_FAILED}
+	 *		code, but it could also be any other status code; it might
+	 *		also be a {@link MultiStatus}.
+	 * @exception OperationCanceledException if the operation is canceled. 
+	 * Cancellation can occur even if no progress monitor is provided.
+	 * 
+	 * @see IProject#build(int, IProgressMonitor)
+	 * @see #computeProjectVariantOrder(IProjectVariant[])
+	 * @see IncrementalProjectBuilder#FULL_BUILD
+	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
+	 * @see IncrementalProjectBuilder#CLEAN_BUILD
+	 * @see IResourceRuleFactory#buildRule()
+	 */
+	public void build(IProjectVariant projectVariants[], int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
 	 * Checkpoints the operation currently in progress. This method is used in
@@ -267,7 +309,8 @@ public interface IWorkspace extends IAdaptable {
 
 	/**
 	 * Returns the prerequisite ordering of the given projects. The computation
-	 * is done by interpreting project references as dependency relationships.
+	 * is done by interpreting their active variants project variant references
+	 * as dependency relationships.
 	 * For example if A references B and C, and C references B, this method,
 	 * given the list A, B, C will return the order B, C, A. That is, projects
 	 * with no dependencies are listed first.
@@ -321,9 +364,9 @@ public interface IWorkspace extends IAdaptable {
 		}
 
 		/**
-		 * A list of projects ordered so as to honor the project reference
-		 * relationships between these projects wherever possible. The elements
-		 * are a subset of the ones passed as the <code>projects</code>
+		 * A list of projects ordered so as to honor the project variant reference
+		 * relationships between these projects' variants wherever possible.
+		 * The elements are a subset of the ones passed as the <code>projects</code>
 		 * parameter to <code>IWorkspace.computeProjectOrder</code>, where
 		 * inaccessible (closed or non-existent) projects have been omitted.
 		 */
@@ -331,7 +374,7 @@ public interface IWorkspace extends IAdaptable {
 		/**
 		 * Indicates whether any of the accessible projects in
 		 * <code>projects</code> are involved in non-trivial cycles.
-		 * <code>true</code> if the project reference graph contains at least
+		 * <code>true</code> if the project variant reference graph contains at least
 		 * one cycle involving two or more of the projects in
 		 * <code>projects</code>, and <code>false</code> if none of the
 		 * projects in <code>projects</code> are involved in cycles.
@@ -340,11 +383,65 @@ public interface IWorkspace extends IAdaptable {
 		/**
 		 * A list of knots in the project reference graph. This list is empty if
 		 * the project reference graph does not contain cycles. If the project
-		 * reference graph contains cycles, each element is a knot of two or
+		 * variant reference graph contains cycles, each element is a knot of two or
 		 * more accessible projects from <code>projects</code> that are
 		 * involved in a cycle of mutually dependent references.
 		 */
 		public IProject[][] knots;
+	}
+
+	/**
+	 * Data structure for holding the multi-part outcome of
+	 * <code>IWorkspace.computeProjectVariantOrder</code>.
+	 * <p>
+	 * This class is not intended to be instantiated by clients.
+	 * </p>
+	 * 
+	 * @see IWorkspace#computeProjectVariantOrder(IProjectVariant[])
+	 * @since 2.1
+	 */
+	public final class ProjectVariantOrder {
+		/**
+		 * Creates an instance with the given values.
+		 * <p>
+		 * This class is not intended to be instantiated by clients.
+		 * </p>
+		 * 
+		 * @param projectVariants initial value of <code>projectVariants</code> field
+		 * @param hasCycles initial value of <code>hasCycles</code> field
+		 * @param knots initial value of <code>knots</code> field
+		 */
+		public ProjectVariantOrder(IProjectVariant[] projectVariants, boolean hasCycles, IProjectVariant[][] knots) {
+			this.projectVariants = projectVariants;
+			this.hasCycles = hasCycles;
+			this.knots = knots;
+		}
+
+		/**
+		 * A list of project variants ordered so as to honor the project variant reference
+		 * relationships between these project variants wherever possible. The elements
+		 * are a subset of the ones passed as the <code>projectVariants</code>
+		 * parameter to <code>IWorkspace.computeProjectOrder</code>, where
+		 * inaccessible (closed or non-existent) projects have been omitted.
+		 */
+		public IProjectVariant[] projectVariants;
+		/**
+		 * Indicates whether any of the accessible project variants in
+		 * <code>projectVariants</code> are involved in non-trivial cycles.
+		 * <code>true</code> if the project variant reference graph contains at least
+		 * one cycle involving two or more of the project variants in
+		 * <code>projectVariants</code>, and <code>false</code> if none of the
+		 * project variants in <code>projectVariants</code> are involved in cycles.
+		 */
+		public boolean hasCycles;
+		/**
+		 * A list of knots in the project variant reference graph. This list is empty if
+		 * the project variant reference graph does not contain cycles. If the project
+		 * variant reference graph contains cycles, each element is a knot of two or
+		 * more accessible project variants from <code>projectVariants</code> that are
+		 * involved in a cycle of mutually dependent references.
+		 */
+		public IProjectVariant[][] knots;
 	}
 
 	/**
@@ -382,6 +479,42 @@ public interface IWorkspace extends IAdaptable {
 	 * @since 2.1
 	 */
 	public ProjectOrder computeProjectOrder(IProject[] projects);
+
+	/**
+	 * Computes a total ordering of the given projects variants based on both static and
+	 * dynamic project references. If an existing and open project variant P references
+	 * another existing and open project variant Q also included in the list, then Q
+	 * should come before P in the resulting ordering. Closed and non-existent
+	 * projects are ignored, and will not appear in the result. References to
+	 * non-existent or closed projects/variants are also ignored, as are any
+	 * self-references. The total ordering is always consistent with the global
+	 * total ordering of all open projects' variants in the workspace.
+	 * <p>
+	 * When there are choices, the choice is made in a reasonably stable way.
+	 * For example, given an arbitrary choice between two project variants, the one with
+	 * the lower collating project name then variant name is usually selected.
+	 * </p>
+	 * <p>
+	 * When the project reference graph contains cyclic references, it is
+	 * impossible to honor all of the relationships. In this case, the result
+	 * ignores as few relationships as possible. For example, if P2 references
+	 * P1, P4 references P3, and P2 and P3 reference each other, then exactly
+	 * one of the relationships between P2 and P3 will have to be ignored. The
+	 * outcome will be either [P1, P2, P3, P4] or [P1, P3, P2, P4]. The result
+	 * also contains complete details of any cycles present.
+	 * </p>
+	 * <p>
+	 * This method is time-consuming and should not be called unnecessarily.
+	 * There are a very limited set of changes to a workspace that could affect
+	 * the outcome: creating, renaming, or deleting a project; opening or
+	 * closing a project; deleting a project variant; adding or removing a project variant reference.
+	 * </p>
+	 * 
+	 * @param projectVariants the project variants to order
+	 * @return result describing the project variant order
+	 * @since 2.1
+	 */
+	public ProjectVariantOrder computeProjectVariantOrder(IProjectVariant[] projectVariants);
 
 	/**
 	 * Copies the given sibling resources so that they are located as members of
@@ -677,6 +810,20 @@ public interface IWorkspace extends IAdaptable {
 	 * <code>IProject[]</code>) from project to dangling project references
 	 */
 	public Map getDanglingReferences();
+
+	/**
+	 * Finds all dangling project variant references in this workspace. Projects
+	 * which are not open are ignored. Returns a map with one entry for each open
+	 * project's variant in the workspace that has at least one dangling project
+	 * variant reference; the value of the entry is an array of project variants
+	 * which are referenced by that project variant but do not exist in the workspace.
+	 * Returns an empty Map if there are no projects in the workspace.
+	 * 
+	 * @return a map (key type: <code>IProjectVariant</code>, value type:
+	 * <code>IProjectVariant[]</code>) from project variant to dangling
+	 * project variant references
+	 */
+	public Map getDanglingVariantReferences();
 
 	/**
 	 * Returns the workspace description. This object is responsible for

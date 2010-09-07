@@ -10,6 +10,7 @@
  *     Serge Beauchamp (Freescale Semiconductor) - [252996] add resource filtering
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group and Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
+ * Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -55,13 +56,13 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		return result;
 	}
 
-	protected void write(BuildCommand command, XMLWriter writer) {
+	protected void write(BuildCommand command, XMLWriter writer) throws IOException {
 		writer.startTag(BUILD_COMMAND, null);
 		if (command != null) {
 			writer.printSimpleTag(NAME, command.getName());
 			if (shouldWriteTriggers(command))
 				writer.printSimpleTag(BUILD_TRIGGERS, triggerString(command));
-			write(ARGUMENTS, command.getArguments(false), writer);
+			write(ARGUMENTS, DICTIONARY, KEY, VALUE, command.getArguments(false), writer);
 		}
 		writer.endTag(BUILD_COMMAND);
 	}
@@ -128,6 +129,28 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			writer.printSimpleTag(VALUE, description.getValue());
 		}
 		writer.endTag(VARIABLE);
+	}
+
+	protected void write(IProjectVariantReference ref, XMLWriter writer) {
+		writer.startTag(REFERENCE, null);
+		if (ref != null) {
+			writer.printSimpleTag(PROJECT, ref.getProject().getName());
+			if (ref.getVariantName() != null)
+				writer.printSimpleTag(VARIANT, ref.getVariantName());
+		}
+		writer.endTag(REFERENCE);
+	}
+
+	protected void write(IProjectVariant projectVariant, boolean isActive, XMLWriter writer) {
+		if (!isActive)
+			writer.printSimpleTag(VARIANT, projectVariant.getVariantName());
+		else {
+			HashMap params = new HashMap(1);
+			params.put(ACTIVE_VARIANT, Boolean.toString(true));
+			writer.printTag(VARIANT, params, true, false);
+			writer.print(XMLWriter.getEscaped(projectVariant.getVariantName()));
+			writer.printTag('/' + VARIANT, null, false, true);
+		}
 	}
 
 	/**
@@ -200,6 +223,16 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			write((VariableDescription) obj, writer);
 			return;
 		}
+		if (obj instanceof IProjectVariantReference[]) {
+			IProjectVariantReference[] array = (IProjectVariantReference[]) obj;
+			for (int i = 0; i < array.length; i++)
+				write(array[i], writer);
+			return;
+		}
+		if (obj instanceof IProjectVariantReference) {
+			write((IProjectVariantReference) obj, writer);
+			return;
+		}
 		writer.printTabulation();
 		writer.println(obj.toString());
 	}
@@ -214,9 +247,12 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			if (snapshotLocation != null) {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
+			write(REFERENCES, VARIANT, NAME, null, description.staticRefs, writer);
+			// Store project references for backwards compatibility
 			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
 			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);
+			write(VARIANTS, Arrays.asList(description.internalGetVariants(false)), description.internalGetActiveVariant(false), writer);
 			HashMap links = description.getLinks();
 			if (links != null) {
 				// ensure consistent order of map elements
@@ -251,10 +287,30 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		writer.endTag(name);
 	}
 
+	protected void write(String name, Collection collection, IProjectVariant activeVariant, XMLWriter writer) throws IOException {
+		writer.startTag(name, null);
+		for (Iterator it = collection.iterator(); it.hasNext();) {
+			IProjectVariant variant = (IProjectVariant) it.next();
+			write(variant, variant.equals(activeVariant), writer);
+		}
+		writer.endTag(name);
+	}
+
 	/**
-	 * Write maps of (String, String).
+	 * Write maps of (String, Object) as
+	 * <name>
+	 *     <entryname>
+	 *         <keyName>key</keyName>
+	 *         <valueName>Object</valueName>
+	 *     </entryname>
+	 *     ...
+	 * </name>
+	 * where Object is written with a call to:
+	 *  - {@link XMLWriter#printSimpleTag(String, Object)} if it is a String
+	 *  - {@link #write(Object, XMLWriter)} otherwise
+	 * If valueName is null, Object is not surrounded in valueName tags
 	 */
-	protected void write(String name, Map table, XMLWriter writer) {
+	protected void write(String name, String entryName, String keyName, String valueName, Map table, XMLWriter writer) throws IOException {
 		writer.startTag(name, null);
 		if (table != null) {
 			// ensure consistent order of map elements
@@ -264,12 +320,20 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			for (Iterator it = sorted.iterator(); it.hasNext();) {
 				String key = (String) it.next();
 				Object value = table.get(key);
-				writer.startTag(DICTIONARY, null);
+				writer.startTag(entryName, null);
 				{
-					writer.printSimpleTag(KEY, key);
-					writer.printSimpleTag(VALUE, value);
+					writer.printSimpleTag(keyName, key);
+					if (value instanceof String)
+						writer.printSimpleTag(valueName, value);
+					else if (value != null) {
+						if (valueName != null)
+							writer.startTag(valueName, null);
+						write(value, writer);
+						if (valueName != null)
+							writer.endTag(valueName);
+					}
 				}
-				writer.endTag(DICTIONARY);
+				writer.endTag(entryName);
 			}
 		}
 		writer.endTag(name);

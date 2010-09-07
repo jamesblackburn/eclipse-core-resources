@@ -10,6 +10,7 @@
  *     Isaac Pacht (isaacp3@gmail.com) - fix for bug 206540
  * Anton Leherbauer (Wind River) - [305858] Allow Builder to return null rule
  * James Blackburn (Broadcom) - [306822] Provide Context for Builder getRule()
+ * Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
@@ -95,7 +96,12 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	//the job for performing background autobuild
 	final AutoBuildJob autoBuildJob;
 	private boolean building = false;
-	private final ArrayList builtProjects = new ArrayList();
+	private final Set builtProjects = new HashSet();
+	private final Set builtProjectVariants = new HashSet();
+
+	//the build order for a subsequent call to #build(). Allows context information to be available
+	//before build is run.
+	private IProjectVariant[] buildOrder = new IProjectVariant[0];
 
 	//the following four fields only apply for the lifetime of a single builder invocation.
 	protected InternalBuilder currentBuilder;
@@ -134,7 +140,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		try {
 			currentBuilder = builder;
 			//clear any old requests to forget built state
-			currentBuilder.clearForgetLastBuiltState();
+			currentBuilder.clearLastBuiltStateRequests();
 			// Figure out want kind of build is needed
 			boolean clean = trigger == IncrementalProjectBuilder.CLEAN_BUILD;
 			currentLastBuiltTree = currentBuilder.getLastBuiltTree();
@@ -181,6 +187,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				// Be sure to clean up after ourselves.
 				if (clean || currentBuilder.wasForgetStateRequested()) {
 					currentBuilder.setLastBuiltTree(null);
+				} else if (currentBuilder.wasRememberStateRequested()) {
+					// Don't modify the last built tree
 				} else {
 					// remember the current state as the last built state.
 					ElementTree lastTree = workspace.getElementTree();
@@ -197,13 +205,13 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		}
 	}
 
-	protected void basicBuild(IProject project, int trigger, ICommand[] commands, MultiStatus status, IProgressMonitor monitor) {
+	protected void basicBuild(IProjectVariant projectVariant, int trigger, IBuildContext context, ICommand[] commands, MultiStatus status, IProgressMonitor monitor) {
 		try {
 			for (int i = 0; i < commands.length; i++) {
 				checkCanceled(trigger, monitor);
 				BuildCommand command = (BuildCommand) commands[i];
 				IProgressMonitor sub = Policy.subMonitorFor(monitor, 1);
-				IncrementalProjectBuilder builder = getBuilder(project, command, i, status);
+				IncrementalProjectBuilder builder = getBuilder(projectVariant, command, i, status, context);
 				if (builder != null)
 					basicBuild(trigger, builder, command.getArguments(false), status, sub);
 			}
@@ -213,24 +221,25 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Runs all builders on the given project. 
+	 * Runs all builders on the given project variant.
 	 * @return A status indicating if the build succeeded or failed
 	 */
-	private IStatus basicBuild(IProject project, int trigger, IProgressMonitor monitor) {
+	private IStatus basicBuild(IProjectVariant projectVariant, int trigger, IBuildContext context, IProgressMonitor monitor) {
 		if (!canRun(trigger))
 			return Status.OK_STATUS;
 		try {
 			hookStartBuild(trigger);
 			MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, Messages.events_errors, null);
-			basicBuild(project, trigger, status, monitor);
+			basicBuild(projectVariant, trigger, context, status, monitor);
 			return status;
 		} finally {
 			hookEndBuild(trigger);
 		}
 	}
 
-	private void basicBuild(final IProject project, final int trigger, final MultiStatus status, final IProgressMonitor monitor) {
+	private void basicBuild(final IProjectVariant projectVariant, final int trigger, final IBuildContext context, final MultiStatus status, final IProgressMonitor monitor) {
 		try {
+			final IProject project = projectVariant.getProject();
 			final ICommand[] commands;
 			if (project.isAccessible())
 				commands = ((Project) project).internalGetDescription().getBuildSpec(false);
@@ -257,7 +266,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				}
 
 				public void run() throws Exception {
-					basicBuild(project, trigger, commands, status, monitor);
+					basicBuild(projectVariant, trigger, context, commands, status, monitor);
 				}
 			};
 			SafeRunner.run(code);
@@ -267,10 +276,11 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Runs the builder with the given name on the given project. 
+	 * Runs the builder with the given name on the given project variant.
 	 * @return A status indicating if the build succeeded or failed
 	 */
-	private IStatus basicBuild(IProject project, int trigger, String builderName, Map args, IProgressMonitor monitor) {
+	private IStatus basicBuild(IProjectVariant projectVariant, int trigger, String builderName, Map args, IProgressMonitor monitor) {
+		final IProject project = projectVariant.getProject();
 		monitor = Policy.monitorFor(monitor);
 		try {
 			String message = NLS.bind(Messages.events_building_1, project.getFullPath());
@@ -282,7 +292,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, Messages.events_errors, null);
 				ICommand command = getCommand(project, builderName, args);
 				try {
-					IncrementalProjectBuilder builder = getBuilder(project, command, -1, status);
+					IBuildContext context = new BuildContext(projectVariant, new IProjectVariant[]{projectVariant});
+					IncrementalProjectBuilder builder = getBuilder(projectVariant, command, -1, status, context);
 					if (builder != null)
 						basicBuild(trigger, builder, args, status, Policy.subMonitorFor(monitor, 1));
 				} catch (CoreException e) {
@@ -300,8 +311,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	/**
 	 * Loop the workspace build until no more builders request a rebuild.
 	 */
-	private void basicBuildLoop(IProject[] ordered, IProject[] unordered, int trigger, MultiStatus status, IProgressMonitor monitor) {
-		int projectWork = ordered.length;
+	private void basicBuildLoop(IProjectVariant[] variants, int trigger, MultiStatus status, IProgressMonitor monitor) {
+		int projectWork = variants.length;
 		if (projectWork > 0)
 			projectWork = TOTAL_BUILD_WORK / projectWork;
 		int maxIterations = workspace.getDescription().getMaxBuildIterations();
@@ -311,16 +322,13 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		for (int iter = 0; rebuildRequested && iter < maxIterations; iter++) {
 			rebuildRequested = false;
 			builtProjects.clear();
-			for (int i = 0; i < ordered.length; i++) {
-				if (ordered[i].isAccessible()) {
-					basicBuild(ordered[i], trigger, status, Policy.subMonitorFor(monitor, projectWork));
-					builtProjects.add(ordered[i]);
-				}
-			}
-			for (int i = 0; i < unordered.length; i++) {
-				if (unordered[i].isAccessible()) {
-					basicBuild(unordered[i], trigger, status, Policy.subMonitorFor(monitor, projectWork));
-					builtProjects.add(unordered[i]);
+			builtProjectVariants.clear();
+			for (int i = 0; i < variants.length; i++) {
+				if (variants[i].getProject().isAccessible()) {
+					IBuildContext context = new BuildContext(variants[i], variants);
+					basicBuild(variants[i], trigger, context, status, Policy.subMonitorFor(monitor, projectWork));
+					builtProjects.add(variants[i].getProject());
+					builtProjectVariants.add(variants[i]);
 				}
 			}
 			//subsequent builds should always be incremental
@@ -329,10 +337,11 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Runs all builders on all projects. 
+	 * Runs all builders on all the given project variants, in the order that
+	 * they are given.
 	 * @return A status indicating if the build succeeded or failed
 	 */
-	public IStatus build(int trigger, IProgressMonitor monitor) {
+	public IStatus build(IProjectVariant[] variants, int trigger, IProgressMonitor monitor) {
 		monitor = Policy.monitorFor(monitor);
 		try {
 			monitor.beginTask(Messages.events_building_0, TOTAL_BUILD_WORK);
@@ -340,12 +349,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				return Status.OK_STATUS;
 			try {
 				hookStartBuild(trigger);
-				IProject[] ordered = workspace.getBuildOrder();
-				HashSet leftover = new HashSet(Arrays.asList(workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN)));
-				leftover.removeAll(Arrays.asList(ordered));
-				IProject[] unordered = (IProject[]) leftover.toArray(new IProject[leftover.size()]);
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.BUILD_FAILED, Messages.events_errors, null);
-				basicBuildLoop(ordered, unordered, trigger, status, monitor);
+				basicBuildLoop(variants, trigger, status, monitor);
 				return status;
 			} finally {
 				hookEndBuild(trigger);
@@ -358,14 +363,16 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Runs the builder with the given name on the given project. 
+	 * Runs the builder with the given name on the given project variant.
 	 * @return A status indicating if the build succeeded or failed
 	 */
-	public IStatus build(IProject project, int trigger, String builderName, Map args, IProgressMonitor monitor) {
+	public IStatus build(IProjectVariant projectVariant, int trigger, String builderName, Map args, IProgressMonitor monitor) {
 		monitor = Policy.monitorFor(monitor);
-		if (builderName == null)
-			return basicBuild(project, trigger, monitor);
-		return basicBuild(project, trigger, builderName, args, monitor);
+		if (builderName == null) {
+			IBuildContext context = new BuildContext(projectVariant, new IProjectVariant[]{projectVariant});
+			return basicBuild(projectVariant, trigger, context, monitor);
+		}
+		return basicBuild(projectVariant, trigger, builderName, args, monitor);
 	}
 
 	private boolean canRun(int trigger) {
@@ -390,7 +397,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 
 	/**
 	 * Creates and returns an ArrayList of BuilderPersistentInfo. 
-	 * The list includes entries for all builders that are
+	 * The list includes entries for all builders for all variants that are
 	 * in the builder spec, and that have a last built state, even if they 
 	 * have not been instantiated this session.
 	 */
@@ -398,32 +405,39 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		/* get the old builders (those not yet instantiated) */
 		ArrayList oldInfos = getBuildersPersistentInfo(project);
 
-		ICommand[] commands = ((Project) project).internalGetDescription().getBuildSpec(false);
+		ProjectDescription desc = ((Project) project).internalGetDescription();
+		ICommand[] commands = desc.getBuildSpec(false);
 		if (commands.length == 0)
+			return null;
+		IProjectVariant[] variants = project.getVariants();
+		if (variants.length == 0)
 			return null;
 
 		/* build the new list */
 		ArrayList newInfos = new ArrayList(commands.length);
 		for (int i = 0; i < commands.length; i++) {
 			String builderName = commands[i].getBuilderName();
-			BuilderPersistentInfo info = null;
-			IncrementalProjectBuilder builder = ((BuildCommand) commands[i]).getBuilder();
-			if (builder == null) {
-				// if the builder was not instantiated, use the old info if any.
-				if (oldInfos != null)
-					info = getBuilderInfo(oldInfos, builderName, i);
-			} else if (!(builder instanceof MissingBuilder)) {
-				ElementTree oldTree = ((InternalBuilder) builder).getLastBuiltTree();
-				//don't persist build state for builders that have no last built state
-				if (oldTree != null) {
-					// if the builder was instantiated, construct a memento with the important info
-					info = new BuilderPersistentInfo(project.getName(), builderName, i);
-					info.setLastBuildTree(oldTree);
-					info.setInterestingProjects(((InternalBuilder) builder).getInterestingProjects());
+			for (int j = 0; j < variants.length; j++) {
+				IProjectVariant variant = variants[j];
+				BuilderPersistentInfo info = null;
+				IncrementalProjectBuilder builder = ((BuildCommand) commands[i]).getBuilder(variant);
+				if (builder == null) {
+					// if the builder was not instantiated, use the old info if any.
+					if (oldInfos != null)
+						info = getBuilderInfo(oldInfos, builderName, variant.getVariantName(), i);
+				} else if (!(builder instanceof MissingBuilder)) {
+					ElementTree oldTree = ((InternalBuilder) builder).getLastBuiltTree();
+					//don't persist build state for builders that have no last built state
+					if (oldTree != null) {
+						// if the builder was instantiated, construct a memento with the important info
+						info = new BuilderPersistentInfo(project.getName(), variant.getVariantName(), builderName, i);
+						info.setLastBuildTree(oldTree);
+						info.setInterestingProjects(((InternalBuilder) builder).getInterestingProjects());
+					}
 				}
+				if (info != null)
+					newInfos.add(info);
 			}
-			if (info != null)
-				newInfos.add(info);
 		}
 		return newInfos;
 	}
@@ -473,21 +487,24 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * 	Returns the builder instance corresponding to the given command, or
+	 * Returns the builder instance corresponding to the given command, or
 	 * <code>null</code> if the builder was not valid.
-	 * @param project The project this builder corresponds to
+	 * 
+	 * Note that this does not modify the context of the builder.
+	 * 
+	 * @param projectVariant The project variant this builder corresponds to
 	 * @param command The build command
 	 * @param buildSpecIndex The index of this builder in the build spec, or -1 if
 	 * the index is unknown
 	 * @param status MultiStatus for collecting errors
 	 */
-	private IncrementalProjectBuilder getBuilder(IProject project, ICommand command, int buildSpecIndex, MultiStatus status) throws CoreException {
-		InternalBuilder result = ((BuildCommand) command).getBuilder();
+	private IncrementalProjectBuilder getBuilder(IProjectVariant projectVariant, ICommand command, int buildSpecIndex, MultiStatus status) throws CoreException {
+		InternalBuilder result = ((BuildCommand) command).getBuilder(projectVariant);
 		if (result == null) {
-			result = initializeBuilder(command.getBuilderName(), project, buildSpecIndex, status);
-			((BuildCommand) command).setBuilder((IncrementalProjectBuilder) result);
+			result = initializeBuilder(command.getBuilderName(), projectVariant, buildSpecIndex, status);
+			((BuildCommand) command).addBuilder(projectVariant, (IncrementalProjectBuilder) result);
 			result.setCommand(command);
-			result.setProject(project);
+			result.setProjectVariant(projectVariant);
 			result.startupOnInitialize();
 		}
 		if (!validateNature(result, command.getBuilderName())) {
@@ -500,19 +517,37 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
+	 * Returns the builder instance corresponding to the given command, or
+	 * <code>null</code> if the builder was not valid, and sets its context
+	 * to the one supplied.
+	 * 
+	 * @param projectVariant The project variant this builder corresponds to
+	 * @param command The build command
+	 * @param buildSpecIndex The index of this builder in the build spec, or -1 if
+	 * the index is unknown
+	 * @param status MultiStatus for collecting errors
+	 */
+	private IncrementalProjectBuilder getBuilder(IProjectVariant projectVariant, ICommand command, int buildSpecIndex, MultiStatus status, IBuildContext context) throws CoreException {
+		InternalBuilder builder = getBuilder(projectVariant, command, buildSpecIndex, status);
+		builder.setContext(context);
+		return (IncrementalProjectBuilder) builder;
+	}
+
+	/**
 	 * Removes the builder persistent info from the map corresponding to the
-	 * given builder name and build spec index, or <code>null</code> if not found
+	 * given builder name, variant name and build spec index, or <code>null</code> if not found
 	 * 
 	 * @param buildSpecIndex The index in the build spec, or -1 if unknown
 	 */
-	private BuilderPersistentInfo getBuilderInfo(ArrayList infos, String builderName, int buildSpecIndex) {
-		//try to match on builder index, but if not match is found, use the name alone
+	private BuilderPersistentInfo getBuilderInfo(ArrayList infos, String builderName, String variantName, int buildSpecIndex) {
+		//try to match on builder index, but if not match is found, use the builder name and variant name
 		//this is because older workspace versions did not store builder infos in build spec order
 		BuilderPersistentInfo nameMatch = null;
 		for (Iterator it = infos.iterator(); it.hasNext();) {
 			BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
-			//match on name and build spec index if known
-			if (info.getBuilderName().equals(builderName)) {
+			//match on name, variant name and build spec index if known
+			// Note: the variant name may return null if the builder info is loaded from an older version
+			if (info.getBuilderName().equals(builderName) && (info.getVariantName() == null || info.getVariantName().equals(variantName))) {
 				//we have found a match on name alone
 				if (nameMatch == null)
 					nameMatch = info;
@@ -553,7 +588,25 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		return result;
 	}
 
+	/**
+	 * Gets a workspace delta for a given project, based on the state of the workspace
+	 * tree the last time the current builder was run.
+	 * <p>
+	 * Returns null if:
+	 * <ul>
+	 * <li> The state of the workspace is unknown. </li>
+	 * <li> The current builder has not indicated that it is interested in deltas
+	 * for the given project. </li>
+	 * <li> If the project does not exist. </li>
+	 * </ul>
+	 * <p>
+	 * Deltas are computed once and cached for efficiency.
+	 * 
+	 * @param project the project to get a delta for
+	 */
 	IResourceDelta getDelta(IProject project) {
+		if (!project.isAccessible())
+			return null;
 		try {
 			lock.acquire();
 			if (currentTree == null) {
@@ -668,11 +721,21 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Returns true if the given project has been built during this build cycle, and
-	 * false otherwise.
+	 * Returns true if at least one of the given project's variants have been built
+	 * during this build cycle; and false otherwise.
 	 */
 	boolean hasBeenBuilt(IProject project) {
+		if (!project.isAccessible())
+			return false;
 		return builtProjects.contains(project);
+	}
+
+	/**
+	 * Returns true if the given project variant has been built during this build cycle, and
+	 * false otherwise.
+	 */
+	boolean hasBeenBuilt(IProjectVariant projectVariant) {
+		return builtProjectVariants.contains(projectVariant);
 	}
 
 	/**
@@ -695,7 +758,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 */
 	private void hookEndBuild(int trigger) {
 		building = false;
-		builtProjects.clear();
+		builtProjectVariants.clear();
 		deltaCache.flush();
 		deltaTreeCache.flush();
 		//ensure autobuild runs after a clean
@@ -736,7 +799,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * prevent trying to instantiate it every time a build is run.
 	 * This method NEVER returns null.
 	 */
-	private IncrementalProjectBuilder initializeBuilder(String builderName, IProject project, int buildSpecIndex, MultiStatus status) throws CoreException {
+	private IncrementalProjectBuilder initializeBuilder(String builderName, IProjectVariant projectVariant, int buildSpecIndex, MultiStatus status) throws CoreException {
+		IProject project = projectVariant.getProject();
 		IncrementalProjectBuilder builder = null;
 		try {
 			builder = instantiateBuilder(builderName);
@@ -751,7 +815,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		// get the map of builders to get the last built tree
 		ArrayList infos = getBuildersPersistentInfo(project);
 		if (infos != null) {
-			BuilderPersistentInfo info = getBuilderInfo(infos, builderName, buildSpecIndex);
+			BuilderPersistentInfo info = getBuilderInfo(infos, builderName, projectVariant.getVariantName(), buildSpecIndex);
 			if (info != null) {
 				infos.remove(info);
 				ElementTree tree = info.getLastBuiltTree();
@@ -830,8 +894,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * Returns true if the given builder needs to be invoked, and false
 	 * otherwise.
 	 * 
-	 * The algorithm is to compute the intersection of the set of projects that
-	 * have changed since the last build, and the set of projects this builder
+	 * The algorithm is to compute the intersection of the set of projects variants that
+	 * have changed since the last build, and the set of projects variants this builder
 	 * cares about.  This is an optimization, under the assumption that computing
 	 * the forward delta once (not the resource delta) is more efficient than
 	 * computing project deltas and invoking builders for projects that haven't
@@ -923,7 +987,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Sets the builder infos for the given project.  The builder infos are
+	 * Sets the builder infos for the given project variant.  The builder infos are
 	 * an ArrayList of BuilderPersistentInfo.
 	 * The list includes entries for all builders that are
 	 * in the builder spec, and that have a last built state, even if they 
@@ -954,7 +1018,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	private String toString(InternalBuilder builder) {
 		String name = builder.getClass().getName();
 		name = name.substring(name.lastIndexOf('.') + 1);
-		return name + "(" + builder.getProject().getName() + ")"; //$NON-NLS-1$ //$NON-NLS-2$
+		return name + "(" + builder.getProjectVariant() + ")"; //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	/**
@@ -985,12 +1049,25 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		}
 		return project.isNatureEnabled(nature);
 	}
-	
+
+	/**
+	 * Set the build order that is going to be built. This ensures that context information
+	 * retrieved when overloading {@link #getRule(IProjectVariant, int, String, Map)}
+	 * is available.
+	 * @param buildOrder
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
+	public void setBuildOrder(IProjectVariant[] buildOrder) {
+		this.buildOrder = buildOrder;
+	}
+
 	/**
 	 * Returns the scheduling rule that is required for building the project.
+	 * {@link #setBuildOrder(IProjectVariant[])} should be called before this method
+	 * is called so that build context information is available.
 	 */
-	public ISchedulingRule getRule(IProject project, int trigger, String builderName, Map args) {
-
+	public ISchedulingRule getRule(IProjectVariant projectVariant, int trigger, String builderName, Map args) {
+		IProject project = projectVariant.getProject();
 		MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, Messages.events_errors, null);
 		if (builderName == null) {
 			final ICommand[] commands;
@@ -1001,7 +1078,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				for (int i = 0; i < commands.length; i++) {
 					BuildCommand command = (BuildCommand) commands[i];
 					try {
-						IncrementalProjectBuilder builder = getBuilder(project, command, i, status);
+						BuildContext context = new BuildContext(projectVariant, buildOrder);
+						IncrementalProjectBuilder builder = getBuilder(projectVariant, command, i, status, context);
 						if (builder != null) {
 							ISchedulingRule builderRule = builder.getRule(trigger, args);
 							if (builderRule != null)
@@ -1024,7 +1102,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			// Returns the derived resources for the specified builderName
 			ICommand command = getCommand(project, builderName, args);
 			try {
-				IncrementalProjectBuilder builder = getBuilder(project, command, -1, status);
+				IncrementalProjectBuilder builder = getBuilder(projectVariant, command, -1, status);
 				if (builder != null)
 					return builder.getRule(trigger, args);
 

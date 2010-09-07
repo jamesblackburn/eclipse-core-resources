@@ -8,17 +8,18 @@
  * Contributors:
  *     IBM - Initial API and implementation
  * Francis Lynch (Wind River) - [305718] Allow reading snapshot into renamed project
+ * Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import java.io.DataInputStream;
+import org.eclipse.osgi.util.NLS;
+import org.eclipse.core.resources.IResourceStatus;
 import org.eclipse.core.internal.utils.Messages;
+import java.io.DataInputStream;
 import org.eclipse.core.internal.watson.ElementTree;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResourceStatus;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.osgi.util.NLS;
 
 /**
  * Default tree reader that does not read anything. This is used in cases
@@ -49,7 +50,8 @@ public abstract class WorkspaceTreeReader {
 				w.renameProjectNode = renameProjectNode;
 				return w;
 			case ICoreConstants.WORKSPACE_TREE_VERSION_2 :
-				w = new WorkspaceTreeReader_2(workspace);
+			case ICoreConstants.WORKSPACE_TREE_VERSION_3 :
+				w = new WorkspaceTreeReader_3(workspace);
 				w.renameProjectNode = renameProjectNode;
 				return w;
 			default :
