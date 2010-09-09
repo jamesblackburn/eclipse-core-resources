@@ -272,6 +272,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			return true;
 		if (!Arrays.equals(natures, description.getNatureIds(false)))
 			return true;
+		if (!internalGetActiveVariant(false).equals(description.internalGetActiveVariant(false)))
+			return true;
 		if (!Arrays.equals(variants, description.variants))
 			return true;
 
