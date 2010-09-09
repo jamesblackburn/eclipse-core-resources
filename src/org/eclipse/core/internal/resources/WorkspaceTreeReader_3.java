@@ -30,6 +30,7 @@ import org.eclipse.core.internal.events.BuilderPersistentInfo;
  * The extra information includes the names of a projects variants
  * and builder information on a per variant basis.
  * 
+ * @since 3.2
  * @noextend This class is not intended to be subclassed by clients.
  * @noinstantiate This class is not intended to be instantiated by clients.
  */

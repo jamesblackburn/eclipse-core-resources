@@ -84,7 +84,7 @@ public class Project extends Container implements IProject {
 		current.setBuildSpec(description.getBuildSpec(true));
 
 		current.setVariants(description.internalGetVariants(true));
-		current.setActiveVariant(description.internalGetActiveVariant(false).getVariantName());
+		current.setActiveVariant(description.internalGetActiveVariant(true).getVariantName());
 
 		// set the references before the natures 
 		boolean flushOrder = false;
