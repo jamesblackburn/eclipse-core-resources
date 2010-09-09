@@ -563,7 +563,7 @@ public class Project extends Container implements IProject {
 						workspace.prepareOperation(buildRule, innerMonitor);
 						//don't open the tree eagerly because it will be wasted if no build occurs
 						workspace.beginOperation(false);
-						result = workspace.getBuildManager().build(getActiveVariant(), trigger, builderName, args, Policy.subMonitorFor(innerMonitor, Policy.opWork));
+						result = workspace.getBuildManager().build(variant, trigger, builderName, args, Policy.subMonitorFor(innerMonitor, Policy.opWork));
 						if (!result.isOK())
 							throw new ResourceException(result);
 					} finally {
