@@ -16,6 +16,7 @@ import org.eclipse.core.resources.*;
 /**
  * @noextend This class is not intended to be subclassed by clients.
  * @noinstantiate This class is not intended to be instantiated by clients.
+ * @since 3.2
  */
 public class ProjectVariant implements IProjectVariant {
 	private static final String DEFAULT_NAME = ""; //$NON-NLS-1$

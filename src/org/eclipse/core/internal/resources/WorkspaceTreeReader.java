@@ -12,14 +12,13 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.osgi.util.NLS;
-import org.eclipse.core.resources.IResourceStatus;
-import org.eclipse.core.internal.utils.Messages;
 import java.io.DataInputStream;
+
+import org.eclipse.osgi.util.NLS;
+import org.eclipse.core.internal.utils.Messages;
 import org.eclipse.core.internal.watson.ElementTree;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.resources.*;
+import org.eclipse.core.runtime.*;
 
 /**
  * Default tree reader that does not read anything. This is used in cases

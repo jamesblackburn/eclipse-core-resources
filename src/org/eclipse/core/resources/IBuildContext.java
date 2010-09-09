@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  * 
  * Contributors:
- *     Broadcom Corporation - initial API and implementation
+ * Broadcom Corporation - initial API and implementation
  *******************************************************************************/
 package org.eclipse.core.resources;
 

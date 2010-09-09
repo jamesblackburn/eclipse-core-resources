@@ -84,7 +84,7 @@ public class Project extends Container implements IProject {
 		current.setBuildSpec(description.getBuildSpec(true));
 
 		current.setVariants(description.internalGetVariants(true));
-		current.setActiveVariant(description.internalGetActiveVariant(false).getVariantName());
+		current.setActiveVariant(description.internalGetActiveVariant(true).getVariantName());
 
 		// set the references before the natures 
 		boolean flushOrder = false;
@@ -563,7 +563,7 @@ public class Project extends Container implements IProject {
 						workspace.prepareOperation(buildRule, innerMonitor);
 						//don't open the tree eagerly because it will be wasted if no build occurs
 						workspace.beginOperation(false);
-						result = workspace.getBuildManager().build(getActiveVariant(), trigger, builderName, args, Policy.subMonitorFor(innerMonitor, Policy.opWork));
+						result = workspace.getBuildManager().build(variant, trigger, builderName, args, Policy.subMonitorFor(innerMonitor, Policy.opWork));
 						if (!result.isOK())
 							throw new ResourceException(result);
 					} finally {
@@ -1208,8 +1208,6 @@ public class Project extends Container implements IProject {
 				//if nothing has changed, we don't need to do anything
 				ProjectDescription oldDescription = internalGetDescription();
 				ProjectDescription newDescription = (ProjectDescription) description;
-				// Silently update the active variant
-				internalGetDescription().setActiveVariant(newDescription.internalGetActiveVariant(false).getVariantName());
 				boolean hasPublicChanges = oldDescription.hasPublicChanges(newDescription);
 				boolean hasPrivateChanges = oldDescription.hasPrivateChanges(newDescription);
 				if (!hasPublicChanges && !hasPrivateChanges)
