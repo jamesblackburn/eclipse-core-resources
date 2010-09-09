@@ -1418,7 +1418,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				SafeChunkyOutputStream safeStream = new SafeChunkyOutputStream(localFile);
 				DataOutputStream out = new DataOutputStream(safeStream);
 				try {
-					out.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
+					out.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
 					writeWorkspaceFields(out, monitor);
 					writer.writeDelta(tree, lastSnap, Path.ROOT, ElementTreeWriter.D_INFINITE, out, ResourceComparator.getSaveComparator());
 					safeStream.succeed();
@@ -1743,7 +1743,6 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 * int - number of builders
 	 * for each builder:
 	 *    UTF - project name
-	 *    UTF - project variant name
 	 *    UTF - fully qualified builder extension name
 	 *    int - number of interesting projects for builder
 	 *    For each interesting project:
