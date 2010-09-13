@@ -10,6 +10,7 @@
  *     Red Hat Incorporated - loadProjectDescription(InputStream)
  *     Serge Beauchamp (Freescale Semiconductor) - [252996] add resource filtering
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group and Project Path Variable Support
+ *     Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -23,6 +24,8 @@ import org.eclipse.core.internal.events.*;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
 import org.eclipse.core.internal.properties.IPropertyManager;
 import org.eclipse.core.internal.refresh.RefreshManager;
+import org.eclipse.core.internal.resources.ComputeVertexOrder.VertexFilter;
+import org.eclipse.core.internal.resources.ComputeVertexOrder.VertexOrder;
 import org.eclipse.core.internal.utils.*;
 import org.eclipse.core.internal.watson.*;
 import org.eclipse.core.resources.*;
@@ -84,7 +87,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	protected WorkManager _workManager;
 	protected AliasManager aliasManager;
 	protected BuildManager buildManager;
-	protected IProject[] buildOrder = null;
+	protected IProjectVariant[] buildOrder = null;
 	protected CharsetManager charsetManager;
 	protected ContentDescriptionManager contentDescriptionManager;
 	/** indicates if the workspace crashed in a previous session */
@@ -173,6 +176,18 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * The currently installed file modification validator.
 	 */
 	protected IFileModificationValidator validator = null;
+
+	// Comparator used to provide a stable ordering of project variants
+	private static class ProjectVariantComparator implements Comparator {
+		public int compare(Object x, Object y) {
+			IProjectVariant px = (IProjectVariant) x;
+			IProjectVariant py = (IProjectVariant) y;
+			int cmp = py.getProject().getName().compareTo(px.getProject().getName());
+			if (cmp == 0)
+				cmp = py.getVariantName().compareTo(px.getVariantName());
+			return cmp;
+		}
+	}
 
 	/**
 	 * Deletes all the files and directories from the given root down (inclusive).
@@ -331,6 +346,58 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @see IWorkspace#build(int, IProgressMonitor)
 	 */
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
+		buildInternal(getBuildOrder(), trigger, monitor);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IWorkspace#build(IProjectVariant[], int, IProgressMonitor)
+	 */
+	public void build(IProjectVariant[] variants, int trigger, IProgressMonitor monitor) throws CoreException {
+		if (variants.length == 0)
+			return;
+
+		Set variantSet = new HashSet(variants.length);
+		variantSet.addAll(Arrays.asList(variants));
+
+		// Find transitive closure of referenced project variants, not including
+		// the variants that were asked to be built
+		Set refs = new HashSet(variantSet);
+		Set buffer = new HashSet();
+		int size = -1;
+		while (size != refs.size()) {
+			size = refs.size();
+			for (Iterator it = refs.iterator(); it.hasNext();) {
+				IProjectVariant variant = (IProjectVariant) it.next();
+				buffer.addAll(Arrays.asList(variant.getProject().getReferencedProjectVariants(variant)));
+			}
+			refs.addAll(buffer);
+			buffer.clear();
+		}
+		refs.removeAll(variantSet);
+		List refsList = new LinkedList(refs);
+
+		// Filter out inaccessible projects, or variants that do not exist
+		for (ListIterator it = refsList.listIterator(); it.hasNext();) {
+			IProjectVariant variant = (IProjectVariant) it.next();
+			if (!variant.getProject().isAccessible() || !variant.getProject().hasVariant(variant))
+				it.remove();
+		}
+
+		// Order the referenced project variants
+		ProjectVariantOrder order = computeProjectVariantOrder((IProjectVariant[]) refsList.toArray(new IProjectVariant[refs.size()]));
+
+		// Compose the two orderings and run the build
+		IProjectVariant[] finalOrder = new IProjectVariant[order.projectVariants.length + variants.length];
+		System.arraycopy(order.projectVariants, 0, finalOrder, 0, order.projectVariants.length);
+		System.arraycopy(variants, 0, finalOrder, order.projectVariants.length, variants.length);
+		buildInternal(finalOrder, trigger, monitor);
+	}
+
+	/**
+	 * Builds the given project variants in the order supplied.
+	 */
+	private void buildInternal(IProjectVariant[] variants, int trigger, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		final ISchedulingRule rule = getRuleFactory().buildRule();
 		try {
@@ -341,7 +408,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 				aboutToBuild(this, trigger);
 				IStatus result;
 				try {
-					result = getBuildManager().build(trigger, Policy.subMonitorFor(monitor, Policy.opWork));
+					result = getBuildManager().build(variants, trigger, Policy.subMonitorFor(monitor, Policy.opWork));
 				} finally {
 					//must fire POST_BUILD if PRE_BUILD has occurred
 					broadcastBuildEvent(this, IResourceChangeEvent.POST_BUILD, trigger);
@@ -477,7 +544,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @return result describing the global project order
 	 * @since 2.1
 	 */
-	private ProjectOrder computeFullProjectOrder() {
+	private VertexOrder computeFullProjectOrder() {
 
 		// determine the full set of accessible projects in the workspace
 		// order the set in descending alphabetical order of project name
@@ -509,18 +576,184 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					edges.add(new IProject[] {project, ref});
 			}
 		}
+		return ComputeVertexOrder.computeVertexOrder(allAccessibleProjects, edges);
+	}
 
-		ProjectOrder fullProjectOrder = ComputeProjectOrder.computeProjectOrder(allAccessibleProjects, edges);
-		return fullProjectOrder;
+	/**
+	 * Computes the global total ordering of all open projects' active variants in the
+	 * workspace based on project variant references. If an existing and open project variant P
+	 * references another existing and open project variant Q, then Q should come before P
+	 * in the resulting ordering. If a project variant references a non-active variant it is
+	 * added to the resulting ordered list. Closed and non-existent projects/variants are
+	 * ignored, and will not appear in the result. References to non-existent or closed
+	 * projects/variants are also ignored, as are any self-references.
+	 * <p>
+	 * When there are choices, the choice is made in a reasonably stable way. For
+	 * example, given an arbitrary choice between two project variants, the one with the
+	 * lower collating project name and variant name will appear earlier in the list.
+	 * </p>
+	 * <p>
+	 * When the project variant reference graph contains cyclic references, it is
+	 * impossible to honor all of the relationships. In this case, the result
+	 * ignores as few relationships as possible.  For example, if P2 references P1,
+	 * P4 references P3, and P2 and P3 reference each other, then exactly one of the
+	 * relationships between P2 and P3 will have to be ignored. The outcome will be
+	 * either [P1, P2, P3, P4] or [P1, P3, P2, P4]. The result also contains
+	 * complete details of any cycles present.
+	 * </p>
+	 *
+	 * @return result describing the global active project variant order
+	 * @since 2.1
+	 */
+	private VertexOrder computeActiveProjectVariantOrder() {
+		// Determine the full set of accessible active project variants in the workspace,
+		// and all the accessible project variants that they reference. This forms a set
+		// of all the project variants that will be returned.
+		// Order the set in descending alphabetical order of project name then variant name,
+		// as a secondary sort applied after sorting based on references, to achieve a stable
+		// ordering.
+		SortedSet allAccessibleProjectVariants = new TreeSet(new ProjectVariantComparator());
+
+		// For each projects active variant, perform a depth first search in the reference graph
+		// rooted at that variant.
+		// This generates the required subset of the reference graph that is required to order all
+		// the dependencies of the active project variants.
+		IProject[] allProjects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
+		List/*<IProjectVariant[]>*/ edges = new ArrayList(allProjects.length);
+
+		for (int i = 0; i < allProjects.length; i++) {
+			Project project = (Project) allProjects[i];
+			// Ignore projects that are not accessible
+			if (!project.isAccessible())
+				continue;
+
+			// If the active project variant hasn't already been explored
+			// perform a depth first search rooted at it
+			if (!allAccessibleProjectVariants.contains(project.internalGetActiveVariant())) {
+				allAccessibleProjectVariants.add(project.internalGetActiveVariant());
+				Stack stack = new Stack();
+				stack.push(project.internalGetActiveVariant());
+
+				while (!stack.isEmpty()) {
+					IProjectVariant projectVariant = (IProjectVariant) stack.pop();
+
+					// Add all referenced variants from the current variant
+					// (it is guaranteed to be accessible as it was pushed onto the stack)
+					Project subProject = (Project) projectVariant.getProject();
+					IProjectVariant[] refs = subProject.internalGetReferencedProjectVariants(projectVariant);
+					for (int j = 0; j < refs.length; j++) {
+						IProjectVariant ref = refs[j];
+
+						// Ignore self references and references to projects that are not accessible
+						if (!ref.getProject().isAccessible() || ref.equals(projectVariant))
+							continue;
+
+						// Ignore variants that do not exist
+						if (!((Project) ref.getProject()).internalHasVariant(ref))
+							continue;
+
+						// Add the referenced accessible variant
+						edges.add(new IProjectVariant[] {projectVariant, ref});
+
+						// If we have already explored the referenced variant, don't explore it again
+						if (allAccessibleProjectVariants.contains(ref))
+							continue;
+
+						allAccessibleProjectVariants.add(ref);
+
+						// Push the referenced variant onto the stack so that it is explored by the depth first search
+						stack.push(ref);
+					}
+				}
+			}
+		}
+		return ComputeVertexOrder.computeVertexOrder(allAccessibleProjectVariants, edges);
+	}
+
+	/**
+	 * Computes the global total ordering of all project variants in the workspace based
+	 * on project variant references. If an existing and open project variant P
+	 * references another existing and open project variant Q, then Q should come before P
+	 * in the resulting ordering. Closed and non-existent projects/variants are
+	 * ignored, and will not appear in the result. References to non-existent or closed
+	 * projects/variants are also ignored, as are any self-references.
+	 * <p>
+	 * When there are choices, the choice is made in a reasonably stable way. For
+	 * example, given an arbitrary choice between two project variants, the one with the
+	 * lower collating project name and variant name will appear earlier in the list.
+	 * </p>
+	 * <p>
+	 * When the project variant reference graph contains cyclic references, it is
+	 * impossible to honor all of the relationships. In this case, the result
+	 * ignores as few relationships as possible.  For example, if P2 references P1,
+	 * P4 references P3, and P2 and P3 reference each other, then exactly one of the
+	 * relationships between P2 and P3 will have to be ignored. The outcome will be
+	 * either [P1, P2, P3, P4] or [P1, P3, P2, P4]. The result also contains
+	 * complete details of any cycles present.
+	 * </p>
+	 *
+	 * @return result describing the global project variant order
+	 */
+	private VertexOrder computeFullProjectVariantOrder() {
+		// Compute the order for all accessible project variants
+		SortedSet allAccessibleProjectVariants = new TreeSet(new ProjectVariantComparator());
+
+		IProject[] allProjects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
+		List/*<IProjectVariant[]>*/ edges = new ArrayList(allProjects.length);
+
+		for (int i = 0; i < allProjects.length; i++) {
+			Project project = (Project) allProjects[i];
+			// Ignore projects that are not accessible
+			if (!project.isAccessible())
+				continue;
+
+			IProjectVariant[] variants = project.internalGetVariants();
+			for (int j = 0; j < variants.length; j++) {
+				IProjectVariant variant = variants[j];
+				allAccessibleProjectVariants.add(variants[j]);
+				IProjectVariant[] refs = project.internalGetReferencedProjectVariants(variants[j]);
+				for (int k = 0; k < refs.length; k++) {
+					IProjectVariant ref = refs[k];
+
+					// Ignore self references and references to projects that are not accessible
+					if (!ref.getProject().isAccessible() || ref.equals(variant))
+						continue;
+
+					// Ignore variants that do not exist
+					if (!((Project) ref.getProject()).internalHasVariant(ref))
+						continue;
+
+					// Add the referenced accessible variant
+					edges.add(new IProjectVariant[] {variant, ref});
+				}
+			}
+		}
+		return ComputeVertexOrder.computeVertexOrder(allAccessibleProjectVariants, edges);
+	}
+
+	private static ProjectOrder vertexOrderToProjectOrder(VertexOrder order) {
+		IProject[] projects = (IProject[]) Arrays.copyOf(order.vertexes, order.vertexes.length, IProject[].class);
+		IProject[][] knots = new IProject[order.knots.length][];
+		for (int i = 0; i < order.knots.length; i++)
+			knots[i] = (IProject[]) Arrays.copyOf(order.knots[i], order.knots[i].length, IProject[].class);
+		return new ProjectOrder(projects, order.hasCycles, knots);
+	}
+
+	private static ProjectVariantOrder vertexOrderToProjectVariantOrder(VertexOrder order) {
+		IProjectVariant[] projectVariants = (IProjectVariant[]) Arrays.copyOf(order.vertexes, order.vertexes.length, IProjectVariant[].class);
+		IProjectVariant[][] knots = new IProjectVariant[order.knots.length][];
+		for (int i = 0; i < order.knots.length; i++)
+			knots[i] = (IProjectVariant[]) Arrays.copyOf(order.knots[i], order.knots[i].length, IProjectVariant[].class);
+		return new ProjectVariantOrder(projectVariants, order.hasCycles, knots);
 	}
 
 	/**
 	 * Implementation of API method declared on IWorkspace.
 	 * 
 	 * @see IWorkspace#computePrerequisiteOrder(IProject[])
-	 * @deprecated Replaced by <code>IWorkspace.computeProjectOrder</code>, which
-	 * produces a more usable result when there are cycles in project reference
-	 * graph.
+	 * @deprecated Replaced by {@link IWorkspace#computeProjectOrder(IProject[])} and
+	 * {@link IWorkspace#computeProjectVariantOrder(IProjectVariant[])} which
+	 * produces more usable results when there are cycles in project reference.
 	 */
 	public IProject[][] computePrerequisiteOrder(IProject[] targets) {
 		return computePrerequisiteOrder1(targets);
@@ -576,61 +809,41 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @since 2.1
 	 */
 	public ProjectOrder computeProjectOrder(IProject[] projects) {
+		// Compute the full project order for all accessible projects
+		VertexOrder fullProjectOrder = computeFullProjectOrder();
 
-		// compute the full project order for all accessible projects
-		ProjectOrder fullProjectOrder = computeFullProjectOrder();
+		// Create a filter to remove all projects that are not in the list asked for
+		final Set projectSet = new HashSet(projects.length);
+		projectSet.addAll(Arrays.asList(projects));
+		VertexFilter filter = new VertexFilter() {
+			public boolean matches(Object vertex) {
+				return !projectSet.contains(vertex);
+			}
+		};
 
-		// "fullProjectOrder.projects" contains no inaccessible projects
-		// but might contain accessible projects omitted from "projects"
-		// optimize common case where "projects" includes everything
-		int accessibleCount = 0;
-		for (int i = 0; i < projects.length; i++) {
-			if (projects[i].isAccessible()) {
-				accessibleCount++;
-			}
-		}
-		// no filtering required if the subset accounts for the full list
-		if (accessibleCount == fullProjectOrder.projects.length) {
-			return fullProjectOrder;
-		}
+		// Filter the order and return it
+		return vertexOrderToProjectOrder(ComputeVertexOrder.filterVertexOrder(fullProjectOrder, filter));
+	}
 
-		// otherwise we need to eliminate mention of other projects...
-		// ... from "fullProjectOrder.projects"...		
-		// Set<IProject> keepers
-		Set keepers = new HashSet(Arrays.asList(projects));
-		// List<IProject> projects
-		List reducedProjects = new ArrayList(fullProjectOrder.projects.length);
-		for (int i = 0; i < fullProjectOrder.projects.length; i++) {
-			IProject project = fullProjectOrder.projects[i];
-			if (keepers.contains(project)) {
-				// remove projects not in the initial subset
-				reducedProjects.add(project);
-			}
-		}
-		IProject[] p1 = new IProject[reducedProjects.size()];
-		reducedProjects.toArray(p1);
+	/* (non-Javadoc)
+	 * @see IWorkspace#computeProjectVariantOrder(IProjectVariant[])
+	 * @since 2.1
+	 */
+	public ProjectVariantOrder computeProjectVariantOrder(IProjectVariant[] projectVariants) {
+		// Compute the full project order for all accessible projects
+		VertexOrder fullProjectVariantOrder = computeFullProjectVariantOrder();
 
-		// ... and from "fullProjectOrder.knots"		
-		// List<IProject[]> knots
-		List reducedKnots = new ArrayList(fullProjectOrder.knots.length);
-		for (int i = 0; i < fullProjectOrder.knots.length; i++) {
-			IProject[] knot = fullProjectOrder.knots[i];
-			List x = new ArrayList(knot.length);
-			for (int j = 0; j < knot.length; j++) {
-				IProject project = knot[j];
-				if (keepers.contains(project)) {
-					x.add(project);
-				}
+		// Create a filter to remove all project variants that are not in the list asked for
+		final Set projectVariantSet = new HashSet(projectVariants.length);
+		projectVariantSet.addAll(Arrays.asList(projectVariants));
+		VertexFilter filter = new VertexFilter() {
+			public boolean matches(Object vertex) {
+				return !projectVariantSet.contains(vertex);
 			}
-			// keep knots containing 2 or more projects in the specified subset
-			if (x.size() > 1) {
-				reducedKnots.add(x.toArray(new IProject[x.size()]));
-			}
-		}
-		IProject[][] k1 = new IProject[reducedKnots.size()][];
-		// okay to use toArray here because reducedKnots elements are IProject[]
-		reducedKnots.toArray(k1);
-		return new ProjectOrder(p1, (k1.length > 0), k1);
+		};
+
+		// Filter the order and return it
+		return vertexOrderToProjectVariantOrder(ComputeVertexOrder.filterVertexOrder(fullProjectVariantOrder, filter));
 	}
 
 	/* (non-Javadoc)
@@ -1226,49 +1439,73 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 
 	/**
 	 * Returns the order in which open projects in this workspace will be built.
+	 * The result returned is a list of project variants, that need to be built
+	 * in order to successfully build the active variant of every project in this
+	 * workspace.
 	 * <p>
-	 * The project build order is based on information specified in the workspace
-	 * description. The projects are built in the order specified by
+	 * The project variant build order is based on information specified in the workspace
+	 * description. The project variants are built in the order specified by
 	 * <code>IWorkspaceDescription.getBuildOrder</code>; closed or non-existent
-	 * projects are ignored and not included in the result. If
-	 * <code>IWorkspaceDescription.getBuildOrder</code> is non-null, the default
-	 * build order is used; again, only open projects are included in the result.
+	 * projects are ignored and not included in the result. If any open projects are
+	 * not specified in this order, they are appended to the end of the build order
+	 * sorted by project name (to provide a stable ordering).
+	 * </p>
+	 * <p>
+	 * If <code>IWorkspaceDescription.getBuildOrder</code> is non-null, the default
+	 * build order is used (calculated based on references); again, only open projects'
+	 * variants are included in the result.
 	 * </p>
 	 * <p>
 	 * The returned value is cached in the <code>buildOrder</code> field.
 	 * </p>
 	 * 
-	 * @return the list of currently open projects in the workspace in the order in
-	 * which they would be built by <code>IWorkspace.build</code>.
+	 * @return the list of currently open projects active variants (and the project variants
+	 * they depend on) in the workspace in the order in which they would be built by <code>IWorkspace.build</code>.
 	 * @see IWorkspace#build(int, IProgressMonitor)
 	 * @see IWorkspaceDescription#getBuildOrder()
 	 * @since 2.1
 	 */
-	public IProject[] getBuildOrder() {
-		if (buildOrder != null) {
-			// return previously-computed and cached project build order
-			return buildOrder;
-		}
-		// see if a particular build order is specified
-		String[] order = description.getBuildOrder(false);
-		if (order != null) {
-			// convert from project names to project handles
-			// and eliminate non-existent and closed projects
-			List projectList = new ArrayList(order.length);
-			for (int i = 0; i < order.length; i++) {
-				IProject project = getRoot().getProject(order[i]);
-				if (project.isAccessible()) {
-					projectList.add(project);
+	public IProjectVariant[] getBuildOrder() {
+		// if the build order has not been cached, calculate it
+		if (buildOrder == null) {
+			// see if a particular build order is specified
+			String[] order = description.getBuildOrder(false);
+			if (order != null) {
+				// convert from project names to active project variants
+				// and eliminate non-existent and closed projects
+				List variants = new ArrayList(order.length);
+				for (int i = 0; i < order.length; i++) {
+					IProject project = getRoot().getProject(order[i]);
+					if (project.isAccessible()) {
+						variants.add(((Project) project).internalGetActiveVariant());
+					}
 				}
+				buildOrder = new IProjectVariant[variants.size()];
+				variants.toArray(buildOrder);
+			} else {
+				// use default project build order
+				// computed for all accessible projects in workspace
+				buildOrder = vertexOrderToProjectVariantOrder(computeActiveProjectVariantOrder()).projectVariants;
 			}
-			buildOrder = new IProject[projectList.size()];
-			projectList.toArray(buildOrder);
-		} else {
-			// use default project build order
-			// computed for all accessible projects in workspace
-			buildOrder = computeFullProjectOrder().projects;
 		}
-		return buildOrder;
+
+		// Add projects not mentioned in the build order to the end, in name order
+		LinkedHashSet variants = new LinkedHashSet(Arrays.asList(buildOrder));
+		SortedSet missing = new TreeSet(new Comparator() {
+			public int compare(Object left, Object right) {
+				return ((IProjectVariant) left).getProject().getName().compareTo(
+							((IProjectVariant) right).getProject().getName());
+			}
+		});
+		IProject[] allProjects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
+		for (int i = 0; i < allProjects.length; i++) {
+			IProject project = allProjects[i];
+			if (project.isAccessible()) {
+				missing.add(((Project) project).internalGetActiveVariant());
+			}
+		}
+		variants.addAll(missing);
+		return (IProjectVariant[]) variants.toArray(new IProjectVariant[variants.size()]);
 	}
 
 	public CharsetManager getCharsetManager() {
@@ -1296,6 +1533,39 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					dangling.add(refs[i]);
 			if (!dangling.isEmpty())
 				result.put(projects[i], dangling.toArray(new IProject[dangling.size()]));
+		}
+		return result;
+	}
+
+	/* (non-Javadoc)
+	 * @see IWorkspace#getDanglingVariantReferences()
+	 */
+	public Map getDanglingVariantReferences() {
+		IProject[] projects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
+		Map result = new HashMap(projects.length);
+		for (int i = 0; i < projects.length; i++) {
+			Project project = (Project) projects[i];
+			ProjectDescription desc = project.internalGetDescription();
+			if (!project.isAccessible())
+				continue;
+			IProjectVariant[] variants = project.internalGetVariants();
+			for (int j = 0; j < variants.length; j++) {
+				IProjectVariantReference[] refs = desc.getReferencedProjectVariants(variants[j].getVariantName());
+				List dangling = new ArrayList(refs.length);
+				for (int k = 0; k < refs.length; k++) {
+					// Check the referenced project and variant exists
+					try {
+						if (!refs[k].getProject().exists() ||
+							!((Project) refs[k].getProject()).internalHasVariant(refs[k].getVariant()))
+							dangling.add(refs[k]);
+					} catch (CoreException e) {
+						// Project did not exist, as the active variant could not be found
+						dangling.add(refs[k]);
+					}
+				}
+				if (!dangling.isEmpty())
+					result.put(variants[j], dangling.toArray(new IProjectVariantReference[dangling.size()]));
+			}
 		}
 		return result;
 	}

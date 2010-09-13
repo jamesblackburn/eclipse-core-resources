@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2010 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
@@ -30,6 +31,7 @@ public abstract class InternalBuilder {
 	static BuildManager buildManager;
 	private ICommand command;
 	private boolean forgetStateRequested = false;
+	private boolean rememberStateRequested = false;
 	private IProject[] interestingProjects = ICoreConstants.EMPTY_PROJECT_ARRAY;
 	/**
 	 * Human readable builder name for progress reporting.
@@ -41,8 +43,15 @@ public abstract class InternalBuilder {
 	 * The symbolic name of the plugin that defines this builder
 	 */
 	private String pluginId;
-	private IProject project;
-	
+	/**
+	 * The project variant that this builder is to build.
+	 */
+	private IProjectVariant projectVariant;
+	/**
+	 * The context in which the builder was called.
+	 */
+	private IBuildContext context = null;
+
 	/**
 	 * The value of the callOnEmptyDelta builder extension attribute.
 	 */
@@ -65,10 +74,11 @@ public abstract class InternalBuilder {
 	protected abstract void clean(IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Clears the request to forget last built states.
+	 * Clears the requests for forgetting or remembering last built states.
 	 */
-	final void clearForgetLastBuiltState() {
+	final void clearLastBuiltStateRequests() {
 		forgetStateRequested = false;
+		rememberStateRequested = false;
 	}
 
 	/*
@@ -77,6 +87,17 @@ public abstract class InternalBuilder {
 	protected void forgetLastBuiltState() {
 		oldState = null;
 		forgetStateRequested = true;
+		rememberStateRequested = false;
+	}
+
+	/*
+	 * @see IncrementalProjectBuilder#rememberLastBuiltState
+	 */
+	/**
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
+	protected void rememberLastBuiltState() {
+		rememberStateRequested = !forgetStateRequested;
 	}
 
 	/*
@@ -86,11 +107,19 @@ public abstract class InternalBuilder {
 		return (ICommand)((BuildCommand)command).clone();
 	}
 	
-	/*
-	 * @see IncrementalProjectBuilder#forgetLastBuiltState
+	/**
+	 * @see IncrementalProjectBuilder#forgetLastBuiltState()
+	 * @see IncrementalProjectBuilder#rememberLastBuiltState()
 	 */
 	protected IResourceDelta getDelta(IProject aProject) {
 		return buildManager.getDelta(aProject);
+	}
+
+	/**
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
+	protected IBuildContext getContext() {
+		return context;
 	}
 
 	final IProject[] getInterestingProjects() {
@@ -121,7 +150,15 @@ public abstract class InternalBuilder {
 	 * Returns the project for this builder
 	 */
 	protected IProject getProject() {
-		return project;
+		return projectVariant.getProject();
+	}
+
+	/**
+	 * Returns the project variant for this builder
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
+	protected IProjectVariant getProjectVariant() {
+		return projectVariant;
 	}
 
 	/*
@@ -129,6 +166,16 @@ public abstract class InternalBuilder {
 	 */
 	protected boolean hasBeenBuilt(IProject aProject) {
 		return buildManager.hasBeenBuilt(aProject);
+	}
+
+	/*
+	 * @see IncrementalProjectBuilder#hasBeenBuilt
+	 */
+	/**
+	 * @nooverride This method is not intended to be re-implemented or extended by clients.
+	 */
+	protected boolean hasBeenBuilt(IProjectVariant aProjectVariant) {
+		return buildManager.hasBeenBuilt(aProjectVariant);
 	}
 
 	/*
@@ -174,12 +221,23 @@ public abstract class InternalBuilder {
 	}
 
 	/**
-	 * Sets the project for which this builder operates.
-	 * @see #getProject()
+	 * Sets the project variant for which this builder operates.
+	 * @see #getProjectVariant()
 	 */
-	final void setProject(IProject value) {
-		Assert.isTrue(project == null);
-		project = value;
+	final void setProjectVariant(IProjectVariant value) {
+		Assert.isTrue(projectVariant == null);
+		Assert.isNotNull(value);
+		projectVariant = value;
+		if (context == null)
+			context = new BuildContext(projectVariant);
+	}
+
+	/**
+	 * Sets the context in which the builder was last called.
+	 * @see #getContext()
+	 */
+	final void setContext(IBuildContext context) {
+		this.context = context;
 	}
 
 	/*
@@ -193,5 +251,13 @@ public abstract class InternalBuilder {
 	 */
 	final boolean wasForgetStateRequested() {
 		return forgetStateRequested;
+	}
+
+	/**
+	 * Returns true if the builder requested that its last built state be
+	 * remembered, and false otherwise.
+	 */
+	final boolean wasRememberStateRequested() {
+		return rememberStateRequested;
 	}
 }

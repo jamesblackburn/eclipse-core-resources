@@ -1,5 +1,5 @@
 /*******************************************************************************
- *  Copyright (c) 2000, 2009 IBM Corporation and others.
+ *  Copyright (c) 2000, 2010 IBM Corporation and others.
  *  All rights reserved. This program and the accompanying materials
  *  are made available under the terms of the Eclipse Public License v1.0
  *  which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  * 
  *  Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.resources;
 
@@ -33,6 +34,8 @@ public interface IProjectDescription {
 	 */
 	public static final String DESCRIPTION_FILE_NAME = ".project"; //$NON-NLS-1$
 
+	public static final String DEFAULT_VARIANT = ""; //$NON-NLS-1$
+
 	/**
 	 * Returns the list of build commands to run when building the described project.
 	 * The commands are listed in the order in which they are to be run.
@@ -47,27 +50,6 @@ public interface IProjectDescription {
 	 * @return the comment for the described project
 	 */
 	public String getComment();
-
-	/**
-	 * Returns the dynamic project references for the described project. Dynamic
-	 * project references can be used instead of simple project references in cases
-	 * where the reference information is computed dynamically be a third party.
-	 * These references are persisted by the workspace in a private location outside
-	 * the project description file, and as such will not be shared when a project is
-	 * exported or persisted in a repository.  A client using project references
-	 * is always responsible for setting these references when a project is created
-	 * or recreated.
-	 * <p>
-	 * The returned projects need not exist in the workspace. The result will not 
-	 * contain duplicates. Returns an empty array if there are no dynamic project 
-	 * references on this description.
-	 *
-	 * @see #getReferencedProjects()
-	 * @see #setDynamicReferences(IProject[])
-	 * @return a list of projects
-	 * @since 3.0
-	 */
-	public IProject[] getDynamicReferences();
 
 	/**
 	 * Returns the  local file system location for the described project.  The path
@@ -107,22 +89,6 @@ public interface IProjectDescription {
 	 * @see #setNatureIds(String[])
 	 */
 	public String[] getNatureIds();
-
-	/**
-	 * Returns the projects referenced by the described project. These references
-	 * are persisted in the project description file (&quot;.project&quot;) and as such
-	 * will be shared whenever the project is exported to another workspace. For
-	 * references that are likely to change from one workspace to another, dynamic
-	 * references should be used instead.
-	 * <p>
-	 * The projects need not exist in the workspace.
-	 * The result will not contain duplicates. Returns an empty
-	 * array if there are no referenced projects on this description.
-	 *
-	 *@see #getDynamicReferences()
-	 * @return a list of projects
-	 */
-	public IProject[] getReferencedProjects();
 
 	/** 
 	 * Returns whether the project nature specified by the given
@@ -172,21 +138,6 @@ public interface IProjectDescription {
 	 * @see #getComment()
 	 */
 	public void setComment(String comment);
-
-	/**
-	 * Sets the dynamic project references for the described project. 
-	 * The projects need not exist in the workspace. Duplicates will be
-	 * removed.  
-	 * <p>
-	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)} 
-	 * before changes made to this description take effect.
-	 * </p>
-	 * @see #getDynamicReferences()
-	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @param projects list of projects
-	 * @since 3.0
-	 */
-	public void setDynamicReferences(IProject[] projects);
 
 	/**
 	 * Sets the local file system location for the described project.  The path must
@@ -273,6 +224,23 @@ public interface IProjectDescription {
 	public void setNatureIds(String[] natures);
 
 	/**
+	 * Returns the projects referenced by the described project. These references
+	 * are persisted in the project description file (&quot;.project&quot;) and as such
+	 * will be shared whenever the project is exported to another workspace. For
+	 * references that are likely to change from one workspace to another, dynamic
+	 * references should be used instead.
+	 * <p>
+	 * The projects need not exist in the workspace.
+	 * The result will not contain duplicates. Returns an empty
+	 * array if there are no referenced projects on this description.
+	 *
+	 * @see #getDynamicReferences()
+	 * @return a list of projects
+	 * @see #getReferencedProjectVariants(String)
+	 */
+	public IProject[] getReferencedProjects();
+
+	/**
 	 * Sets the referenced projects, ignoring any duplicates.
 	 * The order of projects is preserved.
 	 * The projects need not exist in the workspace.
@@ -283,7 +251,168 @@ public interface IProjectDescription {
 	 *
 	 * @param projects a list of projects
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @see #getReferencedProjects()
+	 * @see #setReferencedProjectVariants(String, IProjectVariantReference[])
 	 */
 	public void setReferencedProjects(IProject[] projects);
+
+	/**
+	 * Returns the dynamic project references for the described project. Dynamic
+	 * project references can be used instead of simple project references in cases
+	 * where the reference information is computed dynamically be a third party.
+	 * These references are persisted by the workspace in a private location outside
+	 * the project description file, and as such will not be shared when a project is
+	 * exported or persisted in a repository.  A client using project references
+	 * is always responsible for setting these references when a project is created
+	 * or recreated.
+	 * <p>
+	 * The returned projects need not exist in the workspace. The result will not
+	 * contain duplicates. Returns an empty array if there are no dynamic project
+	 * references on this description.
+	 *
+	 * @see #getReferencedProjects()
+	 * @see #setDynamicReferences(IProject[])
+	 * @return a list of projects
+	 * @since 3.0
+	 * @see #getDynamicVariantReferences(String)
+	 */
+	public IProject[] getDynamicReferences();
+
+	/**
+	 * Sets the dynamic project references for the described project.
+	 * The projects need not exist in the workspace. Duplicates will be
+	 * removed.
+	 * <p>
+	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
+	 * before changes made to this description take effect.
+	 * </p>
+	 * @see #getDynamicReferences()
+	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
+	 * @param projects list of projects
+	 * @since 3.0
+	 * @see #setDynamicVariantReferences(String, IProjectVariantReference[])
+	 */
+	public void setDynamicReferences(IProject[] projects);
+
+	/**
+	 * Returns the project variants references for the specified variant in the
+	 * described project. These references are persisted in the project description
+	 * file (&quot;.project&quot;) and as such will be shared whenever the project 
+	 * is exported to another workspace. For references that are likely to change from
+	 * one workspace to another, dynamic references should be used instead.
+	 * <p>
+	 * The referenced project variants need not exist in the workspace.
+	 * The result will not contain duplicates. The order of the references is preserved
+	 * from the call to {@link #setReferencedProjectVariants(String, IProjectVariantReference[])}.
+	 * Returns an empty array if there are no referenced project variants in this
+	 * description for the given variant, or the given variant does not exist in this description.
+	 *
+	 * @param variant the variant in the described project to get the references for
+	 * @return a list of project variants; or null if the variant does not exist.
+	 * @see #setReferencedProjectVariants(String, IProjectVariantReference[])
+	 */
+	public IProjectVariantReference[] getReferencedProjectVariants(String variant);
+
+	/**
+	 * Sets the referenced project variants for the specified variant in this description.
+	 * <p>
+	 * The variant to which references are being added needs to exist in this
+	 * description, but the referenced projects and variants need not exist.
+	 * Duplicates will be removed. The order of the referenced project variants
+	 * is preserved. If the given variant does not exist in this description then this
+	 * has no effect.
+	 * <p>
+	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
+	 * before changes made to this description take effect.
+	 * </p>
+	 *
+	 * @param variant the variant in the described project to add the references for
+	 * @param references a list of project variant references
+	 * @see #getReferencedProjectVariants(String)
+	 */
+	public void setReferencedProjectVariants(String variant, IProjectVariantReference[] references);
+
+	/**
+	 * Returns the project variants referenced dynamically by the specified variant for the
+	 * described project. Dynamic references can be used instead of simple references
+	 * in cases where the reference information is computed dynamically by a third party.
+	 * These references are persisted by the workspace in a private location outside the
+	 * project description file, and as such will not be shared when a project is exported
+	 * or persisted in a repository.  A client using dynamic references is always
+	 * responsible for setting these references when a project is created or recreated.
+	 * <p>
+	 * The referenced project variants need not exist in the workspace.
+	 * The result will not contain duplicates. The order of the references is preserved
+	 * from the call to {@link #setDynamicVariantReferences(String, IProjectVariantReference[])}.
+	 * Returns an empty array if there are no dynamically referenced project variants on this
+	 * description for the given variant, or the given variant does not exist in this description..
+	 * 
+	 * @param variant the variant in the described project to get the references for
+	 * @return a list of dynamic project variants; or null if the variant does not exist.
+	 * @see #getReferencedProjectVariants(String)
+	 * @see #setDynamicVariantReferences(String, IProjectVariantReference[])
+	 */
+	public IProjectVariantReference[] getDynamicVariantReferences(String variant);
+
+	/**
+	 * Sets the dynamically referenced project variants for the specified variant.
+	 * <p>
+	 * The variant to which references are being added needs to exist in this
+	 * description, but the referenced projects and variants need not exist.
+	 * Duplicates will be removed. The order of the referenced project variants is preserved.
+	 * If the given variant does not exist in this description then this has no effect.
+	 * <p>
+	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
+	 * before changes made to this description take effect.
+	 * </p>
+	 * 
+	 * @see #getDynamicVariantReferences(String)
+	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
+	 * @param variant the variant in the described project to set the references for
+	 * @param references list of project variant references
+	 */
+	public void setDynamicVariantReferences(String variant, IProjectVariantReference[] references);
+
+	/**
+	 * Returns a new project variant for the described project, with the given name.
+	 * <p>
+	 * Note that the new project variant does not become part of this project
+	 * description until it is installed via the {@link #setVariants(IProjectVariant[])}
+	 * method.
+	 * </p>
+	 *
+	 * @param name the name for the variant
+	 * @return a project variant
+	 * @see #setVariants(IProjectVariant[])
+	 */
+	public IProjectVariant newVariant(String name);
+
+	/**
+	 * Sets the variants for the described project.
+	 * <p>
+	 * Before they are set, duplicates are removed from the input.
+	 * <p>
+	 * If the input is null or an empty list, the current variants are removed
+	 * and a default variant is added. It is impossible to configure a project
+	 * to have no variants.
+	 * <p>
+	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
+	 * before changes made to this description take effect.
+	 * 
+	 * @param variants the variants to set for the described project
+	 * @see IProject#getVariants()
+	 * @see IProjectDescription#setActiveVariant(String)
+	 * @see IProject#getActiveVariant()
+	 */
+	public void setVariants(IProjectVariant[] variants);
+
+	/**
+	 * Sets the active variant for the described project.
+	 * <p>
+	 * If a variant with the specified name does not exist in the project then this has
+	 * no effect.
+	 * </p>
+	 *
+	 * @param variantName the variant to set as the active variant
+	 */
+	public void setActiveVariant(String variantName);
 }

@@ -9,6 +9,7 @@
  *     IBM Corporation - initial API and implementation
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
+ * Broadcom Corporation - project variants and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -16,6 +17,7 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.Map.Entry;
 import javax.xml.parsers.*;
 import org.eclipse.core.filesystem.URIUtil;
 import org.eclipse.core.internal.events.BuildCommand;
@@ -70,6 +72,16 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	protected static final int S_VARIABLE_VALUE = 34;
 
 	protected static final int S_SNAPSHOT_LOCATION = 35;
+
+	protected static final int S_VARIANTS = 36;
+	protected static final int S_VARIANT_NAME = 37;
+
+	protected static final int S_REFERENCES = 38;
+	protected static final int S_REFERENCES_VARIANT = 39;
+	protected static final int S_REFERENCES_VARIANT_NAME = 40;
+	protected static final int S_REFERENCE = 41;
+	protected static final int S_REFERENCE_PROJECT_NAME = 42;
+	protected static final int S_REFERENCE_VARIANT_NAME = 43;
 	
 	/**
 	 * Singleton sax parser factory
@@ -95,6 +107,9 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 
 	protected int state = S_INITIAL;
 
+	// Set to true if project variant references existed in the description and were loaded.
+	// Used to work out if the old style project references should be loaded.
+	private boolean loadedProjectVariantReferences;
 
 	/**
 	 * Returns the SAXParser to use when parsing project description files.
@@ -282,6 +297,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_PROJECT_DESC;
 				}
 				break;
+			// Backwards compatibility for project references
 			case S_PROJECTS :
 				if (elementName.equals(PROJECTS)) {
 					endProjectsElement(elementName);
@@ -339,6 +355,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_PROJECT_DESC;
 				}
 				break;
+			// Backwards compatibility for project references
 			case S_REFERENCED_PROJECT_NAME :
 				if (elementName.equals(PROJECT)) {
 					//top of stack is list of project references
@@ -411,6 +428,46 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				break;
 			case S_SNAPSHOT_LOCATION :
 				endSnapshotLocation(elementName);
+				break;
+			case S_VARIANTS :
+				endVariantsElement(elementName);
+				break;
+			case S_VARIANT_NAME :
+				if (elementName.equals(VARIANT)) {
+					// Top of stack is a boolean indicating if the variant is active.
+					boolean isActive = ((Boolean) objectStack.pop()).booleanValue();
+					// Top of stack is the active variant name.
+					String activeVariant = (String) objectStack.pop();
+					// Top of stack is a list of variant names.
+					// A variant name can have leading/trailing whitespace.
+					String variantName = charBuffer.toString();
+					((ArrayList) objectStack.peek()).add(variantName);
+					// Put the active variant name back on the stack
+					objectStack.push(isActive ? variantName : activeVariant);
+					state = S_VARIANTS;
+				}
+			case S_REFERENCES :
+				endReferencesElement(elementName);
+				break;
+			case S_REFERENCES_VARIANT :
+				endReferencesVariantElement(elementName);
+				break;
+			case S_REFERENCES_VARIANT_NAME :
+				// Top of stack is a container for the variant name
+				// and references.
+				// A variant name cannot
+				// have leading/trailing whitespace.
+				((ReferencesContainer) objectStack.peek()).variant = charBuffer.toString().trim();
+				state = S_REFERENCES_VARIANT;
+				break;
+			case S_REFERENCE :
+				endReferenceElement(elementName);
+				break;
+			case S_REFERENCE_PROJECT_NAME :
+				endReferenceProjectName(elementName);
+				break;
+			case S_REFERENCE_VARIANT_NAME :
+				endReferenceVariantName(elementName);
 				break;
 		}
 		charBuffer.setLength(0);
@@ -802,11 +859,14 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			// project descriptor.
 			return;
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-		IProject[] projects = new IProject[referencedProjects.size()];
-		for (int i = 0; i < projects.length; i++) {
-			projects[i] = root.getProject((String) referencedProjects.get(i));
+		IProjectVariantReference[] variants = new IProjectVariantReference[referencedProjects.size()];
+		for (int i = 0; i < variants.length; i++)
+			variants[i] = root.getProject((String) referencedProjects.get(i)).newReference();
+		// If no project variant references were loaded, they weren't specified in the
+		// config file. For backwards compatibility, load the project references.
+		if (!loadedProjectVariantReferences) {
+			projectDescription.setReferencedProjectVariants(IProjectDescription.DEFAULT_VARIANT, variants);
 		}
-		projectDescription.setReferencedProjects(projects);
 	}
 
 	private void endSnapshotLocation(String elementName) {
@@ -822,7 +882,133 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		}
 	}
 
-	
+	/** End of a variants list */
+	private void endVariantsElement(String elementName) {
+		if (elementName.equals(VARIANTS)) {
+			// Pop the active variant name off the stack
+			String activeVariant = (String) objectStack.pop();
+			// Pop the array list of variant names off the stack
+			List variantNames = (List) objectStack.pop();
+			state = S_PROJECT_DESC;
+			if (variantNames.size() == 0)
+				// A project should have more than one variant name,
+				// so leave the project with the default variant if none
+				// are specified in the project description file
+				return;
+			IProjectVariant[] variants = new IProjectVariant[variantNames.size()];
+			int i = 0;
+			for (Iterator it = variantNames.iterator(); it.hasNext(); i++)
+				variants[i] = projectDescription.newVariant((String) it.next());
+			projectDescription.setVariants(variants);
+			projectDescription.setActiveVariant(activeVariant);
+		}
+	}
+
+	/**
+	 * End of the top level references tag
+	 * Processes the map on the object stack to add the references
+	 * to the description.
+	 */
+	private void endReferencesElement(String elementName) {
+		if (elementName.equals(REFERENCES)) {
+			Map/*<String, List<ReferenceContainer.Reference>>*/ references = (Map) objectStack.pop();
+			state = S_PROJECT_DESC;
+			if (references.entrySet().isEmpty())
+				return;
+			Iterator i = references.entrySet().iterator();
+			while (i.hasNext()) {
+				Entry entry = (Entry) i.next();
+				String variantName = (String) entry.getKey();
+
+				// Ensure the variant exists, otherwise adding the references would fail
+				IProjectVariant[] existing = projectDescription.internalGetVariants(false);
+				IProjectVariant[] variants = new IProjectVariant[existing.length + 1];
+				System.arraycopy(existing, 0, variants, 0, existing.length);
+				IProjectVariant variant = projectDescription.newVariant(variantName);
+				variants[variants.length - 1] = variant;
+				projectDescription.setVariants(variants);
+
+				// Convert the List<ReferencesContainer.Reference> to an IProjectVariantReference[]
+				List refs = new ArrayList();
+				IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
+				for (Iterator it = ((List) entry.getValue()).iterator(); it.hasNext();) {
+					ReferencesContainer.Reference ref = (ReferencesContainer.Reference) it.next();
+					refs.add(new ProjectVariantReference(root.getProject(ref.projectName), ref.variantName));
+				}
+				IProjectVariantReference[] refsArray = new IProjectVariantReference[refs.size()];
+				refs.toArray(refsArray);
+
+				projectDescription.setReferencedProjectVariants(variantName, refsArray);
+			}
+			loadedProjectVariantReferences = true;
+		}
+	}
+
+	/**
+	 * End the list of references for a specific variant of the project being described
+	 * Reads the ReferencesContainer off the object stack and updates the reference map
+	 * on the object stack.
+	 */
+	private void endReferencesVariantElement(String elementName) {
+		if (elementName.equals(VARIANT)) {
+			state = S_REFERENCES;
+			// Pop off the references container
+			ReferencesContainer data = (ReferencesContainer) objectStack.pop();
+			if (data.refs.isEmpty())
+				return;
+			// The reference map is the next thing on the stack, so add the references to it
+			Map refsMap = (Map) objectStack.peek();
+			// If separate reference lists in the xml had the same variant name, combine them
+			// while maintaining the correct order
+			List references;
+			if (refsMap.containsKey(data.variant)) {
+				references = (List) refsMap.get(data.variant);
+				references.addAll(data.refs);
+			} else
+				references = data.refs;
+			refsMap.put(data.variant, references);
+		}
+	}
+
+	/** End a single reference */
+	private void endReferenceElement(String elementName) {
+		if (elementName.equals(REFERENCE)) {
+			state = S_REFERENCES_VARIANT;
+			// Pop off the reference
+			ReferencesContainer.Reference reference = (ReferencesContainer.Reference) objectStack.pop();
+			// Make sure that you have something reasonable
+			if (reference.projectName == null) {
+				parseProblem(NLS.bind(Messages.projRead_missingReferenceProjectName, project.getName()));
+				return;
+			}
+//			if (reference.variantName == null && project != null) {
+//				parseProblem(NLS.bind(Messages.projRead_missingReferenceVariantName, project.getName()));
+//				return;
+//			}
+
+			// The references container is the next thing on the stack
+			((ReferencesContainer) objectStack.peek()).refs.add(reference);
+		}
+	}
+
+	/** End a references project name */
+	private void endReferenceProjectName(String elementName) {
+		if (elementName.equals(PROJECT)) {
+			String value = charBuffer.toString();
+			((ReferencesContainer.Reference) objectStack.peek()).projectName = value;
+			state = S_REFERENCE;
+		}
+	}
+
+	/** End a references variant name */
+	private void endReferenceVariantName(String elementName) {
+		if (elementName.equals(VARIANT)) {
+			String value = charBuffer.toString();
+			((ReferencesContainer.Reference) objectStack.peek()).variantName = value;
+			state = S_REFERENCE;
+		}
+	}
+
 	/**
 	 * @see ErrorHandler#error(SAXParseException)
 	 */
@@ -862,6 +1048,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			state = S_PROJECT_COMMENT;
 			return;
 		}
+		// Backwards compatibility for project references
 		if (elementName.equals(PROJECTS)) {
 			state = S_PROJECTS;
 			// Push an array list on the object stack to hold the name
@@ -908,10 +1095,26 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		if (elementName.equals(SNAPSHOT_LOCATION)) {
 			state = S_SNAPSHOT_LOCATION;
 			return;
-		}	
+		}
+		if (elementName.equals(VARIANTS)) {
+			state = S_VARIANTS;
+			// Push an array list to hold all the variant names.
+			objectStack.push(new ArrayList());
+			// Push a place holder that will be replaced with the active variant name.
+			objectStack.push(null);
+			return;
+		}
+		if (elementName.equals(REFERENCES)) {
+			state = S_REFERENCES;
+			// Push a map on the object stack to hold the references:
+			// variant name -> list of IProjectVariant
+			objectStack.push(new HashMap());
+			return;
+		}
 	}
 
 	public ProjectDescription read(InputSource input) {
+		loadedProjectVariantReferences = false;
 		problems = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_READ_METADATA, Messages.projRead_failureReadingProjectDesc, null);
 		objectStack = new Stack();
 		state = S_INITIAL;
@@ -982,6 +1185,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_PROJECT_DESC :
 				parseProjectDescription(elementName);
 				break;
+			// Backwards compatibility for project references
 			case S_PROJECTS :
 				if (elementName.equals(PROJECT)) {
 					state = S_REFERENCED_PROJECT_NAME;
@@ -1095,7 +1299,48 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_VARIABLE_VALUE;
 				}
 				break;
+			case S_VARIANTS:
+				if (elementName.equals(VARIANT)) {
+					state = S_VARIANT_NAME;
+					objectStack.push(new Boolean(attributes.getValue(ACTIVE_VARIANT)));
+				}
+				break;
+			case S_REFERENCES:
+				if (elementName.equals(VARIANT)) {
+					state = S_REFERENCES_VARIANT;
+					// Push place holder for the project variant
+					// references for this project variant.
+					objectStack.push(new ReferencesContainer());
+				}
+				break;
+			case S_REFERENCES_VARIANT:
+				if (elementName.equals(NAME)) {
+					state = S_REFERENCES_VARIANT_NAME;
+				} else if (elementName.equals(REFERENCE)) {
+					state = S_REFERENCE;
+					// Push place holder for the project variant target of this reference.
+					objectStack.push(new ReferencesContainer.Reference());
+				}
+				break;
+			case S_REFERENCE:
+				if (elementName.equals(PROJECT)) {
+					state = S_REFERENCE_PROJECT_NAME;
+				} else if (elementName.equals(VARIANT)) {
+					state = S_REFERENCE_VARIANT_NAME;
+				}
+				break;
 		}
+	}
+
+	// Container for a reference name and list of references, for storage on the object stack
+	private static class ReferencesContainer {
+		public static class Reference {
+			public String projectName;
+			public String variantName;
+		}
+		public ReferencesContainer() {}
+		public String variant = null;
+		public List/*<Reference>*/ refs = new ArrayList();
 	}
 
 	/**

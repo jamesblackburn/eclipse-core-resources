@@ -141,7 +141,7 @@ class AutoBuildJob extends Job implements Preferences.IPropertyChangeListener {
 				IStatus result = Status.OK_STATUS;
 				try {
 					if (shouldBuild())
-						result = workspace.getBuildManager().build(trigger, Policy.subMonitorFor(monitor, Policy.opWork));
+						result = workspace.getBuildManager().build(workspace.getBuildOrder(), trigger, Policy.subMonitorFor(monitor, Policy.opWork));
 				} finally {
 					//always send POST_BUILD if there has been a PRE_BUILD
 					workspace.broadcastBuildEvent(workspace, IResourceChangeEvent.POST_BUILD, trigger);
