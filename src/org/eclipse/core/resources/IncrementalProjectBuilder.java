@@ -191,6 +191,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * didn't run, even though there are changes, and it wants the delta to be preserved
 	 * until the next time it is called.
 	 * This is superseded by a call to {@link #forgetLastBuiltState()}.
+	 * @since 3.7
 	 */
 	public final void rememberLastBuiltState() {
 		super.rememberLastBuiltState();
@@ -270,6 +271,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * Returns the project variant for which this build invocation.
 	 * 
 	 * @return the project variant
+	 * @since 3.7
 	 */
 	public final IProjectVariant getProjectVariant() {
 		return super.getProjectVariant();
@@ -311,7 +313,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * @return <code>true</code> if the given project variant has been built in this
 	 * iteration, and <code>false</code> otherwise.
 	 * @see #needRebuild()
-	 * @since 2.1
+	 * @since 3.7
 	 */
 	public final boolean hasBeenBuilt(IProjectVariant projectVariant) {
 		return super.hasBeenBuilt(projectVariant);
@@ -473,6 +475,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * {@link #build(int, Map, IProgressMonitor)}
 	 * 
 	 * @return the context for the most recent invocation of the builder
+	 * @since 3.7
 	 */
 	public final IBuildContext getContext() {
 		return super.getContext();
