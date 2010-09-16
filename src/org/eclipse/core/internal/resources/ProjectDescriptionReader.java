@@ -865,7 +865,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		// If no project variant references were loaded, they weren't specified in the
 		// config file. For backwards compatibility, load the project references.
 		if (!loadedProjectVariantReferences) {
-			projectDescription.setReferencedProjectVariants(IProjectDescription.DEFAULT_VARIANT, variants);
+			projectDescription.setReferencedProjectVariants(IProjectVariant.DEFAULT_VARIANT, variants);
 		}
 	}
 

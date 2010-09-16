@@ -34,8 +34,6 @@ public interface IProjectDescription {
 	 */
 	public static final String DESCRIPTION_FILE_NAME = ".project"; //$NON-NLS-1$
 
-	public static final String DEFAULT_VARIANT = ""; //$NON-NLS-1$
-
 	/**
 	 * Returns the list of build commands to run when building the described project.
 	 * The commands are listed in the order in which they are to be run.
@@ -309,6 +307,7 @@ public interface IProjectDescription {
 	 * @param variant the variant in the described project to get the references for
 	 * @return a list of project variants; or null if the variant does not exist.
 	 * @see #setReferencedProjectVariants(String, IProjectVariantReference[])
+	 * @since 3.7
 	 */
 	public IProjectVariantReference[] getReferencedProjectVariants(String variant);
 
@@ -328,6 +327,7 @@ public interface IProjectDescription {
 	 * @param variant the variant in the described project to add the references for
 	 * @param references a list of project variant references
 	 * @see #getReferencedProjectVariants(String)
+	 * @since 3.7
 	 */
 	public void setReferencedProjectVariants(String variant, IProjectVariantReference[] references);
 
@@ -350,6 +350,7 @@ public interface IProjectDescription {
 	 * @return a list of dynamic project variants; or null if the variant does not exist.
 	 * @see #getReferencedProjectVariants(String)
 	 * @see #setDynamicVariantReferences(String, IProjectVariantReference[])
+	 * @since 3.7
 	 */
 	public IProjectVariantReference[] getDynamicVariantReferences(String variant);
 
@@ -369,6 +370,7 @@ public interface IProjectDescription {
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
 	 * @param variant the variant in the described project to set the references for
 	 * @param references list of project variant references
+	 * @since 3.7
 	 */
 	public void setDynamicVariantReferences(String variant, IProjectVariantReference[] references);
 
@@ -383,6 +385,7 @@ public interface IProjectDescription {
 	 * @param name the name for the variant
 	 * @return a project variant
 	 * @see #setVariants(IProjectVariant[])
+	 * @since 3.7
 	 */
 	public IProjectVariant newVariant(String name);
 
@@ -402,6 +405,7 @@ public interface IProjectDescription {
 	 * @see IProject#getVariants()
 	 * @see IProjectDescription#setActiveVariant(String)
 	 * @see IProject#getActiveVariant()
+	 * @since 3.7
 	 */
 	public void setVariants(IProjectVariant[] variants);
 
@@ -413,6 +417,7 @@ public interface IProjectDescription {
 	 * </p>
 	 *
 	 * @param variantName the variant to set as the active variant
+	 * @since 3.7
 	 */
 	public void setActiveVariant(String variantName);
 }

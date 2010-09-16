@@ -180,6 +180,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @see IncrementalProjectBuilder#FULL_BUILD
 	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
 	 * @see IResourceRuleFactory#buildRule()
+	 * @since 3.7
 	 */
 	public void build(IProjectVariant variant, int kind, IProgressMonitor monitor) throws CoreException;
 
@@ -592,6 +593,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @see IProjectDescription#getReferencedProjectVariants(String)
 	 * @see IProjectDescription#getDynamicVariantReferences(String)
+	 * @since 3.7
 	 */
 	public IProjectVariant[] getReferencedProjectVariants(IProjectVariant variant) throws CoreException;
 
@@ -607,6 +609,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 *
 	 * @param variant the variant to get the references to
 	 * @return a list of open projects and their existing variant referencing this project
+	 * @since 3.7
 	 */
 	public IProjectVariant[] getReferencingProjectVariants(IProjectVariant variant);
 
@@ -1005,6 +1008,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
 	 * </ul>
+	 * @since 3.7
 	 */
 	public IProjectVariant[] getVariants() throws CoreException;
 
@@ -1019,6 +1023,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> The variant does not exist in this project.</li>
 	 * </ul>
 	 * @see #getVariants()
+	 * @since 3.7
 	 */
 	public IProjectVariant getVariant(String name) throws CoreException;
 
@@ -1032,6 +1037,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
 	 * </ul>
+	 * @since 3.7
 	 */
 	public boolean hasVariant(IProjectVariant variant) throws CoreException;
 
@@ -1050,6 +1056,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
 	 * </ul>
+	 * @since 3.7
 	 */
 	public IProjectVariant getActiveVariant() throws CoreException;
 
@@ -1059,6 +1066,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * but this can be set using {@link IProjectVariantReference#setVariantName(String)}.
 	 *
 	 * @return a project variant reference to this project
+	 * @since 3.7
 	 */
 	public IProjectVariantReference newReference();
 }

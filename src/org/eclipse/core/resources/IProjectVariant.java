@@ -15,9 +15,15 @@ package org.eclipse.core.resources;
  * When a project is built, a specific variant is built. This variant
  * is passed to the builders so that they can adapt their behavior
  * for different variants of the project.
- * @since 3.6
+ * @since 3.7
  */
 public interface IProjectVariant {
+
+	/**
+	 * The name of the default variant
+	 */
+	public static final String DEFAULT_VARIANT = ""; //$NON-NLS-1$
+
 	/**
 	 * @return the project that the variant is for; never null.
 	 */

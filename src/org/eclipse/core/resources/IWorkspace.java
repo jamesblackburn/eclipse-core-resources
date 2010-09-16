@@ -276,6 +276,7 @@ public interface IWorkspace extends IAdaptable {
 	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
 	 * @see IncrementalProjectBuilder#CLEAN_BUILD
 	 * @see IResourceRuleFactory#buildRule()
+	 * @since 3.7
 	 */
 	public void build(IProjectVariant projectVariants[], int kind, IProgressMonitor monitor) throws CoreException;
 
@@ -398,7 +399,7 @@ public interface IWorkspace extends IAdaptable {
 	 * </p>
 	 * 
 	 * @see IWorkspace#computeProjectVariantOrder(IProjectVariant[])
-	 * @since 2.1
+	 * @since 3.7
 	 */
 	public final class ProjectVariantOrder {
 		/**
@@ -512,7 +513,7 @@ public interface IWorkspace extends IAdaptable {
 	 * 
 	 * @param projectVariants the project variants to order
 	 * @return result describing the project variant order
-	 * @since 2.1
+	 * @since 3.7
 	 */
 	public ProjectVariantOrder computeProjectVariantOrder(IProjectVariant[] projectVariants);
 
@@ -822,6 +823,7 @@ public interface IWorkspace extends IAdaptable {
 	 * @return a map (key type: <code>IProjectVariant</code>, value type:
 	 * <code>IProjectVariant[]</code>) from project variant to dangling
 	 * project variant references
+	 * @since 3.7
 	 */
 	public Map getDanglingVariantReferences();
 
