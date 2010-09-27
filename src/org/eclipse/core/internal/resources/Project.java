@@ -1380,7 +1380,7 @@ public class Project extends Container implements IProject {
 		ArrayList variants = new ArrayList(refs.length);
 		for (int i = 0; i < refs.length; i++) {
 			try {
-				variants.add(refs[i].getVariant());
+				variants.add(((ProjectVariantReference)refs[i]).getVariant());
 			} catch (CoreException e) {
 				// Ignore non-existant variant reference
 			}
@@ -1406,7 +1406,7 @@ public class Project extends Container implements IProject {
 				IProjectVariantReference[] refs = description.getAllVariantReferences(variants[j].getVariantName(), false);
 				for (int k = 0; k < refs.length; k++) {
 					try {
-						if (refs[k].getVariant().equals(variant)) {
+						if (((ProjectVariantReference)refs[k]).getVariant().equals(variant)) {
 							result.add(variants[j]);
 							break;
 						}
@@ -1445,7 +1445,7 @@ public class Project extends Container implements IProject {
 		IProjectVariant[] variants = getVariants();
 		for (int i = 0; i < variants.length; i++) {
 			if (variants[i].getVariantName().equals(name)) {
-				return (IProjectVariant) variants[i].clone();
+				return (ProjectVariant)((ProjectVariant) variants[i]).clone();
 			}
 		}
 		throw new ResourceException(IResourceStatus.PROJECT_VARIANT_NOT_FOUND, getFullPath(), null, null);
