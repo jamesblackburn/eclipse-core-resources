@@ -378,8 +378,7 @@ public interface IProjectDescription {
 	 * Returns a new project variant for the described project, with the given name.
 	 * <p>
 	 * Note that the new project variant does not become part of this project
-	 * description until it is installed via the {@link #setVariants(IProjectVariant[])}
-	 * method.
+	 * description until it is installed using {@link #setVariants(IProjectVariant[])}
 	 * </p>
 	 *
 	 * @param name the name for the variant

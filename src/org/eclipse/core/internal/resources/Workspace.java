@@ -1556,7 +1556,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					// Check the referenced project and variant exists
 					try {
 						if (!refs[k].getProject().exists() ||
-							!((Project) refs[k].getProject()).internalHasVariant(refs[k].getVariant()))
+							!((Project) refs[k].getProject()).internalHasVariant(((ProjectVariantReference)refs[k]).getVariant()))
 							dangling.add(refs[k]);
 					} catch (CoreException e) {
 						// Project did not exist, as the active variant could not be found

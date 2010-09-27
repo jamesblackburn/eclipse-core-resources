@@ -29,7 +29,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	private static final IProjectVariantReference[] EMPTY_PROJECT_VARIANT_REFERENCE_ARRAY = new IProjectVariantReference[0];
 	private static final String[] EMPTY_STRING_ARRAY = new String[0];
 	private static final String EMPTY_STR = ""; //$NON-NLS-1$
-	private static final IProjectVariant[] DEFAULT_VARIANTS = new IProjectVariant[]{new ProjectVariant()};
+	private static final ProjectVariant[] DEFAULT_VARIANTS = new ProjectVariant[]{new ProjectVariant()};
 	protected static boolean isReading = false;
 
 	//flags to indicate when we are in the middle of reading or writing a
@@ -81,7 +81,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	// fields
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
-	protected IProjectVariant[] variants = DEFAULT_VARIANTS;
+	protected ProjectVariant[] variants = DEFAULT_VARIANTS;
 	protected Set variantNames = null;
 	protected String activeVariant = null;
 	protected HashMap/*<String, IProjectVariantReference[]>*/ staticRefs = new HashMap();
@@ -660,17 +660,17 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			// Filter out duplicates
 			Set filtered = new LinkedHashSet(value.length);
 			for (int i = 0; i < value.length; i++) {
-				IProjectVariant variant = (IProjectVariant) value[i].clone();
+				ProjectVariant variant = (ProjectVariant)((ProjectVariant) value[i]).clone();
 				// Ensure the project is not set
-				((ProjectVariant) variant).clearProject();
-				Assert.isTrue(((ProjectVariant) variant).internalGetProject() == null);
+				variant.clearProject();
+				Assert.isTrue(variant.internalGetProject() == null);
 				filtered.add(variant);
 			}
 
 			if (filtered.isEmpty())
 				variants = DEFAULT_VARIANTS;
 			else {
-				variants = new IProjectVariant[filtered.size()];
+				variants = new ProjectVariant[filtered.size()];
 				filtered.toArray(variants);
 			}
 		}
@@ -688,29 +688,27 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 	/**
 	 * Used by Project to get the variants on the description
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	public IProjectVariant[] internalGetVariants(boolean makeCopy) {
 		if (variants == null || variants.length == 0)
 			variants = DEFAULT_VARIANTS;
 		for (int i = 0; i < variants.length; i++)
-			Assert.isTrue(((ProjectVariant) variants[i]).internalGetProject() == null);
+			Assert.isTrue(variants[i].internalGetProject() == null);
 		return makeCopy ? copyVariants(variants) : variants;
 	}
 
-	private IProjectVariant[] copyVariants(IProjectVariant[] variants) {
-		IProjectVariant[] result = new IProjectVariant[variants.length];
+	private IProjectVariant[] copyVariants(ProjectVariant[] pvars) {
+		IProjectVariant[] result = new ProjectVariant[variants.length];
 		for (int i = 0; i < variants.length; i++)
-			result[i] = (IProjectVariant) variants[i].clone();
+			result[i] = (ProjectVariant) variants[i].clone();
 		return result;
 	}
 
 	/**
 	 * Used by Project to get the active variant.
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	public IProjectVariant internalGetActiveVariant(boolean makeCopy) {
-		IProjectVariant result = null;
+		ProjectVariant result = null;
 		if (!hasVariant(activeVariant)) {
 			activeVariant = variants[0].getVariantName();
 			result = variants[0];
@@ -722,7 +720,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			}
 		}
 		Assert.isTrue(result != null);
-		Assert.isTrue(((ProjectVariant) result).internalGetProject() == null);
+		Assert.isTrue(result.internalGetProject() == null);
 		return makeCopy ? (IProjectVariant) result.clone() : result;
 	}
 

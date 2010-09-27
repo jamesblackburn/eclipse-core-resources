@@ -268,7 +268,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	}
 
 	/**
-	 * Returns the project variant for which this build invocation.
+	 * Returns the project variant for which this build was invoked.
 	 * 
 	 * @return the project variant
 	 * @since 3.7
