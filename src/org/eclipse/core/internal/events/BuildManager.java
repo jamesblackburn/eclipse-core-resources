@@ -127,6 +127,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 
 	//used for debug/trace timing
 	private long timeStamp = -1;
+	private long overallTimeStamp = -1;
 	private Workspace workspace;
 
 	public BuildManager(Workspace workspace, ILock workspaceLock) {
@@ -223,7 +224,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		if (!canRun(trigger))
 			return Status.OK_STATUS;
 		try {
-			hookStartBuild(trigger);
+			hookStartBuild(new IProjectVariant[] { projectVariant }, trigger);
 			MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, Messages.events_errors, null);
 			basicBuild(projectVariant, trigger, context, status, monitor);
 			return status;
@@ -283,7 +284,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			if (!canRun(trigger))
 				return Status.OK_STATUS;
 			try {
-				hookStartBuild(trigger);
+				hookStartBuild(new IProjectVariant[] {projectVariant}, trigger);
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, Messages.events_errors, null);
 				ICommand command = getCommand(project, builderName, args);
 				try {
@@ -343,7 +344,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			if (!canRun(trigger))
 				return Status.OK_STATUS;
 			try {
-				hookStartBuild(trigger);
+				hookStartBuild(variants, trigger);
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.BUILD_FAILED, Messages.events_errors, null);
 				basicBuildLoop(variants, trigger, status, monitor);
 				return status;
@@ -760,6 +761,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		//ensure autobuild runs after a clean
 		if (trigger == IncrementalProjectBuilder.CLEAN_BUILD)
 			autoBuildJob.forceBuild();
+		if (Policy.DEBUG_BUILD_INVOKING) {
+			Policy.debug("Top-level build-end time: " + (System.currentTimeMillis() - overallTimeStamp)); //$NON-NLS-1$
+			overallTimeStamp = -1;
+		}
 	}
 
 	/**
@@ -780,11 +785,15 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * This hook is called when a build API method is called, before any builders
 	 * start running.
 	 */
-	private void hookStartBuild(int trigger) {
+	private void hookStartBuild(IProjectVariant[] variants, int trigger) {
 		building = true;
 		if (Policy.DEBUG_BUILD_STACK) {
 			IStatus info = new Status(IStatus.INFO, ResourcesPlugin.PI_RESOURCES, 1, "Starting build: " + debugTrigger(trigger), new RuntimeException().fillInStackTrace()); //$NON-NLS-1$
 			Policy.log(info);
+		}
+		if (Policy.DEBUG_BUILD_INVOKING) {
+			overallTimeStamp = System.currentTimeMillis();
+			Policy.debug("Top-level build-start of: " + Arrays.toString(variants) + " " + debugTrigger(trigger));  //$NON-NLS-1$//$NON-NLS-2$
 		}
 	}
 
