@@ -1371,16 +1371,13 @@ public class Project extends Container implements IProject {
 		return internalGetReferencedProjectVariants(variant);
 	}
 
-	/**
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
-	 */
 	public IProjectVariant[] internalGetReferencedProjectVariants(IProjectVariant variant) {
 		ProjectDescription description = internalGetDescription();
 		IProjectVariantReference[] refs = description.getAllVariantReferences(variant.getVariantName(), true);
 		ArrayList variants = new ArrayList(refs.length);
 		for (int i = 0; i < refs.length; i++) {
 			try {
-				variants.add(refs[i].getVariant());
+				variants.add(((ProjectVariantReference)refs[i]).getVariant());
 			} catch (CoreException e) {
 				// Ignore non-existant variant reference
 			}
@@ -1406,7 +1403,7 @@ public class Project extends Container implements IProject {
 				IProjectVariantReference[] refs = description.getAllVariantReferences(variants[j].getVariantName(), false);
 				for (int k = 0; k < refs.length; k++) {
 					try {
-						if (refs[k].getVariant().equals(variant)) {
+						if (((ProjectVariantReference)refs[k]).getVariant().equals(variant)) {
 							result.add(variants[j]);
 							break;
 						}
@@ -1428,9 +1425,6 @@ public class Project extends Container implements IProject {
 		return internalGetVariants();
 	}
 
-	/**
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
-	 */
 	public IProjectVariant[] internalGetVariants() {
 		ProjectDescription desc = internalGetDescription();
 		IProjectVariant[] variants = desc.internalGetVariants(true);
@@ -1445,7 +1439,7 @@ public class Project extends Container implements IProject {
 		IProjectVariant[] variants = getVariants();
 		for (int i = 0; i < variants.length; i++) {
 			if (variants[i].getVariantName().equals(name)) {
-				return (IProjectVariant) variants[i].clone();
+				return (ProjectVariant)((ProjectVariant) variants[i]).clone();
 			}
 		}
 		throw new ResourceException(IResourceStatus.PROJECT_VARIANT_NOT_FOUND, getFullPath(), null, null);
@@ -1461,9 +1455,6 @@ public class Project extends Container implements IProject {
 		return internalHasVariant(variant);
 	}
 
-	/**
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
-	 */
 	public boolean internalHasVariant(IProjectVariant variant) {
 		if (variant == null)
 			return false;
@@ -1487,9 +1478,6 @@ public class Project extends Container implements IProject {
 		return variant;
 	}
 
-	/**
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
-	 */
 	public IProjectVariant internalGetActiveVariant() {
 		ProjectDescription desc = internalGetDescription();
 		IProjectVariant variant = desc.internalGetActiveVariant(true);

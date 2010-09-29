@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import org.eclipse.core.runtime.CoreException;
+
 import org.eclipse.core.runtime.*;
 import org.eclipse.core.resources.*;
 
@@ -77,8 +79,12 @@ public class ProjectVariantReference implements IProjectVariantReference {
 		variantName = name;
 	}
 
-	/* (non-Javadoc)
-	 * @see IProjectVariantReference#getVariant()
+	/**
+	 * @return the variant that this project variant reference refers to.
+	 * If this references the active variant of a project, the projects current
+	 * active variant is returned.
+	 * @throws CoreException if the active variant for the referenced project cannot
+	 * be determined. For example if the references project is not accessible.
 	 */
 	public IProjectVariant getVariant() throws CoreException {
 		IProjectVariant variant = null;

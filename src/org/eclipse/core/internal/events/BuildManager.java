@@ -529,7 +529,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 */
 	private IncrementalProjectBuilder getBuilder(IProjectVariant projectVariant, ICommand command, int buildSpecIndex, MultiStatus status, IBuildContext context) throws CoreException {
 		InternalBuilder builder = getBuilder(projectVariant, command, buildSpecIndex, status);
-		builder.setContext(context);
+		if (builder != null)
+			builder.setContext(context);
 		return (IncrementalProjectBuilder) builder;
 	}
 

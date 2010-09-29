@@ -11,13 +11,32 @@
 package org.eclipse.core.resources;
 
 /**
- * Represents a project variant. A project has one or more variants.
+ * Project Variants are a mechanism to provide orthogonal variant specific
+ * builds.  The core maintains build deltas per builder, per variant, 
+ * and allow variants to reference other variants.
+ *
+ * All projects have a default variant.
+ *
  * When a project is built, a specific variant is built. This variant
- * is passed to the builders so that they can adapt their behavior
- * for different variants of the project.
- * @since 3.6
+ * is passed to the builders so they can adapt their behavior
+ * appropriately. Builders which don't care about variants may ignore this.
+ *
+ * @noimplement This interface is not intended to be implemented by clients.
+ * @noextend This interface is not intended to be extended by clients.
+ *
+ * @since 3.7
  */
 public interface IProjectVariant {
+
+	/**
+	 * The name of the default variant
+	 */
+	public static final String DEFAULT_VARIANT = ""; //$NON-NLS-1$
+	
+	// TODO
+	// Add a variant ID, as distinct from a variant name?
+	// Add a variant Comment ?
+
 	/**
 	 * @return the project that the variant is for; never null.
 	 */
@@ -28,8 +47,4 @@ public interface IProjectVariant {
 	 */
 	public String getVariantName();
 
-	/**
-	 * @return a copy of the project variant, of type IProjectVariant
-	 */
-	public Object clone();
 }

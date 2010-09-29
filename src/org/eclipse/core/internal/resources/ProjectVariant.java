@@ -18,8 +18,7 @@ import org.eclipse.core.resources.*;
  * @noinstantiate This class is not intended to be instantiated by clients.
  * @since 3.2
  */
-public class ProjectVariant implements IProjectVariant {
-	private static final String DEFAULT_NAME = ""; //$NON-NLS-1$
+public class ProjectVariant implements IProjectVariant, Cloneable {
 
 	private IProject project;
 	private final String name;
@@ -35,7 +34,7 @@ public class ProjectVariant implements IProjectVariant {
 	}
 
 	public ProjectVariant() {
-		this(null, DEFAULT_NAME);
+		this(null, DEFAULT_VARIANT);
 	}
 
 	/*

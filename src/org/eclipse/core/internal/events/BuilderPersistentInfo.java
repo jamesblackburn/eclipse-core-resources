@@ -49,7 +49,6 @@ public class BuilderPersistentInfo {
 	/**
 	 * @return the name of the variant for which this information refers. May return
 	 * null if reading persistent data from an old workspace tree.
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	public String getVariantName() {
 		return variantName;

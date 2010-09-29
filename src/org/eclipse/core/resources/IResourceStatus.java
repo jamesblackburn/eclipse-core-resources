@@ -278,7 +278,7 @@ public interface IResourceStatus extends IStatus {
 	/** Status code constant (value 384) indicating a project's variant
 	 * unexpectedly does not exist.
 	 * Severity: error. Category: workspace.
-	 * @since 3.6
+	 * @since 3.7
 	 */
 	public static final int PROJECT_VARIANT_NOT_FOUND = 384;
 
