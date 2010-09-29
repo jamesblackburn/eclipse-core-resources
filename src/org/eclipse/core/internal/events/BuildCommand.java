@@ -20,7 +20,7 @@ import org.eclipse.core.runtime.*;
 /**
  * The concrete implementation of <tt>ICommand</tt>.  This object
  * stores information about a particular type of builder, including references
- * to the instances of the builder for each of a project variants
+ * to the instances of the builder for each of a project's variants
  * (if they have been instantiated).
  */
 public class BuildCommand extends ModelObject implements ICommand {
@@ -135,23 +135,14 @@ public class BuildCommand extends ModelObject implements ICommand {
 		return arguments == null ? null : (makeCopy ? (Map) arguments.clone() : arguments);
 	}
 
-	/**
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
-	 */
 	public Map getBuilders() {
 		return builders;
 	}
 
-	/**
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
-	 */
 	public Map getBuilders(boolean makeCopy) {
 		return builders == null ? null : (makeCopy ? (Map) builders.clone() : builders);
 	}
 
-	/**
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
-	 */
 	public IncrementalProjectBuilder getBuilder(IProjectVariant variant) {
 		return (IncrementalProjectBuilder) builders.get(variant);
 	}
@@ -191,16 +182,12 @@ public class BuildCommand extends ModelObject implements ICommand {
 		// copy parameter for safety's sake
 		arguments = value == null ? null : new HashMap(value);
 	}
-	/**
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
-	 */
+
 	public void setBuilders(Map value) {
 		// copy parameter for safety's sake
 		builders = value == null ? new HashMap(1) : new HashMap(value);
 	}
-	/**
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
-	 */
+
 	public void addBuilder(IProjectVariant variant, IncrementalProjectBuilder builder) {
 		this.builders.put(variant, builder);
 	}
