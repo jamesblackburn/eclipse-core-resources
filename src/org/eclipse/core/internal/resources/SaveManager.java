@@ -1843,9 +1843,17 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 						if (infos != null) {
 							for (Iterator it = infos.iterator(); it.hasNext();) {
 								BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
+								// Nothing to persist if there isn't a previous delta tree.
+								// There used to be code which serialized the current workspace tree 
+								// but this will result in the next build of the builder getting an empty delta...
+								if (info.getLastBuiltTree() == null)
+									continue;
+
 								// Add to the correct list of builders info and add to the configuration ids
 								String configId = info.getConfigurationId() == null ? activeConfigId : info.getConfigurationId();
 								if (configId.equals(activeConfigId)) {
+									// Serializes the active configurations's build tree 
+									// TODO could probably do better by serializing the 'oldest' tree
 									builderInfosVersion2.add(info);
 									configIdsVersion2.add(configId);
 								} else {
@@ -1854,8 +1862,6 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 								}
 								// Add the builder's tree
 								ElementTree tree = info.getLastBuiltTree();
-								if (tree == null)
-									tree = workspace.getElementTree();
 								trees.add(tree);
 							}
 						}
@@ -1936,20 +1942,27 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				List configIdsVersion3 = new ArrayList(5);
 				List builderInfosVersion3 = new ArrayList(5);
 				if (builderInfos != null) {
+					String activeConfigId = project.getActiveBuildConfiguration().getConfigurationId();
 					for (Iterator it = builderInfos.iterator(); it.hasNext();) {
 						BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
+						// Nothing to persist if there isn't a previous delta tree.
+						// There used to be code which serialized the current workspace tree 
+						// but this will result in the next build of the builder getting an empty delta...
+						if (info.getLastBuiltTree() == null)
+							continue;
+
 						// Add to the correct list of builders info and add to the configuration ids
-						if (info.getConfigurationId().equals(project.getActiveBuildConfiguration().getConfigurationId())) {
+						String configId = info.getConfigurationId() == null ? activeConfigId : info.getConfigurationId();
+						if (configId.equals(activeConfigId)) {
+							// Serializes the active configurations's build tree 
 							builderInfosVersion2.add(info);
-							configIdsVersion2.add(info.getConfigurationId());
+							configIdsVersion2.add(configId);
 						} else {
 							builderInfosVersion3.add(info);
-							configIdsVersion3.add(info.getConfigurationId());
+							configIdsVersion3.add(configId);
 						}
 						// Add the builder's tree
 						ElementTree tree = info.getLastBuiltTree();
-						if (tree == null)
-							tree = workspace.getElementTree();
 						trees.add(tree);
 					}
 				}

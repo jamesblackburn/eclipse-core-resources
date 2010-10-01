@@ -21,9 +21,11 @@ import org.eclipse.core.runtime.*;
 
 /**
  * The concrete implementation of <tt>ICommand</tt>.  This object
- * stores information about a particular type of builder, including references
- * to the instances of the builder for each of a project's configurations
- * (if they have been instantiated).
+ * stores information about a particular type of builder.
+ * 
+ *  If the builder has been instantiated, a reference to the builder is held.
+ *  If the builder supports multiple build configurations, a reference to the
+ *  builder for each configuration is held.
  */
 public class BuildCommand extends ModelObject implements ICommand {
 	/**
@@ -47,13 +49,23 @@ public class BuildCommand extends ModelObject implements ICommand {
 
 	private static final int ALL_TRIGGERS = MASK_AUTO | MASK_CLEAN | MASK_FULL | MASK_INCREMENTAL;
 
-	protected HashMap arguments;
-	
+	protected HashMap arguments = new HashMap(0);
+
+
+	/** Have we checked the supports configurations flag */
+	private boolean supportsConfigurationsCalculated;
+	/** Does this builder support configurations */
+	private boolean supportsConfigurations;
 	/**
 	 * The builder instance for this command. Null if the builder has
 	 * not yet been instantiated.
 	 */
-	protected HashMap/*<IBuildConfiguration, IncrementalProjectBuilder>*/ builders;
+	private IncrementalProjectBuilder builder;
+	/**
+	 * The builders for this command if the builder supports multiple configurations 
+	 */
+	private HashMap/*<IBuildConfiguration, IncrementalProjectBuilder>*/ builders;
+
 
 	/**
 	 * The triggers that this builder will respond to.  Since build triggers are not 
@@ -82,8 +94,6 @@ public class BuildCommand extends ModelObject implements ICommand {
 
 	public BuildCommand() {
 		super(""); //$NON-NLS-1$
-		this.builders = new HashMap(1);
-		this.arguments = new HashMap(0);
 	}
 
 	public Object clone() {
@@ -137,16 +147,28 @@ public class BuildCommand extends ModelObject implements ICommand {
 		return arguments == null ? null : (makeCopy ? (Map) arguments.clone() : arguments);
 	}
 
-	public Map getBuilders() {
-		return builders;
+	/**
+	 * @return Map {@link IBuildConfiguration} -> {@link IncrementalProjectBuilder} if
+	 * this build command supports multiple configurations. Otherwise return the {@link IncrementalProjectBuilder}
+	 * associated with this build command.
+	 */
+	public Object getBuilders() {
+		if (supportsConfigurations())
+			return builders;
+		return builder;
 	}
 
-	public Map getBuilders(boolean makeCopy) {
-		return builders == null ? null : (makeCopy ? (Map) builders.clone() : builders);
-	}
-
+	/**
+	 * Return the {@link IncrementalProjectBuilder} for the {@link IBuildConfiguration}
+	 * If this builder is configuration agnostic, the same {@link IncrementalProjectBuilder} is
+	 * returned for all configurations.
+	 * @param config
+	 * @return {@link IncrementalProjectBuilder} corresponding to config
+	 */
 	public IncrementalProjectBuilder getBuilder(IBuildConfiguration config) {
-		return (IncrementalProjectBuilder) builders.get(config);
+		if (builders != null && supportsConfigurations())
+			return (IncrementalProjectBuilder) builders.get(config);
+		return builder;
 	}
 
 	/**
@@ -177,6 +199,21 @@ public class BuildCommand extends ModelObject implements ICommand {
 		return (triggers & MASK_CONFIGURABLE) != 0;
 	}
 
+	public boolean supportsConfigurations() {
+		if (!supportsConfigurationsCalculated) {
+			IExtension extension = Platform.getExtensionRegistry().getExtension(ResourcesPlugin.PI_RESOURCES, ResourcesPlugin.PT_BUILDERS, name);
+			if (extension != null) {
+				IConfigurationElement[] configs = extension.getConfigurationElements();
+				if (configs.length != 0) {
+					String value = configs[0].getAttribute("supportsConfigurations"); //$NON-NLS-1$
+					supportsConfigurations = (value != null && value.equalsIgnoreCase(Boolean.TRUE.toString()));
+				}
+			}
+			supportsConfigurationsCalculated = true;
+		}
+		return supportsConfigurations;
+	}
+
 	/**
 	 * @see ICommand#setArguments(Map)
 	 */
@@ -185,13 +222,40 @@ public class BuildCommand extends ModelObject implements ICommand {
 		arguments = value == null ? null : new HashMap(value);
 	}
 
-	public void setBuilders(Map value) {
-		// copy parameter for safety's sake
-		builders = value == null ? new HashMap(1) : new HashMap(value);
+	/**
+	 * Set the IncrementalProjectBuilder(s) for this command
+	 * @param value
+	 */
+	public void setBuilders(Object value) {
+		if (value == null) {
+			builder = null;
+			builders = null;
+		} else {
+			if (value instanceof IncrementalProjectBuilder)
+				builder = (IncrementalProjectBuilder)value;
+			else
+				builders = new HashMap((Map)value);
+		}
 	}
 
+	/**
+	 * Add an IncrementalProjectBuilder for the given configuration.
+	 * For builders which don't respond to multiple configurations, there's only one builder
+	 * instance.
+	 * @param config
+	 * @param builder
+	 */
 	public void addBuilder(IBuildConfiguration config, IncrementalProjectBuilder builder) {
-		this.builders.put(config, builder);
+		// Builder shouldn't already exist in this build command
+		Assert.isTrue(builders == null || !builders.containsKey(config));
+		Assert.isTrue(this.builder == null);
+
+		if (supportsConfigurations()) {
+			if (builders == null)
+				builders = new HashMap(1);
+			builders.put(config, builder);
+		} else
+			this.builder = builder;
 	}
 
 	/**
