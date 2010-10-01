@@ -31,10 +31,6 @@ public class BuilderPersistentInfo {
 		this(projectName, null, builderName, buildSpecIndex);
 	}
 
-	public void setConfigurationId(String configId) {
-		this.configId = configId;
-	}
-
 	public BuilderPersistentInfo(String projectName, String configId, String builderName, int buildSpecIndex) {
 		this.projectName = projectName;
 		this.configId = configId;
@@ -46,16 +42,17 @@ public class BuilderPersistentInfo {
 		return builderName;
 	}
 
+	public int getBuildSpecIndex() {
+		return buildSpecIndex;
+	}
+
 	/**
-	 * @return the id of the configuration for which this information refers. May return
-	 * null if reading persistent data from an old workspace tree.
+	 * @return the id of the configuration for which this information refers. 
+	 * Will return null if the build command doesn't support configurations, or the 
+	 * build persistent info has been loaded from a workspace without configurations.
 	 */
 	public String getConfigurationId() {
 		return configId;
-	}
-
-	public int getBuildSpecIndex() {
-		return buildSpecIndex;
 	}
 
 	public IProject[] getInterestingProjects() {
@@ -68,6 +65,10 @@ public class BuilderPersistentInfo {
 
 	public String getProjectName() {
 		return projectName;
+	}
+
+	public void setConfigurationId(String configId) {
+		this.configId = configId;
 	}
 
 	public void setInterestingProjects(IProject[] projects) {

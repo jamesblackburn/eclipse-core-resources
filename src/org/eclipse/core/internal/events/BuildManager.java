@@ -399,10 +399,23 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Creates and returns an ArrayList of BuilderPersistentInfo. 
+	 * Creates and returns an ArrayList of BuilderPersistentInfo.
 	 * The list includes entries for all builders for all configs that are
-	 * in the builder spec, and that have a last built state, even if they 
+	 * in the builder spec, and that have a last built state, even if they
 	 * have not been instantiated this session.
+	 *
+	 * e.g.
+	 * The returned Array List is ordered like:
+	 *
+	 * builder_id, config_id,builder_index
+	 * builder_1,  config_1, 1
+	 * builder_1,  config_2, 1
+	 * builder_2,  null,     2
+	 * builder_3,  config_1, 3
+	 * builder_3,  config_1, 3
+	 *
+	 * For a project with 3 builders, 2 build configurations, where the second
+	 * builder doesn't support configurations.
 	 */
 	public ArrayList createBuildersPersistentInfo(IProject project) throws CoreException {
 		/* get the old builders (those not yet instantiated) */
@@ -413,27 +426,31 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		if (commands.length == 0)
 			return null;
 		IBuildConfiguration[] configs = project.getBuildConfigurations();
-		if (configs.length == 0)
-			return null;
 
 		/* build the new list */
-		ArrayList newInfos = new ArrayList(commands.length);
+		ArrayList newInfos = new ArrayList(commands.length * configs.length);
 		for (int i = 0; i < commands.length; i++) {
-			String builderName = commands[i].getBuilderName();
-			for (int j = 0; j < configs.length; j++) {
+			BuildCommand command = (BuildCommand)commands[i];
+			String builderName = command.getBuilderName();
+
+			// If the builder doesn't support configurations, only 1 delta tree to persist
+			boolean supportsConfigs = command.supportsConfigurations();
+			int numberConfigs = supportsConfigs ? configs.length : 1;
+
+			for (int j = 0; j < numberConfigs; j++) {
 				IBuildConfiguration config = configs[j];
 				BuilderPersistentInfo info = null;
 				IncrementalProjectBuilder builder = ((BuildCommand) commands[i]).getBuilder(config);
 				if (builder == null) {
 					// if the builder was not instantiated, use the old info if any.
 					if (oldInfos != null)
-						info = getBuilderInfo(oldInfos, builderName, config.getConfigurationId(), i);
+						info = getBuilderInfo(oldInfos, builderName, supportsConfigs ? config.getConfigurationId() : null, i);
 				} else if (!(builder instanceof MissingBuilder)) {
 					ElementTree oldTree = ((InternalBuilder) builder).getLastBuiltTree();
 					//don't persist build state for builders that have no last built state
 					if (oldTree != null) {
 						// if the builder was instantiated, construct a memento with the important info
-						info = new BuilderPersistentInfo(project.getName(), config.getConfigurationId(), builderName, i);
+						info = new BuilderPersistentInfo(project.getName(), supportsConfigs ? config.getConfigurationId() : null, builderName, i);
 						info.setLastBuildTree(oldTree);
 						info.setInterestingProjects(((InternalBuilder) builder).getInterestingProjects());
 					}
@@ -539,19 +556,21 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 
 	/**
 	 * Removes the builder persistent info from the map corresponding to the
-	 * given builder name, config name and build spec index, or <code>null</code> if not found
+	 * given builder name, configuration id and build spec index, or <code>null</code> if not found
 	 * 
+	 * @param configId or null if the builder doesn't support configurations
 	 * @param buildSpecIndex The index in the build spec, or -1 if unknown
 	 */
-	private BuilderPersistentInfo getBuilderInfo(ArrayList infos, String builderName, String configName, int buildSpecIndex) {
+	private BuilderPersistentInfo getBuilderInfo(ArrayList infos, String builderName, String configId, int buildSpecIndex) {
 		//try to match on builder index, but if not match is found, use the builder name and config name
 		//this is because older workspace versions did not store builder infos in build spec order
 		BuilderPersistentInfo nameMatch = null;
 		for (Iterator it = infos.iterator(); it.hasNext();) {
 			BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
-			//match on name, config name and build spec index if known
-			// Note: the config name may return null if the builder info is loaded from an older version
-			if (info.getBuilderName().equals(builderName) && (info.getConfigurationId() == null || info.getConfigurationId().equals(configName))) {
+			// match on name, config id and build spec index if known
+			// Note: the config id may be null for builders that don't support configurations, or old workspaces
+			if (info.getBuilderName().equals(builderName) && 
+					(info.getConfigurationId() == null || info.getConfigurationId().equals(configId))) {
 				//we have found a match on name alone
 				if (nameMatch == null)
 					nameMatch = info;
