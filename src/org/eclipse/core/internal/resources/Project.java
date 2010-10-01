@@ -11,9 +11,13 @@
  *     Anton Leherbauer (Wind River) - [198591] Allow Builder to specify scheduling rule
  *     Francis Lynch (Wind River) - [301563] Save and load tree snapshots
  *     Markus Schorn (Wind River) - [306575] Save snapshot location with project
- *     Broadcom Corporation - project variants and references
+ *     Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
+
+import org.eclipse.core.resources.IBuildConfiguration;
+import org.eclipse.core.resources.IBuildConfigReference;
+
 
 import java.net.URI;
 import java.util.*;
@@ -83,23 +87,23 @@ public class Project extends Container implements IProject {
 		// set the build order before setting the references or the natures
 		current.setBuildSpec(description.getBuildSpec(true));
 
-		current.setVariants(description.internalGetVariants(true));
-		current.setActiveVariant(description.internalGetActiveVariant(true).getVariantName());
+		current.setBuildConfigurations(description.internalGetBuildConfigs(true));
+		current.setActiveConfiguration(description.internalGetActiveConfig(true).getConfigurationId());
 
 		// set the references before the natures 
 		boolean flushOrder = false;
-		IProjectVariant[] variants = description.internalGetVariants(false);
-		for (int i = 0; i < variants.length; i++) {
-			IProjectVariantReference[] oldReferences = current.getReferencedProjectVariants(variants[i].getVariantName());
-			IProjectVariantReference[] newReferences = description.getReferencedProjectVariants(variants[i].getVariantName());
+		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
+		for (int i = 0; i < configs.length; i++) {
+			IBuildConfigReference[] oldReferences = current.getReferencedProjectConfigs(configs[i].getConfigurationId());
+			IBuildConfigReference[] newReferences = description.getReferencedProjectConfigs(configs[i].getConfigurationId());
 			if (!Arrays.equals(oldReferences, newReferences)) {
-				current.setReferencedProjectVariants(variants[i].getVariantName(), newReferences);
+				current.setReferencedProjectConfigs(configs[i].getConfigurationId(), newReferences);
 				flushOrder = true;
 			}
-			oldReferences = current.getDynamicVariantReferences(variants[i].getVariantName());
-			newReferences = description.getDynamicVariantReferences(variants[i].getVariantName());
+			oldReferences = current.getDynamicConfigReferences(configs[i].getConfigurationId());
+			newReferences = description.getDynamicConfigReferences(configs[i].getConfigurationId());
 			if (!Arrays.equals(oldReferences, newReferences)) {
-				current.setDynamicVariantReferences(variants[i].getVariantName(), newReferences);
+				current.setDynamicConfigReferences(configs[i].getConfigurationId(), newReferences);
 				flushOrder = true;
 			}
 		}
@@ -121,7 +125,7 @@ public class Project extends Container implements IProject {
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
 		if (!isAccessible())
 			return;
-		internalBuild(getActiveVariant(), trigger, null, null, monitor);
+		internalBuild(getActiveBuildConfiguration(), trigger, null, null, monitor);
 	}
 
 	/* (non-Javadoc)
@@ -131,16 +135,16 @@ public class Project extends Container implements IProject {
 		if (!isAccessible())
 			return;
 		Assert.isNotNull(builderName);
-		internalBuild(getActiveVariant(), trigger, builderName, args, monitor);
+		internalBuild(getActiveBuildConfiguration(), trigger, builderName, args, monitor);
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#build(IProjectVariant, int, String, Map, IProgressMonitor)
+	 * @see IProject#build(IBuildConfiguration, int, String, Map, IProgressMonitor)
 	 */
-	public void build(IProjectVariant variant, int trigger, IProgressMonitor monitor) throws CoreException {
+	public void build(IBuildConfiguration config, int trigger, IProgressMonitor monitor) throws CoreException {
 		if (!isAccessible())
 			return;
-		internalBuild(variant, trigger, null, null, monitor);
+		internalBuild(config, trigger, null, null, monitor);
 	}
 
 	/**
@@ -540,7 +544,7 @@ public class Project extends Container implements IProject {
 	/**
 	 * Implements all build methods on IProject.
 	 */
-	protected void internalBuild(final IProjectVariant variant, final int trigger, final String builderName, final Map args, IProgressMonitor monitor) throws CoreException {
+	protected void internalBuild(final IBuildConfiguration config, final int trigger, final String builderName, final Map args, IProgressMonitor monitor) throws CoreException {
 		workspace.run(new IWorkspaceRunnable() {
 			public void run(IProgressMonitor innerMonitor) throws CoreException {
 				innerMonitor = Policy.monitorFor(innerMonitor);
@@ -556,14 +560,14 @@ public class Project extends Container implements IProject {
 					} finally {
 						workspace.endOperation(rule, false, innerMonitor);
 					}
-					workspace.getBuildManager().setBuildOrder(new IProjectVariant[]{variant});
-					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(variant, trigger, builderName, args);
+					workspace.getBuildManager().setBuildOrder(new IBuildConfiguration[]{config});
+					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(config, trigger, builderName, args);
 					try {
 						IStatus result;
 						workspace.prepareOperation(buildRule, innerMonitor);
 						//don't open the tree eagerly because it will be wasted if no build occurs
 						workspace.beginOperation(false);
-						result = workspace.getBuildManager().build(variant, trigger, builderName, args, Policy.subMonitorFor(innerMonitor, Policy.opWork));
+						result = workspace.getBuildManager().build(config, trigger, builderName, args, Policy.subMonitorFor(innerMonitor, Policy.opWork));
 						if (!result.isOK())
 							throw new ResourceException(result);
 					} finally {
@@ -1357,38 +1361,38 @@ public class Project extends Container implements IProject {
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#getReferencedProjectVariants(IProjectVariant)
+	 * @see IProject#getReferencedBuildConfigurations(IBuildConfiguration)
 	 */
-	public IProjectVariant[] getReferencedProjectVariants(IProjectVariant variant) throws CoreException {
+	public IBuildConfiguration[] getReferencedBuildConfigurations(IBuildConfiguration config) throws CoreException {
 		ResourceInfo info = getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		ProjectDescription description = ((ProjectInfo) info).getDescription();
 		//if the project is currently in the middle of being created, the description might not be available yet
 		if (description == null)
 			checkAccessible(NULL_FLAG);
-		if (!hasVariant(variant))
-			throw new ResourceException(IResourceStatus.PROJECT_VARIANT_NOT_FOUND, getFullPath(), null, null);
-		return internalGetReferencedProjectVariants(variant);
+		if (!hasBuildConfiguration(config))
+			throw new ResourceException(IResourceStatus.BUILD_CONFIGURATION_NOT_FOUND, getFullPath(), null, null);
+		return internalGetReferencedBuildConfigurations(config);
 	}
 
-	public IProjectVariant[] internalGetReferencedProjectVariants(IProjectVariant variant) {
+	public IBuildConfiguration[] internalGetReferencedBuildConfigurations(IBuildConfiguration config) {
 		ProjectDescription description = internalGetDescription();
-		IProjectVariantReference[] refs = description.getAllVariantReferences(variant.getVariantName(), true);
-		ArrayList variants = new ArrayList(refs.length);
+		IBuildConfigReference[] refs = description.getAllBuildConfigReferences(config.getConfigurationId(), true);
+		ArrayList configs = new ArrayList(refs.length);
 		for (int i = 0; i < refs.length; i++) {
 			try {
-				variants.add(((ProjectVariantReference)refs[i]).getVariant());
+				configs.add(((BuildConfigReference)refs[i]).getConfiguration());
 			} catch (CoreException e) {
-				// Ignore non-existant variant reference
+				// Ignore non-existant configuration reference
 			}
 		}
-		return (IProjectVariant[]) variants.toArray(new IProjectVariant[variants.size()]);
+		return (IBuildConfiguration[]) configs.toArray(new IBuildConfiguration[configs.size()]);
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#getReferencingProjectVariants(IProjectVariant)
+	 * @see IProject#getReferencingBuildConfigurations(IBuildConfiguration)
 	 */
-	public IProjectVariant[] getReferencingProjectVariants(IProjectVariant variant) {
+	public IBuildConfiguration[] getReferencingBuildConfigurations(IBuildConfiguration config) {
 		IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
 		List result = new ArrayList(projects.length);
 		for (int i = 0; i < projects.length; i++) {
@@ -1398,108 +1402,108 @@ public class Project extends Container implements IProject {
 			ProjectDescription description = project.internalGetDescription();
 			if (description == null)
 				continue;
-			IProjectVariant[] variants = project.internalGetVariants();
-			for (int j = 0; j < variants.length; j++) {
-				IProjectVariantReference[] refs = description.getAllVariantReferences(variants[j].getVariantName(), false);
+			IBuildConfiguration[] configs = project.internalGetBuildConfigs();
+			for (int j = 0; j < configs.length; j++) {
+				IBuildConfigReference[] refs = description.getAllBuildConfigReferences(configs[j].getConfigurationId(), false);
 				for (int k = 0; k < refs.length; k++) {
 					try {
-						if (((ProjectVariantReference)refs[k]).getVariant().equals(variant)) {
-							result.add(variants[j]);
+						if (((BuildConfigReference)refs[k]).getConfiguration().equals(config)) {
+							result.add(configs[j]);
 							break;
 						}
 					} catch (CoreException e) {
-						// Ignore active variants to projects that aren't accessible
+						// Ignore active buildConfigs to projects that aren't accessible
 					}
 				}
 			}
 		}
-		return (IProjectVariant[]) result.toArray(new IProjectVariant[result.size()]);
+		return (IBuildConfiguration[]) result.toArray(new IBuildConfiguration[result.size()]);
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#getVariants()
+	 * @see IProject#getBuildConfigurations()
 	 */
-	public IProjectVariant[] getVariants() throws CoreException {
+	public IBuildConfiguration[] getBuildConfigurations() throws CoreException {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
-		return internalGetVariants();
+		return internalGetBuildConfigs();
 	}
 
-	public IProjectVariant[] internalGetVariants() {
+	public IBuildConfiguration[] internalGetBuildConfigs() {
 		ProjectDescription desc = internalGetDescription();
-		IProjectVariant[] variants = desc.internalGetVariants(true);
-		updateVariants(variants);
-		return variants;
+		IBuildConfiguration[] configs = desc.internalGetBuildConfigs(true);
+		updateConfigurations(configs);
+		return configs;
 	}
 
 	/* (non-Javadoc)
-	 * @see IProject#getVariant(String)
+	 * @see IProject#getBuildConfiguration(String)
 	 */
-	public IProjectVariant getVariant(String name) throws CoreException {
-		IProjectVariant[] variants = getVariants();
-		for (int i = 0; i < variants.length; i++) {
-			if (variants[i].getVariantName().equals(name)) {
-				return (ProjectVariant)((ProjectVariant) variants[i]).clone();
+	public IBuildConfiguration getBuildConfiguration(String name) throws CoreException {
+		IBuildConfiguration[] configs = getBuildConfigurations();
+		for (int i = 0; i < configs.length; i++) {
+			if (configs[i].getConfigurationId().equals(name)) {
+				return (BuildConfiguration)((BuildConfiguration) configs[i]).clone();
 			}
 		}
-		throw new ResourceException(IResourceStatus.PROJECT_VARIANT_NOT_FOUND, getFullPath(), null, null);
+		throw new ResourceException(IResourceStatus.BUILD_CONFIGURATION_NOT_FOUND, getFullPath(), null, null);
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see IProject#hasVariant(IProjectVariant)
+	 * @see IProject#hasBuildConfiguration(IBuildConfiguration)
 	 */
-	public boolean hasVariant(IProjectVariant variant) throws CoreException {
+	public boolean hasBuildConfiguration(IBuildConfiguration config) throws CoreException {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
-		return internalHasVariant(variant);
+		return internalHasBuildConfig(config);
 	}
 
-	public boolean internalHasVariant(IProjectVariant variant) {
-		if (variant == null)
+	public boolean internalHasBuildConfig(IBuildConfiguration config) {
+		if (config == null)
 			return false;
-		IProjectVariant[] variants = internalGetVariants();
-		for (int i = 0; i < variants.length; i++)
-			if (variants[i].equals(variant))
+		IBuildConfiguration[] configs = internalGetBuildConfigs();
+		for (int i = 0; i < configs.length; i++)
+			if (configs[i].equals(config))
 				return true;
 		return false;
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see IProject#getActiveVariant()
+	 * @see IProject#getActiveBuildConfiguration()
 	 */
-	public IProjectVariant getActiveVariant() throws CoreException {
+	public IBuildConfiguration getActiveBuildConfiguration() throws CoreException {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		ProjectDescription desc = internalGetDescription();
-		IProjectVariant variant = desc.internalGetActiveVariant(true);
-		updateVariant(variant);
-		return variant;
+		IBuildConfiguration config = desc.internalGetActiveConfig(true);
+		updateConfiguration(config);
+		return config;
 	}
 
-	public IProjectVariant internalGetActiveVariant() {
+	public IBuildConfiguration internalGetActiveBuildConfig() {
 		ProjectDescription desc = internalGetDescription();
-		IProjectVariant variant = desc.internalGetActiveVariant(true);
-		updateVariant(variant);
-		return variant;
+		IBuildConfiguration config = desc.internalGetActiveConfig(true);
+		updateConfiguration(config);
+		return config;
 	}
 
-	private void updateVariant(IProjectVariant value) {
-		ProjectVariant variant = (ProjectVariant) value;
-		variant.setProject(this);
+	private void updateConfiguration(IBuildConfiguration value) {
+		BuildConfiguration config = (BuildConfiguration) value;
+		config.setProject(this);
 	}
 
-	private void updateVariants(IProjectVariant[] variants) {
-		for (int i = 0; i < variants.length; i++)
-			updateVariant(variants[i]);
+	private void updateConfigurations(IBuildConfiguration[] configs) {
+		for (int i = 0; i < configs.length; i++)
+			updateConfiguration(configs[i]);
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * @see IProject#newReference()
 	 */
-	public IProjectVariantReference newReference() {
-		return new ProjectVariantReference(this);
+	public IBuildConfigReference newReference() {
+		return new BuildConfigReference(this);
 	}
 }

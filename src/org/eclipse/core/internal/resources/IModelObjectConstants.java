@@ -10,7 +10,7 @@
  *     Serge Beauchamp (Freescale Semiconductor) - [252996] add resource filtering
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
- * Broadcom Corporation - project variants and references
+ * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -47,9 +47,9 @@ public interface IModelObjectConstants {
 	public static final String PROJECTS = "projects"; //$NON-NLS-1$
 	public static final String REFERENCES = "references"; //$NON-NLS-1$
 	public static final String REFERENCE = "reference"; //$NON-NLS-1$
-	public static final String VARIANTS = "variants"; //$NON-NLS-1$
-	public static final String VARIANT = "variant"; //$NON-NLS-1$
-	public static final String ACTIVE_VARIANT = "active"; //$NON-NLS-1$
+	public static final String BUILD_CONFIGS = "configurations"; //$NON-NLS-1$
+	public static final String BUILD_CONFIG = "configuration"; //$NON-NLS-1$
+	public static final String ACTIVE_BUILD_CONFIG = "active"; //$NON-NLS-1$
 	public static final String TYPE = "type"; //$NON-NLS-1$
 	public static final String VALUE = "value"; //$NON-NLS-1$
 	public static final String WORKSPACE_DESCRIPTION = "workspaceDescription"; //$NON-NLS-1$

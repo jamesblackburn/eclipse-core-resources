@@ -10,9 +10,13 @@
  *     Red Hat Incorporated - loadProjectDescription(InputStream)
  *     Serge Beauchamp (Freescale Semiconductor) - [252996] add resource filtering
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group and Project Path Variable Support
- *     Broadcom Corporation - project variants and references
+ *     Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
+
+import org.eclipse.core.resources.IBuildConfiguration;
+import org.eclipse.core.resources.IBuildConfigReference;
+
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -87,7 +91,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	protected WorkManager _workManager;
 	protected AliasManager aliasManager;
 	protected BuildManager buildManager;
-	protected IProjectVariant[] buildOrder = null;
+	protected IBuildConfiguration[] buildOrder = null;
 	protected CharsetManager charsetManager;
 	protected ContentDescriptionManager contentDescriptionManager;
 	/** indicates if the workspace crashed in a previous session */
@@ -177,14 +181,14 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 */
 	protected IFileModificationValidator validator = null;
 
-	// Comparator used to provide a stable ordering of project variants
-	private static class ProjectVariantComparator implements Comparator {
+	// Comparator used to provide a stable ordering of project buildConfigs
+	private static class BuildConfigurationComparator implements Comparator {
 		public int compare(Object x, Object y) {
-			IProjectVariant px = (IProjectVariant) x;
-			IProjectVariant py = (IProjectVariant) y;
+			IBuildConfiguration px = (IBuildConfiguration) x;
+			IBuildConfiguration py = (IBuildConfiguration) y;
 			int cmp = py.getProject().getName().compareTo(px.getProject().getName());
 			if (cmp == 0)
-				cmp = py.getVariantName().compareTo(px.getVariantName());
+				cmp = py.getConfigurationId().compareTo(px.getConfigurationId());
 			return cmp;
 		}
 	}
@@ -351,53 +355,53 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 
 	/*
 	 * (non-Javadoc)
-	 * @see IWorkspace#build(IProjectVariant[], int, IProgressMonitor)
+	 * @see IWorkspace#build(IBuildConfiguration[], int, IProgressMonitor)
 	 */
-	public void build(IProjectVariant[] variants, int trigger, IProgressMonitor monitor) throws CoreException {
-		if (variants.length == 0)
+	public void build(IBuildConfiguration[] configs, int trigger, IProgressMonitor monitor) throws CoreException {
+		if (configs.length == 0)
 			return;
 
-		Set variantSet = new HashSet(variants.length);
-		variantSet.addAll(Arrays.asList(variants));
+		Set configSet = new HashSet(configs.length);
+		configSet.addAll(Arrays.asList(configs));
 
-		// Find transitive closure of referenced project variants, not including
-		// the variants that were asked to be built
-		Set refs = new HashSet(variantSet);
+		// Find transitive closure of referenced project buildConfigs, not including
+		// the buildConfigs that were asked to be built
+		Set refs = new HashSet(configSet);
 		Set buffer = new HashSet();
 		int size = -1;
 		while (size != refs.size()) {
 			size = refs.size();
 			for (Iterator it = refs.iterator(); it.hasNext();) {
-				IProjectVariant variant = (IProjectVariant) it.next();
-				buffer.addAll(Arrays.asList(variant.getProject().getReferencedProjectVariants(variant)));
+				IBuildConfiguration config = (IBuildConfiguration) it.next();
+				buffer.addAll(Arrays.asList(config.getProject().getReferencedBuildConfigurations(config)));
 			}
 			refs.addAll(buffer);
 			buffer.clear();
 		}
-		refs.removeAll(variantSet);
+		refs.removeAll(configSet);
 		List refsList = new LinkedList(refs);
 
-		// Filter out inaccessible projects, or variants that do not exist
+		// Filter out inaccessible projects, or buildConfigs that do not exist
 		for (ListIterator it = refsList.listIterator(); it.hasNext();) {
-			IProjectVariant variant = (IProjectVariant) it.next();
-			if (!variant.getProject().isAccessible() || !variant.getProject().hasVariant(variant))
+			IBuildConfiguration config = (IBuildConfiguration) it.next();
+			if (!config.getProject().isAccessible() || !config.getProject().hasBuildConfiguration(config))
 				it.remove();
 		}
 
-		// Order the referenced project variants
-		ProjectVariantOrder order = computeProjectVariantOrder((IProjectVariant[]) refsList.toArray(new IProjectVariant[refs.size()]));
+		// Order the referenced project buildConfigs
+		ProjectBuildConfigOrder order = computeProjectBuildConfigOrder((IBuildConfiguration[]) refsList.toArray(new IBuildConfiguration[refs.size()]));
 
 		// Compose the two orderings and run the build
-		IProjectVariant[] finalOrder = new IProjectVariant[order.projectVariants.length + variants.length];
-		System.arraycopy(order.projectVariants, 0, finalOrder, 0, order.projectVariants.length);
-		System.arraycopy(variants, 0, finalOrder, order.projectVariants.length, variants.length);
+		IBuildConfiguration[] finalOrder = new IBuildConfiguration[order.buildConfigurations.length + configs.length];
+		System.arraycopy(order.buildConfigurations, 0, finalOrder, 0, order.buildConfigurations.length);
+		System.arraycopy(configs, 0, finalOrder, order.buildConfigurations.length, configs.length);
 		buildInternal(finalOrder, trigger, monitor);
 	}
 
 	/**
-	 * Builds the given project variants in the order supplied.
+	 * Builds the given project buildConfigs in the order supplied.
 	 */
-	private void buildInternal(IProjectVariant[] variants, int trigger, IProgressMonitor monitor) throws CoreException {
+	private void buildInternal(IBuildConfiguration[] configs, int trigger, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		final ISchedulingRule rule = getRuleFactory().buildRule();
 		try {
@@ -408,7 +412,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 				aboutToBuild(this, trigger);
 				IStatus result;
 				try {
-					result = getBuildManager().build(variants, trigger, Policy.subMonitorFor(monitor, Policy.opWork));
+					result = getBuildManager().build(configs, trigger, Policy.subMonitorFor(monitor, Policy.opWork));
 				} finally {
 					//must fire POST_BUILD if PRE_BUILD has occurred
 					broadcastBuildEvent(this, IResourceChangeEvent.POST_BUILD, trigger);
@@ -580,20 +584,20 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	}
 
 	/**
-	 * Computes the global total ordering of all open projects' active variants in the
-	 * workspace based on project variant references. If an existing and open project variant P
-	 * references another existing and open project variant Q, then Q should come before P
-	 * in the resulting ordering. If a project variant references a non-active variant it is
-	 * added to the resulting ordered list. Closed and non-existent projects/variants are
+	 * Computes the global total ordering of all open projects' active buildConfigs in the
+	 * workspace based on build configuration references. If an existing and open project's build config P
+	 * references another existing and open project's build config Q, then Q should come before P
+	 * in the resulting ordering. If a build config references a non-active build config it is
+	 * added to the resulting ordered list. Closed and non-existent projects/buildConfigs are
 	 * ignored, and will not appear in the result. References to non-existent or closed
-	 * projects/variants are also ignored, as are any self-references.
+	 * projects/buildConfigs are also ignored, as are any self-references.
 	 * <p>
 	 * When there are choices, the choice is made in a reasonably stable way. For
-	 * example, given an arbitrary choice between two project variants, the one with the
-	 * lower collating project name and variant name will appear earlier in the list.
+	 * example, given an arbitrary choice between two project buildConfigs, the one with the
+	 * lower collating project name and build config Id will appear earlier in the list.
 	 * </p>
 	 * <p>
-	 * When the project variant reference graph contains cyclic references, it is
+	 * When the build configuration reference graph contains cyclic references, it is
 	 * impossible to honor all of the relationships. In this case, the result
 	 * ignores as few relationships as possible.  For example, if P2 references P1,
 	 * P4 references P3, and P2 and P3 reference each other, then exactly one of the
@@ -602,24 +606,24 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * complete details of any cycles present.
 	 * </p>
 	 *
-	 * @return result describing the global active project variant order
+	 * @return result describing the global active build configuration order
 	 * @since 2.1
 	 */
-	private VertexOrder computeActiveProjectVariantOrder() {
-		// Determine the full set of accessible active project variants in the workspace,
-		// and all the accessible project variants that they reference. This forms a set
-		// of all the project variants that will be returned.
-		// Order the set in descending alphabetical order of project name then variant name,
+	private VertexOrder computeActiveBuildConfigurationOrder() {
+		// Determine the full set of accessible active project buildConfigs in the workspace,
+		// and all the accessible project buildConfigs that they reference. This forms a set
+		// of all the project buildConfigs that will be returned.
+		// Order the set in descending alphabetical order of project name then build config Id,
 		// as a secondary sort applied after sorting based on references, to achieve a stable
 		// ordering.
-		SortedSet allAccessibleProjectVariants = new TreeSet(new ProjectVariantComparator());
+		SortedSet allAccessibleBuildConfigs = new TreeSet(new BuildConfigurationComparator());
 
-		// For each projects active variant, perform a depth first search in the reference graph
-		// rooted at that variant.
+		// For each project's active build config, perform a depth first search in the reference graph
+		// rooted at that build config.
 		// This generates the required subset of the reference graph that is required to order all
-		// the dependencies of the active project variants.
+		// the dependencies of the active project buildConfigs.
 		IProject[] allProjects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
-		List/*<IProjectVariant[]>*/ edges = new ArrayList(allProjects.length);
+		List/*<IBuildConfiguration[]>*/ edges = new ArrayList(allProjects.length);
 
 		for (int i = 0; i < allProjects.length; i++) {
 			Project project = (Project) allProjects[i];
@@ -627,63 +631,63 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			if (!project.isAccessible())
 				continue;
 
-			// If the active project variant hasn't already been explored
+			// If the active build configuration hasn't already been explored
 			// perform a depth first search rooted at it
-			if (!allAccessibleProjectVariants.contains(project.internalGetActiveVariant())) {
-				allAccessibleProjectVariants.add(project.internalGetActiveVariant());
+			if (!allAccessibleBuildConfigs.contains(project.internalGetActiveBuildConfig())) {
+				allAccessibleBuildConfigs.add(project.internalGetActiveBuildConfig());
 				Stack stack = new Stack();
-				stack.push(project.internalGetActiveVariant());
+				stack.push(project.internalGetActiveBuildConfig());
 
 				while (!stack.isEmpty()) {
-					IProjectVariant projectVariant = (IProjectVariant) stack.pop();
+					IBuildConfiguration buildConfiguration = (IBuildConfiguration) stack.pop();
 
-					// Add all referenced variants from the current variant
+					// Add all referenced buildConfigs from the current configuration
 					// (it is guaranteed to be accessible as it was pushed onto the stack)
-					Project subProject = (Project) projectVariant.getProject();
-					IProjectVariant[] refs = subProject.internalGetReferencedProjectVariants(projectVariant);
+					Project subProject = (Project) buildConfiguration.getProject();
+					IBuildConfiguration[] refs = subProject.internalGetReferencedBuildConfigurations(buildConfiguration);
 					for (int j = 0; j < refs.length; j++) {
-						IProjectVariant ref = refs[j];
+						IBuildConfiguration ref = refs[j];
 
 						// Ignore self references and references to projects that are not accessible
-						if (!ref.getProject().isAccessible() || ref.equals(projectVariant))
+						if (!ref.getProject().isAccessible() || ref.equals(buildConfiguration))
 							continue;
 
-						// Ignore variants that do not exist
-						if (!((Project) ref.getProject()).internalHasVariant(ref))
+						// Ignore buildConfigs that do not exist
+						if (!((Project) ref.getProject()).internalHasBuildConfig(ref))
 							continue;
 
-						// Add the referenced accessible variant
-						edges.add(new IProjectVariant[] {projectVariant, ref});
+						// Add the referenced accessible configuration
+						edges.add(new IBuildConfiguration[] {buildConfiguration, ref});
 
-						// If we have already explored the referenced variant, don't explore it again
-						if (allAccessibleProjectVariants.contains(ref))
+						// If we have already explored the referenced configuration, don't explore it again
+						if (allAccessibleBuildConfigs.contains(ref))
 							continue;
 
-						allAccessibleProjectVariants.add(ref);
+						allAccessibleBuildConfigs.add(ref);
 
-						// Push the referenced variant onto the stack so that it is explored by the depth first search
+						// Push the referenced configuration onto the stack so that it is explored by the depth first search
 						stack.push(ref);
 					}
 				}
 			}
 		}
-		return ComputeVertexOrder.computeVertexOrder(allAccessibleProjectVariants, edges);
+		return ComputeVertexOrder.computeVertexOrder(allAccessibleBuildConfigs, edges);
 	}
 
 	/**
-	 * Computes the global total ordering of all project variants in the workspace based
-	 * on project variant references. If an existing and open project variant P
-	 * references another existing and open project variant Q, then Q should come before P
-	 * in the resulting ordering. Closed and non-existent projects/variants are
+	 * Computes the global total ordering of all project buildConfigs in the workspace based
+	 * on build config references. If an existing and open build config P
+	 * references another existing and open project build config Q, then Q should come before P
+	 * in the resulting ordering. Closed and non-existent projects/buildConfigs are
 	 * ignored, and will not appear in the result. References to non-existent or closed
-	 * projects/variants are also ignored, as are any self-references.
+	 * projects/buildConfigs are also ignored, as are any self-references.
 	 * <p>
 	 * When there are choices, the choice is made in a reasonably stable way. For
-	 * example, given an arbitrary choice between two project variants, the one with the
-	 * lower collating project name and variant name will appear earlier in the list.
+	 * example, given an arbitrary choice between two project buildConfigs, the one with the
+	 * lower collating project name and build config id will appear earlier in the list.
 	 * </p>
 	 * <p>
-	 * When the project variant reference graph contains cyclic references, it is
+	 * When the build config reference graph contains cyclic references, it is
 	 * impossible to honor all of the relationships. In this case, the result
 	 * ignores as few relationships as possible.  For example, if P2 references P1,
 	 * P4 references P3, and P2 and P3 reference each other, then exactly one of the
@@ -692,14 +696,14 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * complete details of any cycles present.
 	 * </p>
 	 *
-	 * @return result describing the global project variant order
+	 * @return result describing the global project build configuration order
 	 */
-	private VertexOrder computeFullProjectVariantOrder() {
-		// Compute the order for all accessible project variants
-		SortedSet allAccessibleProjectVariants = new TreeSet(new ProjectVariantComparator());
+	private VertexOrder computeFullBuildConfigurationOrder() {
+		// Compute the order for all accessible project buildConfigs
+		SortedSet allAccessibleBuildConfigurations = new TreeSet(new BuildConfigurationComparator());
 
 		IProject[] allProjects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
-		List/*<IProjectVariant[]>*/ edges = new ArrayList(allProjects.length);
+		List/*<IBuildConfiguration[]>*/ edges = new ArrayList(allProjects.length);
 
 		for (int i = 0; i < allProjects.length; i++) {
 			Project project = (Project) allProjects[i];
@@ -707,28 +711,28 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			if (!project.isAccessible())
 				continue;
 
-			IProjectVariant[] variants = project.internalGetVariants();
-			for (int j = 0; j < variants.length; j++) {
-				IProjectVariant variant = variants[j];
-				allAccessibleProjectVariants.add(variants[j]);
-				IProjectVariant[] refs = project.internalGetReferencedProjectVariants(variants[j]);
+			IBuildConfiguration[] configs = project.internalGetBuildConfigs();
+			for (int j = 0; j < configs.length; j++) {
+				IBuildConfiguration config = configs[j];
+				allAccessibleBuildConfigurations.add(configs[j]);
+				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigurations(configs[j]);
 				for (int k = 0; k < refs.length; k++) {
-					IProjectVariant ref = refs[k];
+					IBuildConfiguration ref = refs[k];
 
 					// Ignore self references and references to projects that are not accessible
-					if (!ref.getProject().isAccessible() || ref.equals(variant))
+					if (!ref.getProject().isAccessible() || ref.equals(config))
 						continue;
 
-					// Ignore variants that do not exist
-					if (!((Project) ref.getProject()).internalHasVariant(ref))
+					// Ignore buildConfigs that do not exist
+					if (!((Project) ref.getProject()).internalHasBuildConfig(ref))
 						continue;
 
-					// Add the referenced accessible variant
-					edges.add(new IProjectVariant[] {variant, ref});
+					// Add the referenced accessible config
+					edges.add(new IBuildConfiguration[] {config, ref});
 				}
 			}
 		}
-		return ComputeVertexOrder.computeVertexOrder(allAccessibleProjectVariants, edges);
+		return ComputeVertexOrder.computeVertexOrder(allAccessibleBuildConfigurations, edges);
 	}
 
 	private static ProjectOrder vertexOrderToProjectOrder(VertexOrder order) {
@@ -739,12 +743,12 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		return new ProjectOrder(projects, order.hasCycles, knots);
 	}
 
-	private static ProjectVariantOrder vertexOrderToProjectVariantOrder(VertexOrder order) {
-		IProjectVariant[] projectVariants = (IProjectVariant[]) Arrays.copyOf(order.vertexes, order.vertexes.length, IProjectVariant[].class);
-		IProjectVariant[][] knots = new IProjectVariant[order.knots.length][];
+	private static ProjectBuildConfigOrder vertexOrderToProjectBuildConfigOrder(VertexOrder order) {
+		IBuildConfiguration[] buildConfigs = (IBuildConfiguration[]) Arrays.copyOf(order.vertexes, order.vertexes.length, IBuildConfiguration[].class);
+		IBuildConfiguration[][] knots = new IBuildConfiguration[order.knots.length][];
 		for (int i = 0; i < order.knots.length; i++)
-			knots[i] = (IProjectVariant[]) Arrays.copyOf(order.knots[i], order.knots[i].length, IProjectVariant[].class);
-		return new ProjectVariantOrder(projectVariants, order.hasCycles, knots);
+			knots[i] = (IBuildConfiguration[]) Arrays.copyOf(order.knots[i], order.knots[i].length, IBuildConfiguration[].class);
+		return new ProjectBuildConfigOrder(buildConfigs, order.hasCycles, knots);
 	}
 
 	/**
@@ -752,7 +756,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * 
 	 * @see IWorkspace#computePrerequisiteOrder(IProject[])
 	 * @deprecated Replaced by {@link IWorkspace#computeProjectOrder(IProject[])} and
-	 * {@link IWorkspace#computeProjectVariantOrder(IProjectVariant[])} which
+	 * {@link IWorkspace#computeProjectBuildConfigOrder(IBuildConfiguration[])} which
 	 * produces more usable results when there are cycles in project reference.
 	 */
 	public IProject[][] computePrerequisiteOrder(IProject[] targets) {
@@ -826,24 +830,24 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	}
 
 	/* (non-Javadoc)
-	 * @see IWorkspace#computeProjectVariantOrder(IProjectVariant[])
+	 * @see IWorkspace#computeProjectBuildConfigOrder(IBuildConfiguration[])
 	 * @since 2.1
 	 */
-	public ProjectVariantOrder computeProjectVariantOrder(IProjectVariant[] projectVariants) {
+	public ProjectBuildConfigOrder computeProjectBuildConfigOrder(IBuildConfiguration[] buildConfigs) {
 		// Compute the full project order for all accessible projects
-		VertexOrder fullProjectVariantOrder = computeFullProjectVariantOrder();
+		VertexOrder fullBuildConfigOrder = computeFullBuildConfigurationOrder();
 
-		// Create a filter to remove all project variants that are not in the list asked for
-		final Set projectVariantSet = new HashSet(projectVariants.length);
-		projectVariantSet.addAll(Arrays.asList(projectVariants));
+		// Create a filter to remove all project buildConfigs that are not in the list asked for
+		final Set projectConfigSet = new HashSet(buildConfigs.length);
+		projectConfigSet.addAll(Arrays.asList(buildConfigs));
 		VertexFilter filter = new VertexFilter() {
 			public boolean matches(Object vertex) {
-				return !projectVariantSet.contains(vertex);
+				return !projectConfigSet.contains(vertex);
 			}
 		};
 
 		// Filter the order and return it
-		return vertexOrderToProjectVariantOrder(ComputeVertexOrder.filterVertexOrder(fullProjectVariantOrder, filter));
+		return vertexOrderToProjectBuildConfigOrder(ComputeVertexOrder.filterVertexOrder(fullBuildConfigOrder, filter));
 	}
 
 	/* (non-Javadoc)
@@ -1439,12 +1443,12 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 
 	/**
 	 * Returns the order in which open projects in this workspace will be built.
-	 * The result returned is a list of project variants, that need to be built
-	 * in order to successfully build the active variant of every project in this
+	 * The result returned is a list of project buildConfigs, that need to be built
+	 * in order to successfully build the active config of every project in this
 	 * workspace.
 	 * <p>
-	 * The project variant build order is based on information specified in the workspace
-	 * description. The project variants are built in the order specified by
+	 * The build configuration order is based on information specified in the workspace
+	 * description. The project buildConfigs are built in the order specified by
 	 * <code>IWorkspaceDescription.getBuildOrder</code>; closed or non-existent
 	 * projects are ignored and not included in the result. If any open projects are
 	 * not specified in this order, they are appended to the end of the build order
@@ -1453,59 +1457,59 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * <p>
 	 * If <code>IWorkspaceDescription.getBuildOrder</code> is non-null, the default
 	 * build order is used (calculated based on references); again, only open projects'
-	 * variants are included in the result.
+	 * buildConfigs are included in the result.
 	 * </p>
 	 * <p>
 	 * The returned value is cached in the <code>buildOrder</code> field.
 	 * </p>
 	 * 
-	 * @return the list of currently open projects active variants (and the project variants
+	 * @return the list of currently open projects active buildConfigs (and the project buildConfigs
 	 * they depend on) in the workspace in the order in which they would be built by <code>IWorkspace.build</code>.
 	 * @see IWorkspace#build(int, IProgressMonitor)
 	 * @see IWorkspaceDescription#getBuildOrder()
 	 * @since 2.1
 	 */
-	public IProjectVariant[] getBuildOrder() {
+	public IBuildConfiguration[] getBuildOrder() {
 		// if the build order has not been cached, calculate it
 		if (buildOrder == null) {
 			// see if a particular build order is specified
 			String[] order = description.getBuildOrder(false);
 			if (order != null) {
-				// convert from project names to active project variants
+				// convert from project names to active project buildConfigs
 				// and eliminate non-existent and closed projects
-				List variants = new ArrayList(order.length);
+				List configs = new ArrayList(order.length);
 				for (int i = 0; i < order.length; i++) {
 					IProject project = getRoot().getProject(order[i]);
 					if (project.isAccessible()) {
-						variants.add(((Project) project).internalGetActiveVariant());
+						configs.add(((Project) project).internalGetActiveBuildConfig());
 					}
 				}
-				buildOrder = new IProjectVariant[variants.size()];
-				variants.toArray(buildOrder);
+				buildOrder = new IBuildConfiguration[configs.size()];
+				configs.toArray(buildOrder);
 			} else {
 				// use default project build order
 				// computed for all accessible projects in workspace
-				buildOrder = vertexOrderToProjectVariantOrder(computeActiveProjectVariantOrder()).projectVariants;
+				buildOrder = vertexOrderToProjectBuildConfigOrder(computeActiveBuildConfigurationOrder()).buildConfigurations;
 			}
 		}
 
 		// Add projects not mentioned in the build order to the end, in name order
-		LinkedHashSet variants = new LinkedHashSet(Arrays.asList(buildOrder));
+		LinkedHashSet configs = new LinkedHashSet(Arrays.asList(buildOrder));
 		SortedSet missing = new TreeSet(new Comparator() {
 			public int compare(Object left, Object right) {
-				return ((IProjectVariant) left).getProject().getName().compareTo(
-							((IProjectVariant) right).getProject().getName());
+				return ((IBuildConfiguration) left).getProject().getName().compareTo(
+							((IBuildConfiguration) right).getProject().getName());
 			}
 		});
 		IProject[] allProjects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
 		for (int i = 0; i < allProjects.length; i++) {
 			IProject project = allProjects[i];
 			if (project.isAccessible()) {
-				missing.add(((Project) project).internalGetActiveVariant());
+				missing.add(((Project) project).internalGetActiveBuildConfig());
 			}
 		}
-		variants.addAll(missing);
-		return (IProjectVariant[]) variants.toArray(new IProjectVariant[variants.size()]);
+		configs.addAll(missing);
+		return (IBuildConfiguration[]) configs.toArray(new IBuildConfiguration[configs.size()]);
 	}
 
 	public CharsetManager getCharsetManager() {
@@ -1538,9 +1542,9 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	}
 
 	/* (non-Javadoc)
-	 * @see IWorkspace#getDanglingVariantReferences()
+	 * @see IWorkspace#getDanglingBuildConfigReferences()
 	 */
-	public Map getDanglingVariantReferences() {
+	public Map getDanglingBuildConfigReferences() {
 		IProject[] projects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
 		Map result = new HashMap(projects.length);
 		for (int i = 0; i < projects.length; i++) {
@@ -1548,23 +1552,23 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			ProjectDescription desc = project.internalGetDescription();
 			if (!project.isAccessible())
 				continue;
-			IProjectVariant[] variants = project.internalGetVariants();
-			for (int j = 0; j < variants.length; j++) {
-				IProjectVariantReference[] refs = desc.getReferencedProjectVariants(variants[j].getVariantName());
+			IBuildConfiguration[] configs = project.internalGetBuildConfigs();
+			for (int j = 0; j < configs.length; j++) {
+				IBuildConfigReference[] refs = desc.getReferencedProjectConfigs(configs[j].getConfigurationId());
 				List dangling = new ArrayList(refs.length);
 				for (int k = 0; k < refs.length; k++) {
-					// Check the referenced project and variant exists
+					// Check the referenced project and config exists
 					try {
 						if (!refs[k].getProject().exists() ||
-							!((Project) refs[k].getProject()).internalHasVariant(((ProjectVariantReference)refs[k]).getVariant()))
+							!((Project) refs[k].getProject()).internalHasBuildConfig(((BuildConfigReference)refs[k]).getConfiguration()))
 							dangling.add(refs[k]);
 					} catch (CoreException e) {
-						// Project did not exist, as the active variant could not be found
+						// Project did not exist, as the active config could not be found
 						dangling.add(refs[k]);
 					}
 				}
 				if (!dangling.isEmpty())
-					result.put(variants[j], dangling.toArray(new IProjectVariantReference[dangling.size()]));
+					result.put(configs[j], dangling.toArray(new IBuildConfigReference[dangling.size()]));
 			}
 		}
 		return result;

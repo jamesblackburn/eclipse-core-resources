@@ -7,9 +7,11 @@
  * 
  * Contributors:
  *     IBM Corporation - initial API and implementation
- *     Broadcom Corporation - project variants
+ *     Broadcom Corporation - build configurations
  *******************************************************************************/
 package org.eclipse.core.internal.events;
+
+import org.eclipse.core.resources.IBuildConfiguration;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +22,7 @@ import org.eclipse.core.runtime.*;
 /**
  * The concrete implementation of <tt>ICommand</tt>.  This object
  * stores information about a particular type of builder, including references
- * to the instances of the builder for each of a project's variants
+ * to the instances of the builder for each of a project's configurations
  * (if they have been instantiated).
  */
 public class BuildCommand extends ModelObject implements ICommand {
@@ -51,7 +53,7 @@ public class BuildCommand extends ModelObject implements ICommand {
 	 * The builder instance for this command. Null if the builder has
 	 * not yet been instantiated.
 	 */
-	protected HashMap/*<IProjectVariant, IncrementalProjectBuilder>*/ builders;
+	protected HashMap/*<IBuildConfiguration, IncrementalProjectBuilder>*/ builders;
 
 	/**
 	 * The triggers that this builder will respond to.  Since build triggers are not 
@@ -143,8 +145,8 @@ public class BuildCommand extends ModelObject implements ICommand {
 		return builders == null ? null : (makeCopy ? (Map) builders.clone() : builders);
 	}
 
-	public IncrementalProjectBuilder getBuilder(IProjectVariant variant) {
-		return (IncrementalProjectBuilder) builders.get(variant);
+	public IncrementalProjectBuilder getBuilder(IBuildConfiguration config) {
+		return (IncrementalProjectBuilder) builders.get(config);
 	}
 
 	/**
@@ -188,8 +190,8 @@ public class BuildCommand extends ModelObject implements ICommand {
 		builders = value == null ? new HashMap(1) : new HashMap(value);
 	}
 
-	public void addBuilder(IProjectVariant variant, IncrementalProjectBuilder builder) {
-		this.builders.put(variant, builder);
+	public void addBuilder(IBuildConfiguration config, IncrementalProjectBuilder builder) {
+		this.builders.put(config, builder);
 	}
 
 	/**

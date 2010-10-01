@@ -9,7 +9,7 @@
  *     IBM Corporation - initial API and implementation
  * Francis Lynch (Wind River) - [301563] Save and load tree snapshots
  * Francis Lynch (Wind River) - [305718] Allow reading snapshot into renamed project
- * Broadcom Corporation - project variants and references
+ * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -1789,11 +1789,11 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 * <ul>
 	 * <li> Workspace information </li>
 	 * <li> A list of plugin info </li>
-	 * <li> Builder info for all the builders for each project's active variant </li>
+	 * <li> Builder info for all the builders for each project's active build config </li>
 	 * <li> Workspace trees for all plugins and builders </li>
 	 * <li> A version 3 marker </li>
-	 * <li> Builder info for all the builders of all the other project's variants </li>
-	 * <li> The names of the variants for each of the builders </li>
+	 * <li> Builder info for all the builders of all the other project's buildConfigs </li>
+	 * <li> The names of the buildConfigs for each of the builders </li>
 	 * </ul>
 	 * This format is designed to work with WorkspaceTreeReader versions 2 and 3.
 	 * The first two items constitute a version 2 file, and the additional information
@@ -1829,28 +1829,28 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				}
 				monitor.worked(Policy.totalWork * 10 / 100);
 
-				// Get the the builder info and variant names, and add all the associated workspace trees in the correct order
+				// Get the the builder info and configuration ids, and add all the associated workspace trees in the correct order
 				IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
 				List builderInfosVersion2 = new ArrayList(projects.length * 2);
-				List variantNamesVersion2 = new ArrayList(projects.length);
+				List configIdsVersion2 = new ArrayList(projects.length);
 				List builderInfosVersion3 = new ArrayList(projects.length * 2);
-				List variantNamesVersion3 = new ArrayList(projects.length);
+				List configIdsVersion3 = new ArrayList(projects.length);
 				for (int i = 0; i < projects.length; i++) {
 					IProject project = projects[i];
 					if (project.isOpen()) {
-						String activeVariantName = project.getActiveVariant().getVariantName();
+						String activeConfigId = project.getActiveBuildConfiguration().getConfigurationId();
 						List infos = workspace.getBuildManager().createBuildersPersistentInfo(project);
 						if (infos != null) {
 							for (Iterator it = infos.iterator(); it.hasNext();) {
 								BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
-								// Add to the correct list of builders info and add to the variant names
-								String variantName = info.getVariantName() == null ? activeVariantName : info.getVariantName();
-								if (variantName.equals(activeVariantName)) {
+								// Add to the correct list of builders info and add to the configuration ids
+								String configId = info.getConfigurationId() == null ? activeConfigId : info.getConfigurationId();
+								if (configId.equals(activeConfigId)) {
 									builderInfosVersion2.add(info);
-									variantNamesVersion2.add(variantName);
+									configIdsVersion2.add(configId);
 								} else {
 									builderInfosVersion3.add(info);
-									variantNamesVersion3.add(variantName);
+									configIdsVersion3.add(configId);
 								}
 								// Add the builder's tree
 								ElementTree tree = info.getLastBuiltTree();
@@ -1880,11 +1880,11 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				// Save the version 3 builders info
 				writeBuilderPersistentInfo(output, builderInfosVersion3, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
 
-				// Save the variant names for the builders in the order they were saved
-				List variantNames = new ArrayList(variantNamesVersion2.size() + variantNamesVersion3.size());
-				variantNames.addAll(variantNamesVersion2);
-				variantNames.addAll(variantNamesVersion3);
-				for (Iterator it = variantNames.iterator(); it.hasNext();)
+				// Save the configuration ids for the builders in the order they were saved
+				List configIds = new ArrayList(configIdsVersion2.size() + configIdsVersion3.size());
+				configIds.addAll(configIdsVersion2);
+				configIds.addAll(configIdsVersion3);
+				for (Iterator it = configIds.iterator(); it.hasNext();)
 					output.writeUTF((String) it.next());
 			} finally {
 				if (!wasImmutable)
@@ -1901,11 +1901,11 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 * 
 	 * The following is written to the output stream:
 	 * <ul>
-	 * <li> Builder info for all the builders for the project's active variant </li>
+	 * <li> Builder info for all the builders for the project's active build configuration </li>
 	 * <li> Workspace trees for all the project's builders </li>
 	 * <li> A version 3 marker </li>
-	 * <li> Builder info for all the builders of all the other project's variants </li>
-	 * <li> Name of the project's variants </li>
+	 * <li> Builder info for all the builders of all the other project's buildConfigs </li>
+	 * <li> Name of the project's buildConfigs </li>
 	 * </ul>
 	 * This format is designed to work with WorkspaceTreeReader versions 2 and 3.
 	 * The first two items constitute a version 2 file, and the additional information
@@ -1929,22 +1929,22 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				List trees = new ArrayList(2);
 				monitor.worked(Policy.totalWork * 10 / 100);
 
-				// Get the the builder info and variant names, and add all the associated workspace trees in the correct order
+				// Get the the builder info and configuration ids, and add all the associated workspace trees in the correct order
 				List builderInfos = workspace.getBuildManager().createBuildersPersistentInfo(project);
-				List variantNamesVersion2 = new ArrayList(5);
+				List configIdsVersion2 = new ArrayList(5);
 				List builderInfosVersion2 = new ArrayList(5);
-				List variantNamesVersion3 = new ArrayList(5);
+				List configIdsVersion3 = new ArrayList(5);
 				List builderInfosVersion3 = new ArrayList(5);
 				if (builderInfos != null) {
 					for (Iterator it = builderInfos.iterator(); it.hasNext();) {
 						BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
-						// Add to the correct list of builders info and add to the variant names
-						if (info.getVariantName().equals(project.getActiveVariant().getVariantName())) {
+						// Add to the correct list of builders info and add to the configuration ids
+						if (info.getConfigurationId().equals(project.getActiveBuildConfiguration().getConfigurationId())) {
 							builderInfosVersion2.add(info);
-							variantNamesVersion2.add(info.getVariantName());
+							configIdsVersion2.add(info.getConfigurationId());
 						} else {
 							builderInfosVersion3.add(info);
-							variantNamesVersion3.add(info.getVariantName());
+							configIdsVersion3.add(info.getConfigurationId());
 						}
 						// Add the builder's tree
 						ElementTree tree = info.getLastBuiltTree();
@@ -1972,11 +1972,11 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				// Save the version 3 builders info and get the workspace trees associated with those builders
 				writeBuilderPersistentInfo(output, builderInfosVersion3, Policy.subMonitorFor(monitor, Policy.totalWork * 20 / 100));
 
-				// Save variant names for the builders in the order they were saved
-				List variantNames = new ArrayList(variantNamesVersion2.size() + variantNamesVersion3.size());
-				variantNames.addAll(variantNamesVersion2);
-				variantNames.addAll(variantNamesVersion3);
-				for (Iterator it = variantNames.iterator(); it.hasNext();)
+				// Save configuration ids for the builders in the order they were saved
+				List configIds = new ArrayList(configIdsVersion2.size() + configIdsVersion3.size());
+				configIds.addAll(configIdsVersion2);
+				configIds.addAll(configIdsVersion3);
+				for (Iterator it = configIds.iterator(); it.hasNext();)
 					output.writeUTF((String) it.next());
 			} finally {
 				if (output != null)

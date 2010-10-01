@@ -10,44 +10,44 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import org.eclipse.core.resources.IBuildConfiguration;
+
 import org.eclipse.core.runtime.*;
 import org.eclipse.core.resources.*;
 
 /**
- * @noextend This class is not intended to be subclassed by clients.
- * @noinstantiate This class is not intended to be instantiated by clients.
- * @since 3.2
+ * Concrete implementation of a build configuration
  */
-public class ProjectVariant implements IProjectVariant, Cloneable {
+public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 
 	private IProject project;
 	private final String name;
 
-	public ProjectVariant(IProject project, String name) {
+	public BuildConfiguration(IProject project, String name) {
 		Assert.isNotNull(name);
 		this.project = project;
 		this.name = name;
 	}
 
-	public ProjectVariant(String name) {
+	public BuildConfiguration(String name) {
 		this(null, name);
 	}
 
-	public ProjectVariant() {
-		this(null, DEFAULT_VARIANT);
+	public BuildConfiguration() {
+		this(null, DEFAULT_CONFIG_ID);
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see IProjectVariant#getVariantName()
+	 * @see IBuildConfiguration#getConfigurationId()
 	 */
-	public String getVariantName() {
+	public String getConfigurationId() {
 		return name;
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see IProjectVariant#getProject()
+	 * @see IBuildConfiguration#getProject()
 	 */
 	public IProject getProject() {
 		Assert.isNotNull(project);
@@ -73,7 +73,7 @@ public class ProjectVariant implements IProjectVariant, Cloneable {
 	 * @see Object#clone()
 	 */
 	public Object clone() {
-		return new ProjectVariant(project, name);
+		return new BuildConfiguration(project, name);
 	}
 
 	/*
@@ -98,12 +98,12 @@ public class ProjectVariant implements IProjectVariant, Cloneable {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		ProjectVariant variant = (ProjectVariant) obj;
-		if (!name.equals(variant.name))
+		BuildConfiguration config = (BuildConfiguration) obj;
+		if (!name.equals(config.name))
 			return false;
-		if ((project == null) != (variant.project == null))
+		if ((project == null) != (config.project == null))
 			return false;
-		if (project != null && !project.equals(variant.project))
+		if (project != null && !project.equals(config.project))
 			return false;
 		return true;
 	}

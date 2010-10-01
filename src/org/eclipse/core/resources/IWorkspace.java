@@ -8,9 +8,10 @@
  *  Contributors:
  *     IBM Corporation - initial API and implementation
  *     Red Hat Incorporated - loadProjectDescription(InputStream)
- *     Broadcom Corporation - project variants and references
+ *     Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.resources;
+
 
 import java.io.InputStream;
 import java.net.URI;
@@ -230,7 +231,7 @@ public interface IWorkspace extends IAdaptable {
 	 * Cancelation can occur even if no progress monitor is provided.
 	 * 
 	 * @see IProject#build(int, IProgressMonitor)
-	 * @see #computeProjectVariantOrder(IProjectVariant[])
+	 * @see #computeProjectBuildConfigOrder(IBuildConfiguration[])
 	 * @see IncrementalProjectBuilder#FULL_BUILD
 	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
 	 * @see IncrementalProjectBuilder#CLEAN_BUILD
@@ -239,11 +240,12 @@ public interface IWorkspace extends IAdaptable {
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Build all project variants in the given list along with their references.
-	 * The project variants are built in the order specified in the list.
-	 * Any referenced project variants that do not appear in the list are built before any
-	 * of the variants in the list, in an order specified in the workspace description.
-	 * If no order is specified, the workspace computes an order determined by project variant
+	 * FIXME: is the below right?
+	 * Build all project buildConfigs in the given list along with their references.
+	 * The project buildConfigs are built in the order specified in the list.
+	 * Any referenced project buildConfigs that do not appear in the list are built before any
+	 * of the buildConfigs in the list, in an order specified in the workspace description.
+	 * If no order is specified, the workspace computes an order determined by build configuration
 	 * references.
 	 * <p>
 	 * This method may change resources; these changes will be reported in a
@@ -271,14 +273,14 @@ public interface IWorkspace extends IAdaptable {
 	 * Cancellation can occur even if no progress monitor is provided.
 	 * 
 	 * @see IProject#build(int, IProgressMonitor)
-	 * @see #computeProjectVariantOrder(IProjectVariant[])
+	 * @see #computeProjectBuildConfigOrder(IBuildConfiguration[])
 	 * @see IncrementalProjectBuilder#FULL_BUILD
 	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
 	 * @see IncrementalProjectBuilder#CLEAN_BUILD
 	 * @see IResourceRuleFactory#buildRule()
 	 * @since 3.7
 	 */
-	public void build(IProjectVariant projectVariants[], int kind, IProgressMonitor monitor) throws CoreException;
+	public void build(IBuildConfiguration buildConfigs[], int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
 	 * Checkpoints the operation currently in progress. This method is used in
@@ -310,7 +312,7 @@ public interface IWorkspace extends IAdaptable {
 
 	/**
 	 * Returns the prerequisite ordering of the given projects. The computation
-	 * is done by interpreting their active variants project variant references
+	 * is done by interpreting their active build configurations' references
 	 * as dependency relationships.
 	 * For example if A references B and C, and C references B, this method,
 	 * given the list A, B, C will return the order B, C, A. That is, projects
@@ -365,8 +367,8 @@ public interface IWorkspace extends IAdaptable {
 		}
 
 		/**
-		 * A list of projects ordered so as to honor the project variant reference
-		 * relationships between these projects' variants wherever possible.
+		 * A list of projects ordered so as to honor the build configuration reference
+		 * relationships between these projects' buildConfigs wherever possible.
 		 * The elements are a subset of the ones passed as the <code>projects</code>
 		 * parameter to <code>IWorkspace.computeProjectOrder</code>, where
 		 * inaccessible (closed or non-existent) projects have been omitted.
@@ -375,7 +377,7 @@ public interface IWorkspace extends IAdaptable {
 		/**
 		 * Indicates whether any of the accessible projects in
 		 * <code>projects</code> are involved in non-trivial cycles.
-		 * <code>true</code> if the project variant reference graph contains at least
+		 * <code>true</code> if the reference graph contains at least
 		 * one cycle involving two or more of the projects in
 		 * <code>projects</code>, and <code>false</code> if none of the
 		 * projects in <code>projects</code> are involved in cycles.
@@ -384,7 +386,7 @@ public interface IWorkspace extends IAdaptable {
 		/**
 		 * A list of knots in the project reference graph. This list is empty if
 		 * the project reference graph does not contain cycles. If the project
-		 * variant reference graph contains cycles, each element is a knot of two or
+		 * reference graph contains cycles, each element is a knot of two or
 		 * more accessible projects from <code>projects</code> that are
 		 * involved in a cycle of mutually dependent references.
 		 */
@@ -393,56 +395,56 @@ public interface IWorkspace extends IAdaptable {
 
 	/**
 	 * Data structure for holding the multi-part outcome of
-	 * <code>IWorkspace.computeProjectVariantOrder</code>.
+	 * <code>IWorkspace.computeProjectBuildConfigOrder</code>.
 	 * <p>
 	 * This class is not intended to be instantiated by clients.
 	 * </p>
 	 * 
-	 * @see IWorkspace#computeProjectVariantOrder(IProjectVariant[])
+	 * @see IWorkspace#computeProjectBuildConfigOrder(IBuildConfiguration[])
 	 * @since 3.7
 	 */
-	public final class ProjectVariantOrder {
+	public final class ProjectBuildConfigOrder {
 		/**
 		 * Creates an instance with the given values.
 		 * <p>
 		 * This class is not intended to be instantiated by clients.
 		 * </p>
 		 * 
-		 * @param projectVariants initial value of <code>projectVariants</code> field
+		 * @param buildConfigurations initial value of <code>buildConfigurations</code> field
 		 * @param hasCycles initial value of <code>hasCycles</code> field
 		 * @param knots initial value of <code>knots</code> field
 		 */
-		public ProjectVariantOrder(IProjectVariant[] projectVariants, boolean hasCycles, IProjectVariant[][] knots) {
-			this.projectVariants = projectVariants;
+		public ProjectBuildConfigOrder(IBuildConfiguration[] buildConfigurations, boolean hasCycles, IBuildConfiguration[][] knots) {
+			this.buildConfigurations = buildConfigurations;
 			this.hasCycles = hasCycles;
 			this.knots = knots;
 		}
 
 		/**
-		 * A list of project variants ordered so as to honor the project variant reference
-		 * relationships between these project variants wherever possible. The elements
-		 * are a subset of the ones passed as the <code>projectVariants</code>
+		 * A list of project buildConfigs ordered so as to honor the build configuration reference
+		 * relationships between these project buildConfigs wherever possible. The elements
+		 * are a subset of the ones passed as the <code>buildConfigurations</code>
 		 * parameter to <code>IWorkspace.computeProjectOrder</code>, where
 		 * inaccessible (closed or non-existent) projects have been omitted.
 		 */
-		public IProjectVariant[] projectVariants;
+		public IBuildConfiguration[] buildConfigurations;
 		/**
-		 * Indicates whether any of the accessible project variants in
-		 * <code>projectVariants</code> are involved in non-trivial cycles.
-		 * <code>true</code> if the project variant reference graph contains at least
-		 * one cycle involving two or more of the project variants in
-		 * <code>projectVariants</code>, and <code>false</code> if none of the
-		 * project variants in <code>projectVariants</code> are involved in cycles.
+		 * Indicates whether any of the accessible project buildConfigs in
+		 * <code>buildConfigurations</code> are involved in non-trivial cycles.
+		 * <code>true</code> if the reference graph contains at least
+		 * one cycle involving two or more of the project buildConfigs in
+		 * <code>buildConfigurations</code>, and <code>false</code> if none of the
+		 * project buildConfigs in <code>buildConfigurations</code> are involved in cycles.
 		 */
 		public boolean hasCycles;
 		/**
-		 * A list of knots in the project variant reference graph. This list is empty if
-		 * the project variant reference graph does not contain cycles. If the project
-		 * variant reference graph contains cycles, each element is a knot of two or
-		 * more accessible project variants from <code>projectVariants</code> that are
+		 * A list of knots in the reference graph. This list is empty if
+		 * the reference graph does not contain cycles. If the
+		 * reference graph contains cycles, each element is a knot of two or
+		 * more accessible project buildConfigs from <code>buildConfigurations</code> that are
 		 * involved in a cycle of mutually dependent references.
 		 */
-		public IProjectVariant[][] knots;
+		public IBuildConfiguration[][] knots;
 	}
 
 	/**
@@ -482,18 +484,18 @@ public interface IWorkspace extends IAdaptable {
 	public ProjectOrder computeProjectOrder(IProject[] projects);
 
 	/**
-	 * Computes a total ordering of the given projects variants based on both static and
-	 * dynamic project references. If an existing and open project variant P references
-	 * another existing and open project variant Q also included in the list, then Q
+	 * Computes a total ordering of the given projects buildConfigs based on both static and
+	 * dynamic project references. If an existing and open project's build configuratioin P references
+	 * another existing and open project's configuration Q also included in the list, then Q
 	 * should come before P in the resulting ordering. Closed and non-existent
 	 * projects are ignored, and will not appear in the result. References to
-	 * non-existent or closed projects/variants are also ignored, as are any
+	 * non-existent or closed projects/buildConfigs are also ignored, as are any
 	 * self-references. The total ordering is always consistent with the global
-	 * total ordering of all open projects' variants in the workspace.
+	 * total ordering of all open projects' buildConfigs in the workspace.
 	 * <p>
 	 * When there are choices, the choice is made in a reasonably stable way.
-	 * For example, given an arbitrary choice between two project variants, the one with
-	 * the lower collating project name then variant name is usually selected.
+	 * For example, given an arbitrary choice between two project buildConfigs, the one with
+	 * the lower collating configuration id then configuration id is usually selected.
 	 * </p>
 	 * <p>
 	 * When the project reference graph contains cyclic references, it is
@@ -508,14 +510,14 @@ public interface IWorkspace extends IAdaptable {
 	 * This method is time-consuming and should not be called unnecessarily.
 	 * There are a very limited set of changes to a workspace that could affect
 	 * the outcome: creating, renaming, or deleting a project; opening or
-	 * closing a project; deleting a project variant; adding or removing a project variant reference.
+	 * closing a project; deleting a build configuration; adding or removing a build configuration reference.
 	 * </p>
 	 * 
-	 * @param projectVariants the project variants to order
-	 * @return result describing the project variant order
+	 * @param buildConfigurations the build configurations to order
+	 * @return result describing the build configuration order
 	 * @since 3.7
 	 */
-	public ProjectVariantOrder computeProjectVariantOrder(IProjectVariant[] projectVariants);
+	public ProjectBuildConfigOrder computeProjectBuildConfigOrder(IBuildConfiguration[] buildConfigurations);
 
 	/**
 	 * Copies the given sibling resources so that they are located as members of
@@ -813,19 +815,19 @@ public interface IWorkspace extends IAdaptable {
 	public Map getDanglingReferences();
 
 	/**
-	 * Finds all dangling project variant references in this workspace. Projects
+	 * Finds all dangling build configuration references in this workspace. Projects
 	 * which are not open are ignored. Returns a map with one entry for each open
-	 * project's variant in the workspace that has at least one dangling project
-	 * variant reference; the value of the entry is an array of project variants
-	 * which are referenced by that project variant but do not exist in the workspace.
+	 * project's build configuration in the workspace that has at least one dangling
+	 * configuration reference; the value of the entry is an array of project buildConfigs
+	 * which are referenced by that build configuration but do not exist in the workspace.
 	 * Returns an empty Map if there are no projects in the workspace.
 	 * 
-	 * @return a map (key type: <code>IProjectVariant</code>, value type:
-	 * <code>IProjectVariant[]</code>) from project variant to dangling
-	 * project variant references
+	 * @return a map (key type: <code>IBuildConfiguration</code>, value type:
+	 * <code>IBuildConfiguration[]</code>) from project build configuration to dangling
+	 * build configuration references
 	 * @since 3.7
 	 */
-	public Map getDanglingVariantReferences();
+	public Map getDanglingBuildConfigReferences();
 
 	/**
 	 * Returns the workspace description. This object is responsible for
