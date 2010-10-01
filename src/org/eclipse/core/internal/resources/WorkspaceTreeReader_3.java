@@ -6,7 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  * 
  * Contributors:
- *     Broadcom Corporation - project variants and references
+ *     Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -21,18 +21,16 @@ import org.eclipse.core.internal.watson.ElementTree;
 import org.eclipse.core.internal.events.BuilderPersistentInfo;
 
 /**
- * Reads version 3 of the workspace tree file format. 
- * 
- * This version differs from version 2 in the amount of information persisted.
- * The first part of the file is identical to version 2. This allows a version 2
- * reader to read a version 3 file.
- * 
- * The extra information includes the names of a projects variants
- * and builder information on a per variant basis.
- * 
- * @since 3.2
- * @noextend This class is not intended to be subclassed by clients.
- * @noinstantiate This class is not intended to be instantiated by clients.
+ * Reads version 3 of the workspace tree file format. Note: this version is 
+ * both forwards and backwards compatible with version 2.
+ * <p>
+ * This workspace tree format adds support for persisting build configuration 
+ * ids of projects in the workspace, and workspace trees
+ * per build configuration for interested builders.
+ * <p>
+ * To achieve backwards compatibility, the new additional information is
+ * appended to the existing workspace tree file.  This allows the workspace
+ * to be opened, and function, with older eclipse products.
  */
 public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 	private List builderInfos;
@@ -82,7 +80,7 @@ public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 				linkBuildersToTrees(buildersToBeLinked, trees, 0, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 
 				for (Iterator it = builderInfos.iterator(); it.hasNext();)
-					((BuilderPersistentInfo) it.next()).setVariantName(input.readUTF());
+					((BuilderPersistentInfo) it.next()).setConfigurationId(input.readUTF());
 			}
 
 			// Set the builder infos on the projects
@@ -126,7 +124,7 @@ public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 				linkBuildersToTrees(infos, trees, 0, Policy.subMonitorFor(monitor, 1));
 
 				for (Iterator it = builderInfos.iterator(); it.hasNext();)
-					((BuilderPersistentInfo) it.next()).setVariantName(input.readUTF());
+					((BuilderPersistentInfo) it.next()).setConfigurationId(input.readUTF());
 			}
 
 			// Set the builder info on the projects

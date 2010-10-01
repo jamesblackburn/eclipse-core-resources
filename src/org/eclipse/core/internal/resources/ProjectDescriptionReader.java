@@ -9,9 +9,13 @@
  *     IBM Corporation - initial API and implementation
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
- * Broadcom Corporation - project variants and references
+ * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
+
+import org.eclipse.core.resources.IBuildConfiguration;
+import org.eclipse.core.resources.IBuildConfigReference;
+
 
 import java.io.*;
 import java.net.URI;
@@ -73,15 +77,15 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 
 	protected static final int S_SNAPSHOT_LOCATION = 35;
 
-	protected static final int S_VARIANTS = 36;
-	protected static final int S_VARIANT_NAME = 37;
+	protected static final int S_BUILD_CONFIGS = 36;
+	protected static final int S_BUILD_CONFIG_ID = 37;
 
 	protected static final int S_REFERENCES = 38;
-	protected static final int S_REFERENCES_VARIANT = 39;
-	protected static final int S_REFERENCES_VARIANT_NAME = 40;
+	protected static final int S_REFERENCES_CONFIG = 39;
+	protected static final int S_REFERENCES_CONFIG_ID = 40;
 	protected static final int S_REFERENCE = 41;
 	protected static final int S_REFERENCE_PROJECT_NAME = 42;
-	protected static final int S_REFERENCE_VARIANT_NAME = 43;
+	protected static final int S_REFERENCE_CONFIG_ID = 43;
 	
 	/**
 	 * Singleton sax parser factory
@@ -107,9 +111,9 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 
 	protected int state = S_INITIAL;
 
-	// Set to true if project variant references existed in the description and were loaded.
+	// Set to true if build configuration references existed in the description and were loaded.
 	// Used to work out if the old style project references should be loaded.
-	private boolean loadedProjectVariantReferences;
+	private boolean loadedBuildConfigReferences;
 
 	/**
 	 * Returns the SAXParser to use when parsing project description files.
@@ -429,36 +433,35 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_SNAPSHOT_LOCATION :
 				endSnapshotLocation(elementName);
 				break;
-			case S_VARIANTS :
-				endVariantsElement(elementName);
+			case S_BUILD_CONFIGS :
+				endBuildConfigsElement(elementName);
 				break;
-			case S_VARIANT_NAME :
-				if (elementName.equals(VARIANT)) {
-					// Top of stack is a boolean indicating if the variant is active.
+			case S_BUILD_CONFIG_ID :
+				if (elementName.equals(BUILD_CONFIG)) {
+					// FIXME don't store active configuration like this
+					// Top of stack is a boolean indicating if the configuration is active.
 					boolean isActive = ((Boolean) objectStack.pop()).booleanValue();
-					// Top of stack is the active variant name.
-					String activeVariant = (String) objectStack.pop();
-					// Top of stack is a list of variant names.
-					// A variant name can have leading/trailing whitespace.
-					String variantName = charBuffer.toString();
-					((ArrayList) objectStack.peek()).add(variantName);
-					// Put the active variant name back on the stack
-					objectStack.push(isActive ? variantName : activeVariant);
-					state = S_VARIANTS;
+					// Top of stack is the active configuration id.
+					String activeConfig = (String) objectStack.pop();
+					// Top of stack is a list of configuration names.
+					// A configuration Id can have leading/trailing whitespace.
+					String configurationId = charBuffer.toString();
+					((ArrayList) objectStack.peek()).add(configurationId);
+					// Put the active configuration id back on the stack
+					objectStack.push(isActive ? configurationId : activeConfig);
+					state = S_BUILD_CONFIGS;
 				}
 			case S_REFERENCES :
 				endReferencesElement(elementName);
 				break;
-			case S_REFERENCES_VARIANT :
-				endReferencesVariantElement(elementName);
+			case S_REFERENCES_CONFIG :
+				endReferencesBuildConfigElement(elementName);
 				break;
-			case S_REFERENCES_VARIANT_NAME :
-				// Top of stack is a container for the variant name
-				// and references.
-				// A variant name cannot
-				// have leading/trailing whitespace.
-				((ReferencesContainer) objectStack.peek()).variant = charBuffer.toString().trim();
-				state = S_REFERENCES_VARIANT;
+			case S_REFERENCES_CONFIG_ID :
+				// Top of stack is a container for the configuration id and references.
+				// A configuration id cannot have leading/trailing whitespace.
+				((ReferencesContainer) objectStack.peek()).configId = charBuffer.toString().trim();
+				state = S_REFERENCES_CONFIG;
 				break;
 			case S_REFERENCE :
 				endReferenceElement(elementName);
@@ -466,8 +469,8 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_REFERENCE_PROJECT_NAME :
 				endReferenceProjectName(elementName);
 				break;
-			case S_REFERENCE_VARIANT_NAME :
-				endReferenceVariantName(elementName);
+			case S_REFERENCE_CONFIG_ID :
+				endReferenceBuildConfigName(elementName);
 				break;
 		}
 		charBuffer.setLength(0);
@@ -859,13 +862,13 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			// project descriptor.
 			return;
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-		IProjectVariantReference[] variants = new IProjectVariantReference[referencedProjects.size()];
-		for (int i = 0; i < variants.length; i++)
-			variants[i] = root.getProject((String) referencedProjects.get(i)).newReference();
-		// If no project variant references were loaded, they weren't specified in the
+		IBuildConfigReference[] configs = new IBuildConfigReference[referencedProjects.size()];
+		for (int i = 0; i < configs.length; i++)
+			configs[i] = root.getProject((String) referencedProjects.get(i)).newReference();
+		// If no build configuration references were loaded, they weren't specified in the
 		// config file. For backwards compatibility, load the project references.
-		if (!loadedProjectVariantReferences) {
-			projectDescription.setReferencedProjectVariants(IProjectVariant.DEFAULT_VARIANT, variants);
+		if (!loadedBuildConfigReferences) {
+			projectDescription.setReferencedProjectConfigs(IBuildConfiguration.DEFAULT_CONFIG_ID, configs);
 		}
 	}
 
@@ -882,25 +885,25 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		}
 	}
 
-	/** End of a variants list */
-	private void endVariantsElement(String elementName) {
-		if (elementName.equals(VARIANTS)) {
-			// Pop the active variant name off the stack
-			String activeVariant = (String) objectStack.pop();
-			// Pop the array list of variant names off the stack
-			List variantNames = (List) objectStack.pop();
+	/** End of a buildConfigs list */
+	private void endBuildConfigsElement(String elementName) {
+		if (elementName.equals(BUILD_CONFIGS)) {
+			// Pop the active configuration id off the stack
+			String activeConfig = (String) objectStack.pop();
+			// Pop the array list of configuration ids off the stack
+			List configIds = (List) objectStack.pop();
 			state = S_PROJECT_DESC;
-			if (variantNames.size() == 0)
-				// A project should have more than one variant name,
-				// so leave the project with the default variant if none
+			if (configIds.size() == 0)
+				// All projects have one ore more configurations,
+				// so leave the project with the default config if none
 				// are specified in the project description file
 				return;
-			IProjectVariant[] variants = new IProjectVariant[variantNames.size()];
+			IBuildConfiguration[] configs = new IBuildConfiguration[configIds.size()];
 			int i = 0;
-			for (Iterator it = variantNames.iterator(); it.hasNext(); i++)
-				variants[i] = projectDescription.newVariant((String) it.next());
-			projectDescription.setVariants(variants);
-			projectDescription.setActiveVariant(activeVariant);
+			for (Iterator it = configIds.iterator(); it.hasNext(); i++)
+				configs[i] = projectDescription.newBuildConfiguration((String) it.next());
+			projectDescription.setBuildConfigurations(configs);
+			projectDescription.setActiveConfiguration(activeConfig);
 		}
 	}
 
@@ -918,39 +921,39 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			Iterator i = references.entrySet().iterator();
 			while (i.hasNext()) {
 				Entry entry = (Entry) i.next();
-				String variantName = (String) entry.getKey();
+				String configId = (String) entry.getKey();
 
-				// Ensure the variant exists, otherwise adding the references would fail
-				IProjectVariant[] existing = projectDescription.internalGetVariants(false);
-				IProjectVariant[] variants = new IProjectVariant[existing.length + 1];
-				System.arraycopy(existing, 0, variants, 0, existing.length);
-				IProjectVariant variant = projectDescription.newVariant(variantName);
-				variants[variants.length - 1] = variant;
-				projectDescription.setVariants(variants);
+				// Ensure the configuration exists, otherwise adding the references would fail
+				IBuildConfiguration[] existing = projectDescription.internalGetBuildConfigs(false);
+				IBuildConfiguration[] configs = new IBuildConfiguration[existing.length + 1];
+				System.arraycopy(existing, 0, configs, 0, existing.length);
+				IBuildConfiguration config = projectDescription.newBuildConfiguration(configId);
+				configs[configs.length - 1] = config;
+				projectDescription.setBuildConfigurations(configs);
 
-				// Convert the List<ReferencesContainer.Reference> to an IProjectVariantReference[]
+				// Convert the List<ReferencesContainer.Reference> to an IBuildConfigReference[]
 				List refs = new ArrayList();
 				IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 				for (Iterator it = ((List) entry.getValue()).iterator(); it.hasNext();) {
 					ReferencesContainer.Reference ref = (ReferencesContainer.Reference) it.next();
-					refs.add(new ProjectVariantReference(root.getProject(ref.projectName), ref.variantName));
+					refs.add(new BuildConfigReference(root.getProject(ref.projectName), ref.configId));
 				}
-				IProjectVariantReference[] refsArray = new IProjectVariantReference[refs.size()];
+				IBuildConfigReference[] refsArray = new IBuildConfigReference[refs.size()];
 				refs.toArray(refsArray);
 
-				projectDescription.setReferencedProjectVariants(variantName, refsArray);
+				projectDescription.setReferencedProjectConfigs(configId, refsArray);
 			}
-			loadedProjectVariantReferences = true;
+			loadedBuildConfigReferences = true;
 		}
 	}
 
 	/**
-	 * End the list of references for a specific variant of the project being described
+	 * End the list of references for a specific config Id of the project being described
 	 * Reads the ReferencesContainer off the object stack and updates the reference map
 	 * on the object stack.
 	 */
-	private void endReferencesVariantElement(String elementName) {
-		if (elementName.equals(VARIANT)) {
+	private void endReferencesBuildConfigElement(String elementName) {
+		if (elementName.equals(BUILD_CONFIG)) {
 			state = S_REFERENCES;
 			// Pop off the references container
 			ReferencesContainer data = (ReferencesContainer) objectStack.pop();
@@ -958,22 +961,22 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				return;
 			// The reference map is the next thing on the stack, so add the references to it
 			Map refsMap = (Map) objectStack.peek();
-			// If separate reference lists in the xml had the same variant name, combine them
+			// If separate reference lists in the xml had the same config id, combine them
 			// while maintaining the correct order
 			List references;
-			if (refsMap.containsKey(data.variant)) {
-				references = (List) refsMap.get(data.variant);
+			if (refsMap.containsKey(data.configId)) {
+				references = (List) refsMap.get(data.configId);
 				references.addAll(data.refs);
 			} else
 				references = data.refs;
-			refsMap.put(data.variant, references);
+			refsMap.put(data.configId, references);
 		}
 	}
 
 	/** End a single reference */
 	private void endReferenceElement(String elementName) {
 		if (elementName.equals(REFERENCE)) {
-			state = S_REFERENCES_VARIANT;
+			state = S_REFERENCES_CONFIG;
 			// Pop off the reference
 			ReferencesContainer.Reference reference = (ReferencesContainer.Reference) objectStack.pop();
 			// Make sure that you have something reasonable
@@ -981,8 +984,8 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				parseProblem(NLS.bind(Messages.projRead_missingReferenceProjectName, project.getName()));
 				return;
 			}
-//			if (reference.variantName == null && project != null) {
-//				parseProblem(NLS.bind(Messages.projRead_missingReferenceVariantName, project.getName()));
+//			if (reference.configId == null && project != null) {
+//				parseProblem(NLS.bind(Messages.projRead_missingReferenceBuildConfigId, project.getName()));
 //				return;
 //			}
 
@@ -1000,11 +1003,11 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		}
 	}
 
-	/** End a references variant name */
-	private void endReferenceVariantName(String elementName) {
-		if (elementName.equals(VARIANT)) {
+	/** End a references configId */
+	private void endReferenceBuildConfigName(String elementName) {
+		if (elementName.equals(BUILD_CONFIG)) {
 			String value = charBuffer.toString();
-			((ReferencesContainer.Reference) objectStack.peek()).variantName = value;
+			((ReferencesContainer.Reference) objectStack.peek()).configId = value;
 			state = S_REFERENCE;
 		}
 	}
@@ -1096,25 +1099,25 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			state = S_SNAPSHOT_LOCATION;
 			return;
 		}
-		if (elementName.equals(VARIANTS)) {
-			state = S_VARIANTS;
-			// Push an array list to hold all the variant names.
+		if (elementName.equals(BUILD_CONFIGS)) {
+			state = S_BUILD_CONFIGS;
+			// Push an array list to hold all the configuration ids.
 			objectStack.push(new ArrayList());
-			// Push a place holder that will be replaced with the active variant name.
+			// Push a place holder that will be replaced with the active config id.
 			objectStack.push(null);
 			return;
 		}
 		if (elementName.equals(REFERENCES)) {
 			state = S_REFERENCES;
 			// Push a map on the object stack to hold the references:
-			// variant name -> list of IProjectVariant
+			// config id -> list of IBuildConfiguration
 			objectStack.push(new HashMap());
 			return;
 		}
 	}
 
 	public ProjectDescription read(InputSource input) {
-		loadedProjectVariantReferences = false;
+		loadedBuildConfigReferences = false;
 		problems = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_READ_METADATA, Messages.projRead_failureReadingProjectDesc, null);
 		objectStack = new Stack();
 		state = S_INITIAL;
@@ -1299,34 +1302,34 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_VARIABLE_VALUE;
 				}
 				break;
-			case S_VARIANTS:
-				if (elementName.equals(VARIANT)) {
-					state = S_VARIANT_NAME;
-					objectStack.push(new Boolean(attributes.getValue(ACTIVE_VARIANT)));
+			case S_BUILD_CONFIGS:
+				if (elementName.equals(BUILD_CONFIG)) {
+					state = S_BUILD_CONFIG_ID;
+					objectStack.push(new Boolean(attributes.getValue(ACTIVE_BUILD_CONFIG)));
 				}
 				break;
 			case S_REFERENCES:
-				if (elementName.equals(VARIANT)) {
-					state = S_REFERENCES_VARIANT;
-					// Push place holder for the project variant
-					// references for this project variant.
+				if (elementName.equals(BUILD_CONFIG)) {
+					state = S_REFERENCES_CONFIG;
+					// Push place holder for the build configuration
+					// references for this project configuration.
 					objectStack.push(new ReferencesContainer());
 				}
 				break;
-			case S_REFERENCES_VARIANT:
+			case S_REFERENCES_CONFIG:
 				if (elementName.equals(NAME)) {
-					state = S_REFERENCES_VARIANT_NAME;
+					state = S_REFERENCES_CONFIG_ID;
 				} else if (elementName.equals(REFERENCE)) {
 					state = S_REFERENCE;
-					// Push place holder for the project variant target of this reference.
+					// Push place holder for the build config target of this reference.
 					objectStack.push(new ReferencesContainer.Reference());
 				}
 				break;
 			case S_REFERENCE:
 				if (elementName.equals(PROJECT)) {
 					state = S_REFERENCE_PROJECT_NAME;
-				} else if (elementName.equals(VARIANT)) {
-					state = S_REFERENCE_VARIANT_NAME;
+				} else if (elementName.equals(BUILD_CONFIG)) {
+					state = S_REFERENCE_CONFIG_ID;
 				}
 				break;
 		}
@@ -1336,10 +1339,10 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	private static class ReferencesContainer {
 		public static class Reference {
 			public String projectName;
-			public String variantName;
+			public String configId;
 		}
 		public ReferencesContainer() {}
-		public String variant = null;
+		public String configId = null;
 		public List/*<Reference>*/ refs = new ArrayList();
 	}
 

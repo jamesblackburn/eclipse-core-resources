@@ -275,12 +275,12 @@ public interface IResourceStatus extends IStatus {
 	 */
 	public static final int FAILED_GETTING_CHARSET = 383;	
 
-	/** Status code constant (value 384) indicating a project's variant
-	 * unexpectedly does not exist.
+	/** Status code constant (value 384) indicating a build configuration with
+	 * the specified ID unexpectedly does not exist.
 	 * Severity: error. Category: workspace.
 	 * @since 3.7
 	 */
-	public static final int PROJECT_VARIANT_NOT_FOUND = 384;
+	public static final int BUILD_CONFIGURATION_NOT_FOUND = 384;
 
 	// Internal constants [500-598]
 	// Information Only [500-532]

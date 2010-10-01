@@ -8,9 +8,11 @@
  *  Contributors:
  *     IBM Corporation - initial API and implementation
  * Francis Lynch (Wind River) - [301563] Save and load tree snapshots
- * Broadcom Corporation - project variants and references
+ * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.resources;
+
+
 
 import java.net.URI;
 
@@ -31,8 +33,8 @@ import org.eclipse.core.runtime.content.IContentTypeMatcher;
  * <li>A project can carry session and persistent properties.</li>
  * <li>A project can be open or closed; a closed project is
  * 		passive and has a minimal in-memory footprint.</li>
- * <li>A project can have one or more project variants.</li>
- * <li>A project can carry references to other project variants.</li>
+ * <li>A project can have one or more project build configurations.</li>
+ * <li>A project can carry references to other project build configurations.</li>
  * <li>A project can have one or more project natures.</li>
  * </ul>
  * </p>
@@ -60,7 +62,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * for this project. Does nothing if this project is closed.  If this project
 	 * has multiple builders on its build spec matching the given name, only
 	 * the first matching builder will be run. The build is run for the project's
-	 * active variant.
+	 * active build configuration.
 	 * <p>
 	 * The builder name is declared in the extension that plugs in
 	 * to the standard <code>org.eclipse.core.resources.builders</code> 
@@ -109,7 +111,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <p>
 	 * Building a project involves executing the commands found
 	 * in this project's build spec. The build is run for the project's
-	 * active variant.
+	 * active build configuration.
 	 * </p>
 	 * <p>
 	 * This method may change resources; these changes will be reported
@@ -144,12 +146,12 @@ public interface IProject extends IContainer, IAdaptable {
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
 
 	/** 
-	 * Builds a specific variant of this project. Does nothing if the project is closed
-	 * or the variant does not exist.
+	 * Builds a specific build configuration of this project. Does nothing if the project is closed
+	 * or the build configuration does not exist.
 	 * <p>
 	 * Building a project involves executing the commands found
 	 * in this project's build spec. The build is run for the specific project
-	 * variant.
+	 * build configuration.
 	 * </p>
 	 * <p>
 	 * This method may change resources; these changes will be reported
@@ -182,7 +184,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @see IResourceRuleFactory#buildRule()
 	 * @since 3.7
 	 */
-	public void build(IProjectVariant variant, int kind, IProgressMonitor monitor) throws CoreException;
+	public void build(IBuildConfiguration config, int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
 	 * Closes this project.  The project need not be open.  Closing
@@ -557,7 +559,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @see IProjectDescription#getReferencedProjects()
 	 * @see IProjectDescription#getDynamicReferences()
-	 * @see #getReferencedProjectVariants(IProjectVariant)
+	 * @see #getReferencedBuildConfigurations(IBuildConfiguration)
 	 */
 	public IProject[] getReferencedProjects() throws CoreException;
 
@@ -567,51 +569,51 @@ public interface IProject extends IContainer, IAdaptable {
 	 * an empty array if there are no referencing projects.
 	 *
 	 * @return a list of open projects referencing this project
-	 * @see #getReferencingProjectVariants(IProjectVariant)
+	 * @see #getReferencingBuildConfigurations(IBuildConfiguration)
 	 */
 	public IProject[] getReferencingProjects();
 
 	/**
-	 * Returns the project variant references for one of this project's variants.
+	 * Returns the build configurations referenced by the passed in build configuration.
 	 * This includes both the static and dynamic references of this project.
-	 * The returned projects and variants need not exist in the workspace.
+	 * The returned projects and configurations need not exist in the workspace.
 	 * The result will not contain duplicates. Returns an empty
-	 * array if there are no referenced project variants.
+	 * array if there are no referenced build configurations.
 	 * <p>
-	 * References to active variants will be translated to references to actual
-	 * project variants, if the project is accessible. If the referenced project
+	 * References to active configurations will be translated to references to actual
+	 * build configurations, if the project is accessible. If the referenced project
 	 * is not accessible the reference will be omitted from the result.
 	 * </p>
 	 *
-	 * @param variant the variant to get the references for
-	 * @return a list of project variants
+	 * @param config the configuration to get the references for
+	 * @return an array of project build configurations
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
-	 * <li> The project variant does not exist in this project.</li>
+	 * <li> The build configuration does not exist in this project.</li>
 	 * </ul>
-	 * @see IProjectDescription#getReferencedProjectVariants(String)
-	 * @see IProjectDescription#getDynamicVariantReferences(String)
+	 * @see IProjectDescription#getReferencedProjectConfigs(String)
+	 * @see IProjectDescription#getDynamicConfigReferences(String)
 	 * @since 3.7
 	 */
-	public IProjectVariant[] getReferencedProjectVariants(IProjectVariant variant) throws CoreException;
+	public IBuildConfiguration[] getReferencedBuildConfigurations(IBuildConfiguration config) throws CoreException;
 
 	/**
-	 * Returns the list of all open projects' existing variants which reference
-	 * this project and the specified variant. This project and variant may
+	 * Returns the list of all open projects' existing build configurations which reference
+	 * this project and the specified configuration. This project and configuration may
 	 * or may not exist. Returns an empty array if there are no
-	 * referencing project variants.
+	 * referencing build configurations.
 	 * <p>
-	 * If this variant is the projects active variant, then the result will include
-	 * variants that reference the active variant of ths project.
+	 * If this configuration is the project's active build config, then the result will include
+	 * build configs that reference the active configuration of this project.
 	 * </p>
 	 *
-	 * @param variant the variant to get the references to
-	 * @return a list of open projects and their existing variant referencing this project
+	 * @param config the configuration to find references to
+	 * @return an array of build configurations referencing this project
 	 * @since 3.7
 	 */
-	public IProjectVariant[] getReferencingProjectVariants(IProjectVariant variant);
+	public IBuildConfiguration[] getReferencingBuildConfigurations(IBuildConfiguration config);
 
 	/** 
 	 * Returns whether the project nature specified by the given
@@ -999,10 +1001,10 @@ public interface IProject extends IContainer, IAdaptable {
 	public void setDescription(IProjectDescription description, int updateFlags, IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Returns the project variants for this project. A project always has at
-	 * least one variant, so this will never return an empty list or null.
+	 * Returns the build configurations for this project. A project always has at
+	 * least one build configuration, so this will never return an empty list or null.
 	 * The result will not contain duplicates.
-	 * @return a list of project variants
+	 * @return a list of project build configurations
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
 	 * <li> This project does not exist.</li>
@@ -1010,28 +1012,28 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @since 3.7
 	 */
-	public IProjectVariant[] getVariants() throws CoreException;
+	public IBuildConfiguration[] getBuildConfigurations() throws CoreException;
 
 	/**
-	 * Returns the project variant with the given name for this project.
-	 * @param name the name of the variant to get
-	 * @return a project variants
+	 * Returns the project build configuration with the given name for this project.
+	 * @param name the name of the configuration to get
+	 * @return a project configuration
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
-	 * <li> The variant does not exist in this project.</li>
+	 * <li> The configuration does not exist in this project.</li>
 	 * </ul>
-	 * @see #getVariants()
+	 * @see #getBuildConfigurations()
 	 * @since 3.7
 	 */
-	public IProjectVariant getVariant(String name) throws CoreException;
+	public IBuildConfiguration getBuildConfiguration(String name) throws CoreException;
 
 	/**
-	 * Checks whether the project has the specified variant.
+	 * Checks whether the project has the specified build configuration.
 	 *
-	 * @param variant the variant
-	 * @return <code>true</code> if the project has the specified variant, false otherwise
+	 * @param configuration the configuration
+	 * @return <code>true</code> if the project has the specified configuration, false otherwise
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
 	 * <li> This project does not exist.</li>
@@ -1039,18 +1041,20 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @since 3.7
 	 */
-	public boolean hasVariant(IProjectVariant variant) throws CoreException;
+	public boolean hasBuildConfiguration(IBuildConfiguration configuration) throws CoreException;
 
 	/**
-	 * Returns the active variant for the project.
+	 * FIXME allow setting the active build configuration
+	 * Returns the active build configuration for the project.
 	 * <p>
-	 * If at any point the active variant is removed from the project, for example
-	 * when updating the list of variants, the active variant will be set to
-	 * the first variant specified by {@link IProjectDescription#setVariants(IProjectVariant[])}.
-	 * If all of the variants are removed, the active variant will be set to the
-	 * default variant.
+	 * If at any point the active configuration is removed from the project, for example
+	 * when updating the list of build configurations, the active build configuration will be set to
+	 * the first build configuration specified by {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}.
+	 * <p>
+	 * If all of the build configurations are removed, the active build configuration will be set to the
+	 * default configuration.
 	 * </p>
-	 * @return the active variant
+	 * @return the active build configuration
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
 	 * <li> This project does not exist.</li>
@@ -1058,15 +1062,15 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @since 3.7
 	 */
-	public IProjectVariant getActiveVariant() throws CoreException;
+	public IBuildConfiguration getActiveBuildConfiguration() throws CoreException;
 
 	/**
-	 * Returns a new project variant reference that points to this project.
-	 * The reference points to the project's active variant by default,
-	 * but this can be set using {@link IProjectVariantReference#setVariantName(String)}.
+	 * Returns a new project build configuration reference that points to this project.
+	 * The reference points to the project's active configuration by default,
+	 * but this can be set using {@link IBuildConfigReference#setConfigurationId(String)}.
 	 *
-	 * @return a project variant reference to this project
+	 * @return a project build configuration reference to this project
 	 * @since 3.7
 	 */
-	public IProjectVariantReference newReference();
+	public IBuildConfigReference newReference();
 }

@@ -7,7 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
- *     Broadcom Corporation - project variants
+ *     Broadcom Corporation - build configurations
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
@@ -17,7 +17,7 @@ import org.eclipse.core.resources.IProject;
 
 public class BuilderPersistentInfo {
 	protected String projectName;
-	protected String variantName;
+	protected String configId;
 	protected String builderName;
 	/**
 	 * Index of this builder in the build spec. A value of -1 indicates
@@ -31,13 +31,13 @@ public class BuilderPersistentInfo {
 		this(projectName, null, builderName, buildSpecIndex);
 	}
 
-	public void setVariantName(String variantName) {
-		this.variantName = variantName;
+	public void setConfigurationId(String configId) {
+		this.configId = configId;
 	}
 
-	public BuilderPersistentInfo(String projectName, String variantName, String builderName, int buildSpecIndex) {
+	public BuilderPersistentInfo(String projectName, String configId, String builderName, int buildSpecIndex) {
 		this.projectName = projectName;
-		this.variantName = variantName;
+		this.configId = configId;
 		this.builderName = builderName;
 		this.buildSpecIndex = buildSpecIndex;
 	}
@@ -47,11 +47,11 @@ public class BuilderPersistentInfo {
 	}
 
 	/**
-	 * @return the name of the variant for which this information refers. May return
+	 * @return the id of the configuration for which this information refers. May return
 	 * null if reading persistent data from an old workspace tree.
 	 */
-	public String getVariantName() {
-		return variantName;
+	public String getConfigurationId() {
+		return configId;
 	}
 
 	public int getBuildSpecIndex() {

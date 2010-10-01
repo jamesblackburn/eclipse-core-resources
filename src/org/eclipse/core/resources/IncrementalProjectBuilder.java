@@ -10,9 +10,10 @@
  * Anton Leherbauer (Wind River) - [198591] Allow Builder to specify scheduling rule
  * Anton Leherbauer (Wind River) - [305858] Allow Builder to return null rule
  * James Blackburn (Broadcom) - [306822] Provide Context for Builder getRule()
- * Broadcom Corporation - project variants and references
+ * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.resources;
+
 
 import java.util.Map;
 import org.eclipse.core.internal.events.InternalBuilder;
@@ -268,13 +269,13 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	}
 
 	/**
-	 * Returns the project variant for which this build was invoked.
+	 * Returns the build configuration for which this build was invoked.
 	 * 
-	 * @return the project variant
+	 * @return the build configuration
 	 * @since 3.7
 	 */
-	public final IProjectVariant getProjectVariant() {
-		return super.getProjectVariant();
+	public final IBuildConfiguration getBuildConfiguration() {
+		return super.getBuildConfiguration();
 	}
 
 	/**
@@ -299,24 +300,24 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	}
 
 	/**
-	 * Returns whether the given project variant has already been built during this
+	 * Returns whether the given project configuration has already been built during this
 	 * build iteration.
 	 * <p>
-	 * When the entire workspace is being built, the project variants are built in
-	 * linear sequence. This method can be used to determine if another project variant
+	 * When the entire workspace is being built, the project buildConfigs are built in
+	 * linear sequence. This method can be used to determine if another project configuration
 	 * precedes this builder's project in that build sequence. If only a single
 	 * project is being built, then there is no build order and this method will
 	 * always return <code>false</code>.
 	 * </p>
 	 * 
-	 * @param projectVariant the project to check against in the current build order
-	 * @return <code>true</code> if the given project variant has been built in this
+	 * @param buildConfiguration the project to check against in the current build order
+	 * @return <code>true</code> if the given project configuration has been built in this
 	 * iteration, and <code>false</code> otherwise.
 	 * @see #needRebuild()
 	 * @since 3.7
 	 */
-	public final boolean hasBeenBuilt(IProjectVariant projectVariant) {
-		return super.hasBeenBuilt(projectVariant);
+	public final boolean hasBeenBuilt(IBuildConfiguration buildConfiguration) {
+		return super.hasBeenBuilt(buildConfiguration);
 	}
 
 	/**
@@ -338,8 +339,8 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	}
 
 	/**
-	 * Indicates that this builder made changes that affect a project variant that
-	 * precedes this project variant in the currently executing build order, and thus a
+	 * Indicates that this builder made changes that affect a build configuration that
+	 * precedes this build configuration in the currently executing build order, and thus a
 	 * rebuild will be necessary.
 	 * <p>
 	 * This is an advanced feature that builders should use with caution. This
@@ -348,7 +349,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * </p>
 	 * 
 	 * @see #hasBeenBuilt(IProject)
-	 * @see #hasBeenBuilt(IProjectVariant)
+	 * @see #hasBeenBuilt(IBuildConfiguration)
 	 * @since 2.1
 	 */
 	public final void needRebuild() {
@@ -414,7 +415,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 
 	/**
 	 * Returns the scheduling rule that is required for building 
-	 * the project variant for which this builder is defined. The default 
+	 * the project build configuration for which this builder is defined. The default 
 	 * is {@link #getRule()}, which returns the workspace root 
 	 * rule unless overridden.
 	 * <p>

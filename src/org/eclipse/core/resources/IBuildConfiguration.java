@@ -10,41 +10,43 @@
  *******************************************************************************/
 package org.eclipse.core.resources;
 
+
 /**
- * Project Variants are a mechanism to provide orthogonal variant specific
- * builds.  The core maintains build deltas per builder, per variant, 
- * and allow variants to reference other variants.
- *
- * All projects have a default variant.
- *
- * When a project is built, a specific variant is built. This variant
+ * Build Configurations are a mechanism to provide orthogonal config specific
+ * builds.  The core maintains build deltas per interested builder, per configuration, 
+ * and allow configs to reference each other.
+ *<p>
+ * All projects have a default configuration with ID {@link #DEFAULT_CONFIG_ID}
+ *<p>
+ * When a project is built, a specific configuration is built. This config
  * is passed to the builders so they can adapt their behavior
- * appropriately. Builders which don't care about variants may ignore this.
+ * appropriately. Builders which don't care about configurations may ignore this,
+ * and work as before.
  *
  * @noimplement This interface is not intended to be implemented by clients.
  * @noextend This interface is not intended to be extended by clients.
  *
  * @since 3.7
  */
-public interface IProjectVariant {
+public interface IBuildConfiguration {
 
 	/**
-	 * The name of the default variant
+	 * The name of the default config
 	 */
-	public static final String DEFAULT_VARIANT = ""; //$NON-NLS-1$
+	public static final String DEFAULT_CONFIG_ID = ""; //$NON-NLS-1$
 	
-	// TODO
-	// Add a variant ID, as distinct from a variant name?
-	// Add a variant Comment ?
+	// FIXME
+	// Add a config ID, as distinct from a config name?
+	// Add a config Comment ?
 
 	/**
-	 * @return the project that the variant is for; never null.
+	 * @return the project that the config is for; never null.
 	 */
 	public IProject getProject();
 
 	/**
-	 * @return the name of the variant; never null.
+	 * @return the id of the configuration; never null.
 	 */
-	public String getVariantName();
+	public String getConfigurationId();
 
 }
