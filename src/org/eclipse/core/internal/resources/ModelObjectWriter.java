@@ -146,18 +146,16 @@ public class ModelObjectWriter implements IModelObjectConstants {
 	}
 
 	/**
-	 * Writes the contents of the build specification including
+	 * Writes the contents of the build configurations if there's at least
+	 * one non-default configuration defined.
 	 * <ul>
-	 * <li>Build Commands</li>
 	 * <li>Build Configurations</li>
 	 * <li>Build Configuration references</li>
 	 * </ul>
 	 * @param description
 	 * @param writer
 	 */
-	protected void writeBuildSpec(ProjectDescription description, XMLWriter writer) throws IOException {
-		writer.startTag(BUILD_SPEC, null);
-
+	protected void writeBuildConfigurations(ProjectDescription description, XMLWriter writer) throws IOException {
 		// Print the configurations
 		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
 		// Only if there's at least one non-default configuration to serialize
@@ -176,13 +174,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			}
 			writer.endTag(BUILD_CONFIGS);
 		}
-
-		// Print the commands
-		ICommand[] cmds = description.getBuildSpec(false);
-		for (int i = 0; i < cmds.length; i++)
-			write(cmds[i], writer);
-
-		writer.endTag(BUILD_SPEC);
 	}
 
 	/**
@@ -279,9 +270,11 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			if (snapshotLocation != null) {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
-			// Project level references
+			// Write out the build configurations
+			writeBuildConfigurations(description, writer);
+			// Project level references written for backwards compatibility
 			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
-			writeBuildSpec(description, writer);
+			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);
 			HashMap links = description.getLinks();
 			if (links != null) {
