@@ -27,7 +27,7 @@ import org.eclipse.core.resources.*;
  */
 public class BuildConfigReference implements IBuildConfigReference {
 	private final IProject project;
-	private String configName;
+	private String configId;
 
 	/**
 	 * Create a reference to a project's active configuration.
@@ -35,7 +35,7 @@ public class BuildConfigReference implements IBuildConfigReference {
 	public BuildConfigReference(IProject project) {
 		Assert.isLegal(project != null);
 		this.project = project;
-		this.configName = null;
+		this.configId = null;
 	}
 
 	/**
@@ -44,7 +44,7 @@ public class BuildConfigReference implements IBuildConfigReference {
 	public BuildConfigReference(IProject project, String configurationName) {
 		Assert.isLegal(project != null);
 		this.project = project;
-		this.configName = configurationName;
+		this.configId = configurationName;
 	}
 
 	/**
@@ -53,7 +53,7 @@ public class BuildConfigReference implements IBuildConfigReference {
 	public BuildConfigReference(IBuildConfiguration buildConfiguration) {
 		Assert.isLegal(buildConfiguration != null);
 		this.project = buildConfiguration.getProject();
-		this.configName = buildConfiguration.getConfigurationId();
+		this.configId = buildConfiguration.getConfigurationId();
 	}
 
 	/* (non-Javadoc)
@@ -67,7 +67,7 @@ public class BuildConfigReference implements IBuildConfigReference {
 	 * @see IBuildConfigReference#getConfigurationName()
 	 */
 	public String getConfigurationId() {
-		return configName;
+		return configId;
 	}
 
 	/*
@@ -76,8 +76,8 @@ public class BuildConfigReference implements IBuildConfigReference {
 	 */
 	public void setConfigurationId(String name) {
 		Assert.isLegal(name != null);
-		Assert.isTrue(configName == null);
-		configName = name;
+		Assert.isTrue(configId == null);
+		configId = name;
 	}
 
 	/**
@@ -89,12 +89,12 @@ public class BuildConfigReference implements IBuildConfigReference {
 	 */
 	public IBuildConfiguration getConfiguration() throws CoreException {
 		IBuildConfiguration configuration = null;
-		if (configName == null)
+		if (configId == null)
 			configuration = project.getActiveBuildConfiguration();
 		else {
 			IBuildConfiguration[] configurations = project.getBuildConfigurations();
 			for (int i = 0; i < configurations.length; i++)
-				if (configurations[i].getConfigurationId().equals(configName)) {
+				if (configurations[i].getConfigurationId().equals(configId)) {
 					configuration = configurations[i];
 					break;
 				}
@@ -111,7 +111,7 @@ public class BuildConfigReference implements IBuildConfigReference {
 	public int hashCode() {
 		final int prime = 31;
 		int result = prime + project.hashCode();
-		result = prime * result + (configName == null ? 0 : configName.hashCode());
+		result = prime * result + (configId == null ? 0 : configId.hashCode());
 		return result;
 	}
 
@@ -129,9 +129,9 @@ public class BuildConfigReference implements IBuildConfigReference {
 		BuildConfigReference ref = (BuildConfigReference) obj;
 		if (!project.equals(ref.project))
 			return false;
-		if ((configName == null) != (ref.configName == null))
+		if ((configId == null) != (ref.configId == null))
 			return false;
-		if (configName != null && !configName.equals(ref.configName))
+		if (configId != null && !configId.equals(ref.configId))
 			return false;
 		return true;
 	}
@@ -145,8 +145,8 @@ public class BuildConfigReference implements IBuildConfigReference {
 		StringBuffer result = new StringBuffer();
 		result.append(project.getName());
 		result.append(";"); //$NON-NLS-1$
-		if (configName != null)
-			result.append(configName);
+		if (configId != null)
+			result.append(configId);
 		else
 			result.append("<active>"); //$NON-NLS-1$
 		return result.toString();

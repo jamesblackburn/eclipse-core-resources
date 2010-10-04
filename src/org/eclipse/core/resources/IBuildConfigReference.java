@@ -11,7 +11,7 @@
 package org.eclipse.core.resources;
 
 /**
- * Represents a reference to a build configuration.
+ * Represents a reference to another build configuration
  *
  * @noimplement This interface is not intended to be implemented by clients.
  * @noextend This interface is not intended to be extended by clients.
@@ -20,14 +20,14 @@ package org.eclipse.core.resources;
  */
 public interface IBuildConfigReference {
 	/**
-	 * @return the project that this build configuration reference refers to.
+	 * @return the project which contains the build configuration referenced
+	 * by this.
 	 */
 	public IProject getProject();
 
 	/**
-	 * @return the id of the configuration that this build configuration reference refers to
-	 * or null if it references the active configuration.
-	 *FIXME JBB don't return null here!
+	 * @return the id of the configuration this build configuration reference refers to.
+	 * May be null if this references the active configuration.
 	 */
 	public String getConfigurationId();
 

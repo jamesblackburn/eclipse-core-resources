@@ -444,6 +444,13 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					((BuildConfig) objectStack.peek()).configId  = configurationId;
 				}
 				break;
+			case S_BUILD_CONFIG_NAME :
+				if (elementName.equals(BUILD_CONFIG_NAME)) {
+					state = S_BUILD_CONFIG;
+					String name = charBuffer.toString();
+					((BuildConfig) objectStack.peek()).configName = name;
+				}
+				break;
 			case S_BUILD_CONFIG_REF :
 				endReferenceElement(elementName);
 				break;
@@ -881,8 +888,11 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			// Add the configurations
 			IBuildConfiguration[] configs = new IBuildConfiguration[bcs.size()];
 			int i = 0;
-			for (Iterator it = bcs.iterator(); it.hasNext(); i++)
-				configs[i] = projectDescription.newBuildConfiguration(((BuildConfig) it.next()).configId);
+			for (Iterator it = bcs.iterator(); it.hasNext(); i++) {
+				BuildConfig config = (BuildConfig) it.next();
+				configs[i] = projectDescription.newBuildConfiguration(config.configId);
+				configs[i].setName(config.configName);
+			}
 			projectDescription.setBuildConfigurations(configs);
 
 			// Now add the references
@@ -891,7 +901,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				String configId = bc.configId;
 				List refs = new ArrayList();
 				IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-				// Convert the List<ReferencesContainer.Reference> to an IBuildConfigReference[]
+				// Convert the List<BuildConfig.Reference> to an IBuildConfigReference[]
 				for (Iterator it2 = bc.refs.iterator(); it2.hasNext();) {
 					BuildConfig.Reference ref = (BuildConfig.Reference)it2.next();
 					refs.add(new BuildConfigReference(root.getProject(ref.projectName), ref.configId));
@@ -1223,12 +1233,14 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_BUILD_CONFIGS:
 				if (elementName.equals(BUILD_CONFIG)) {
 					state = S_BUILD_CONFIG;
+					objectStack.push(new BuildConfig());
 				}
 				break;
 			case S_BUILD_CONFIG:
 				if (elementName.equals(BUILD_CONFIG_ID)) {
 					state = S_BUILD_CONFIG_ID;
-					objectStack.push(new BuildConfig());
+				} else if (elementName.equals(BUILD_CONFIG_NAME)) {
+					state = S_BUILD_CONFIG_NAME;
 				} else if (elementName.equals(BUILD_CONFIG_REF)) {
 					state = S_BUILD_CONFIG_REF;
 					objectStack.push(new BuildConfig.Reference());
@@ -1251,6 +1263,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			public String configId;
 		}
 		String configId;
+		String configName;
 		ArrayList/*<Reference>*/ refs = new ArrayList();
 	}
 
