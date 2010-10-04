@@ -140,7 +140,7 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		if (ref != null) {
 			writer.printSimpleTag(PROJECT, ref.getProject().getName());
 			if (ref.getConfigurationId() != null)
-				writer.printSimpleTag(BUILD_CONFIG, ref.getConfigurationId());
+				writer.printSimpleTag(BUILD_CONFIG_ID, ref.getConfigurationId());
 		}
 		writer.endTag(BUILD_CONFIG_REF);
 	}

@@ -45,8 +45,8 @@ public interface IModelObjectConstants {
 	public static final String PROJECT = "project"; //$NON-NLS-1$
 	public static final String PROJECT_DESCRIPTION = "projectDescription"; //$NON-NLS-1$
 	public static final String PROJECTS = "projects"; //$NON-NLS-1$
-	public static final String BUILD_CONFIGS = "configurations"; //$NON-NLS-1$
-	public static final String BUILD_CONFIG = "configuration"; //$NON-NLS-1$
+	public static final String BUILD_CONFIGS = "build_configs"; //$NON-NLS-1$
+	public static final String BUILD_CONFIG = "build_config"; //$NON-NLS-1$
 	public static final String BUILD_CONFIG_ID = "config_id"; //$NON-NLS-1$
 	public static final String BUILD_CONFIG_NAME = "config_name"; //$NON-NLS-1$
 	public static final String BUILD_CONFIG_REF = "config_ref"; //$NON-NLS-1$

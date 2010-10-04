@@ -933,7 +933,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 
 	/** End a references configId */
 	private void endReferenceBuildConfigName(String elementName) {
-		if (elementName.equals(BUILD_CONFIG)) {
+		if (elementName.equals(BUILD_CONFIG_ID)) {
 			String value = charBuffer.toString();
 			((BuildConfig.Reference) objectStack.peek()).configId = value;
 			state = S_BUILD_CONFIG_REF;
@@ -1237,7 +1237,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_BUILD_CONFIG_REF:
 				if (elementName.equals(PROJECT)) {
 					state = S_BUILD_CONFIG_REF_PROJECT_NAME;
-				} else if (elementName.equals(BUILD_CONFIG)) {
+				} else if (elementName.equals(BUILD_CONFIG_ID)) {
 					state = S_BUILD_CONFIG_REF_CONFIG_ID;
 				}
 				break;
