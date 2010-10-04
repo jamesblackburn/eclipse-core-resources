@@ -87,7 +87,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected String[] natures = EMPTY_STRING_ARRAY;
 	protected BuildConfiguration[] buildConfigs = DEFAULT_BUILD_CONFIGS;
 	protected Set buildConfigIds = null;
-	protected String activeBuildConfig = null;
+	/** Map from config id in this project -> build configurations in other projects */
 	protected HashMap/*<String, IBuildConfigReference[]>*/ staticRefs = new HashMap();
 	protected HashMap/*<String, IBuildConfigReference[]>*/ dynamicRefs = new HashMap();
 	protected URI snapshotLocation= null;
@@ -275,8 +275,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		if (!staticRefs.equals(description.staticRefs))
 			return true;
 		if (!Arrays.equals(natures, description.getNatureIds(false)))
-			return true;
-		if (!internalGetActiveConfig(false).equals(description.internalGetActiveConfig(false)))
 			return true;
 		if (!Arrays.equals(buildConfigs, description.buildConfigs))
 			return true;
@@ -699,36 +697,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		for (int i = 0; i < buildConfigs.length; i++)
 			result[i] = (BuildConfiguration) buildConfigs[i].clone();
 		return result;
-	}
-
-	/**
-	 * Used by Project to get the active build configuration.
-	 */
-	public IBuildConfiguration internalGetActiveConfig(boolean makeCopy) {
-		BuildConfiguration result = null;
-		if (!hasBuildConfig(activeBuildConfig)) {
-			activeBuildConfig = buildConfigs[0].getConfigurationId();
-			result = buildConfigs[0];
-		}
-		for (int i = 0; i < buildConfigs.length; i++) {
-			if (buildConfigs[i].getConfigurationId().equals(activeBuildConfig)) {
-				result = buildConfigs[i];
-				break;
-			}
-		}
-		Assert.isTrue(result != null);
-		Assert.isTrue(result.internalGetProject() == null);
-		return makeCopy ? (IBuildConfiguration) result.clone() : result;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see IProjectDescription#setActiveConfiguration(String)
-	 */
-	public void setActiveConfiguration(String buildConfigId) {
-		if (hasBuildConfig(buildConfigId)) {
-			activeBuildConfig = buildConfigId;
-		}
 	}
 
 	/**

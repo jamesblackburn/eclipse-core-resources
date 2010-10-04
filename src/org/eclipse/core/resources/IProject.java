@@ -1015,8 +1015,8 @@ public interface IProject extends IContainer, IAdaptable {
 	public IBuildConfiguration[] getBuildConfigurations() throws CoreException;
 
 	/**
-	 * Returns the project build configuration with the given name for this project.
-	 * @param name the name of the configuration to get
+	 * Returns the project build configuration with the given id for this project.
+	 * @param id the id of the configuration to get
 	 * @return a project configuration
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
@@ -1027,7 +1027,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @see #getBuildConfigurations()
 	 * @since 3.7
 	 */
-	public IBuildConfiguration getBuildConfiguration(String name) throws CoreException;
+	public IBuildConfiguration getBuildConfiguration(String id) throws CoreException;
 
 	/**
 	 * Checks whether the project has the specified build configuration.
@@ -1044,7 +1044,6 @@ public interface IProject extends IContainer, IAdaptable {
 	public boolean hasBuildConfiguration(IBuildConfiguration configuration) throws CoreException;
 
 	/**
-	 * FIXME allow setting the active build configuration
 	 * Returns the active build configuration for the project.
 	 * <p>
 	 * If at any point the active configuration is removed from the project, for example
@@ -1063,6 +1062,23 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @since 3.7
 	 */
 	public IBuildConfiguration getActiveBuildConfiguration() throws CoreException;
+
+	/**
+	 * Sets the active configuration for the described project.
+	 * <p>
+	 * If a configuration with the specified id does not exist in the project then this has
+	 * no effect.
+	 * </p>
+	 *
+	 * @param configId the configuration to set as the active or default
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * </ul>
+	 * @since 3.7
+	 */
+	public void setActiveBuildConfiguration(String configId) throws CoreException;
 
 	/**
 	 * Returns a new project build configuration reference that points to this project.

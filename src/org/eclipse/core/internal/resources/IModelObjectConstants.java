@@ -45,11 +45,12 @@ public interface IModelObjectConstants {
 	public static final String PROJECT = "project"; //$NON-NLS-1$
 	public static final String PROJECT_DESCRIPTION = "projectDescription"; //$NON-NLS-1$
 	public static final String PROJECTS = "projects"; //$NON-NLS-1$
-	public static final String REFERENCES = "references"; //$NON-NLS-1$
-	public static final String REFERENCE = "reference"; //$NON-NLS-1$
 	public static final String BUILD_CONFIGS = "configurations"; //$NON-NLS-1$
 	public static final String BUILD_CONFIG = "configuration"; //$NON-NLS-1$
-	public static final String ACTIVE_BUILD_CONFIG = "active"; //$NON-NLS-1$
+	public static final String BUILD_CONFIG_ID = "id"; //$NON-NLS-1$
+	public static final String BUILD_CONFIG_NAME = "name"; //$NON-NLS-1$
+//	public static final String BUILD_CONFIG_REFS = "references"; //$NON-NLS-1$
+	public static final String BUILD_CONFIG_REF = "ref"; //$NON-NLS-1$
 	public static final String TYPE = "type"; //$NON-NLS-1$
 	public static final String VALUE = "value"; //$NON-NLS-1$
 	public static final String WORKSPACE_DESCRIPTION = "workspaceDescription"; //$NON-NLS-1$
