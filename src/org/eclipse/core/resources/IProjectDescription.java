@@ -251,7 +251,7 @@ public interface IProjectDescription {
 	 *
 	 * @param projects a list of projects
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @see #setReferencedProjectConfigs(String, IBuildConfigReference[])
+	 * @see IProjectDescription#setReferencedProjectConfigs(String, IBuildConfigReference[])
 	 */
 	public void setReferencedProjects(IProject[] projects);
 

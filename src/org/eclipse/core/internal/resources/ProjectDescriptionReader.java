@@ -871,7 +871,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		if (elementName.equals(BUILD_CONFIGS)) {
 			// Pop the array list of configuration ids off the stack
 			List bcs = (List) objectStack.pop();
-			state = S_BUILD_SPEC;
+			state = S_PROJECT_DESC;
 			if (bcs.size() == 0)
 				// All projects have one ore more configurations,
 				// so leave the project with the default config if none
@@ -900,7 +900,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				refs.toArray(refsArray);
 
 				projectDescription.setReferencedProjectConfigs(configId, refsArray);
-				// FIXME why do we have this?
+				// Mark the project as using build configurations
 				loadedBuildConfigReferences = true;
 			}
 		}
@@ -1027,6 +1027,11 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			state = S_SNAPSHOT_LOCATION;
 			return;
 		}
+		if (elementName.equals(BUILD_CONFIGS)) {
+			state = S_BUILD_CONFIGS;
+			objectStack.push(new ArrayList/*<BuildConfiguration>*/());
+			return;
+		}
 	}
 
 	public ProjectDescription read(InputSource input) {
@@ -1111,9 +1116,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				if (elementName.equals(BUILD_COMMAND)) {
 					state = S_BUILD_COMMAND;
 					objectStack.push(new BuildCommand());
-				} else if (elementName.equals(BUILD_CONFIGS)) {
-					state = S_BUILD_CONFIGS;
-					objectStack.push(new ArrayList/*<BuildConfiguration>*/());
 				}
 				break;
 			case S_BUILD_COMMAND :
