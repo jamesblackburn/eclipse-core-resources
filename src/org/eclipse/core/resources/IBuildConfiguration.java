@@ -13,7 +13,7 @@ package org.eclipse.core.resources;
 
 /**
  * Build Configurations are a mechanism to provide orthogonal config specific
- * builds.  The core maintains build deltas per interested builder, per configuration, 
+ * builds.  The core maintains build deltas per interested builder, per configuration,
  * and allow configs to reference each other.
  *<p>
  * All projects have a default configuration with ID {@link #DEFAULT_CONFIG_ID}
@@ -34,10 +34,6 @@ public interface IBuildConfiguration {
 	 * The name of the default config
 	 */
 	public static final String DEFAULT_CONFIG_ID = ""; //$NON-NLS-1$
-	
-	// FIXME
-	// Add a config ID, as distinct from a config name?
-	// Add a config Comment ?
 
 	/**
 	 * @return the project that the config is for; never null.
@@ -48,5 +44,16 @@ public interface IBuildConfiguration {
 	 * @return the id of the configuration; never null.
 	 */
 	public String getConfigurationId();
+
+	/**
+	 * @return the human readable name of this configuration; may be null
+	 */
+	public String getName();
+
+	/**
+	 * Set the human readable name of this configuration
+	 * @param name may be null
+	 */
+	public void setName(String name);
 
 }
