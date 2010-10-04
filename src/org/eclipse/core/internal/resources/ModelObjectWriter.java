@@ -136,25 +136,53 @@ public class ModelObjectWriter implements IModelObjectConstants {
 	}
 
 	protected void write(IBuildConfigReference ref, XMLWriter writer) {
-		writer.startTag(REFERENCE, null);
+		writer.startTag(BUILD_CONFIG_REF, null);
 		if (ref != null) {
 			writer.printSimpleTag(PROJECT, ref.getProject().getName());
 			if (ref.getConfigurationId() != null)
 				writer.printSimpleTag(BUILD_CONFIG, ref.getConfigurationId());
 		}
-		writer.endTag(REFERENCE);
+		writer.endTag(BUILD_CONFIG_REF);
 	}
 
-	protected void write(IBuildConfiguration buildConfiguration, boolean isActive, XMLWriter writer) {
-		if (!isActive)
-			writer.printSimpleTag(BUILD_CONFIG, buildConfiguration.getConfigurationId());
-		else {
-			HashMap params = new HashMap(1);
-			params.put(ACTIVE_BUILD_CONFIG, Boolean.toString(true));
-			writer.printTag(BUILD_CONFIG, params, true, false);
-			writer.print(XMLWriter.getEscaped(buildConfiguration.getConfigurationId()));
-			writer.printTag('/' + BUILD_CONFIG, null, false, true);
+	/**
+	 * Writes the contents of the build specification including
+	 * <ul>
+	 * <li>Build Commands</li>
+	 * <li>Build Configurations</li>
+	 * <li>Build Configuration references</li>
+	 * </ul>
+	 * @param description
+	 * @param writer
+	 */
+	protected void writeBuildSpec(ProjectDescription description, XMLWriter writer) throws IOException {
+		writer.startTag(BUILD_SPEC, null);
+
+		// Print the configurations
+		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
+		// Only if there's at least one non-default configuration to serialize
+		if (configs.length > 1 ||
+				!((BuildConfiguration)configs[0]).isDefault()) {
+			writer.startTag(BUILD_CONFIGS, null);
+			for (int i = 0; i < configs.length; i++) {
+				IBuildConfiguration config = configs[i];
+				writer.startTag(BUILD_CONFIG, null);
+				writer.printSimpleTag(BUILD_CONFIG_ID, config.getConfigurationId());
+	//			params.put(BUILD_CONFIG_NAME, config.getName());
+				// Print all the references
+				if (description.staticRefs.containsKey(config.getConfigurationId()))
+					write(description.staticRefs.get(config.getConfigurationId()), writer);
+				writer.endTag(BUILD_CONFIG);
+			}
+			writer.endTag(BUILD_CONFIGS);
 		}
+
+		// Print the commands
+		ICommand[] cmds = description.getBuildSpec(false);
+		for (int i = 0; i < cmds.length; i++)
+			write(cmds[i], writer);
+
+		writer.endTag(BUILD_SPEC);
 	}
 
 	/**
@@ -251,12 +279,10 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			if (snapshotLocation != null) {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
-			write(REFERENCES, BUILD_CONFIG, NAME, null, description.staticRefs, writer);
-			// Store project references for backwards compatibility
+			// Project level references
 			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
-			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
+			writeBuildSpec(description, writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);
-			write(BUILD_CONFIGS, Arrays.asList(description.internalGetBuildConfigs(false)), description.internalGetActiveConfig(false), writer);
 			HashMap links = description.getLinks();
 			if (links != null) {
 				// ensure consistent order of map elements
@@ -288,15 +314,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		writer.startTag(name, null);
 		for (Iterator it = collection.iterator(); it.hasNext();)
 			write(it.next(), writer);
-		writer.endTag(name);
-	}
-
-	protected void write(String name, Collection collection, IBuildConfiguration activeConfig, XMLWriter writer) {
-		writer.startTag(name, null);
-		for (Iterator it = collection.iterator(); it.hasNext();) {
-			IBuildConfiguration config = (IBuildConfiguration) it.next();
-			write(config, config.equals(activeConfig), writer);
-		}
 		writer.endTag(name);
 	}
 

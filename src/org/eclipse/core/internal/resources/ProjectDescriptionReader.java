@@ -13,15 +13,10 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IBuildConfiguration;
-import org.eclipse.core.resources.IBuildConfigReference;
-
-
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
-import java.util.Map.Entry;
 import javax.xml.parsers.*;
 import org.eclipse.core.filesystem.URIUtil;
 import org.eclipse.core.internal.events.BuildCommand;
@@ -78,15 +73,13 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	protected static final int S_SNAPSHOT_LOCATION = 35;
 
 	protected static final int S_BUILD_CONFIGS = 36;
-	protected static final int S_BUILD_CONFIG_ID = 37;
+	protected static final int S_BUILD_CONFIG = 37;
+	protected static final int S_BUILD_CONFIG_ID = 38;	
+	protected static final int S_BUILD_CONFIG_NAME = 39;
+	protected static final int S_BUILD_CONFIG_REF = 40;
+	protected static final int S_BUILD_CONFIG_REF_PROJECT_NAME = 41;
+	protected static final int S_BUILD_CONFIG_REF_CONFIG_ID = 42;
 
-	protected static final int S_REFERENCES = 38;
-	protected static final int S_REFERENCES_CONFIG = 39;
-	protected static final int S_REFERENCES_CONFIG_ID = 40;
-	protected static final int S_REFERENCE = 41;
-	protected static final int S_REFERENCE_PROJECT_NAME = 42;
-	protected static final int S_REFERENCE_CONFIG_ID = 43;
-	
 	/**
 	 * Singleton sax parser factory
 	 */
@@ -436,40 +429,28 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_BUILD_CONFIGS :
 				endBuildConfigsElement(elementName);
 				break;
-			case S_BUILD_CONFIG_ID :
+			case S_BUILD_CONFIG :
 				if (elementName.equals(BUILD_CONFIG)) {
-					// FIXME don't store active configuration like this
-					// Top of stack is a boolean indicating if the configuration is active.
-					boolean isActive = ((Boolean) objectStack.pop()).booleanValue();
-					// Top of stack is the active configuration id.
-					String activeConfig = (String) objectStack.pop();
-					// Top of stack is a list of configuration names.
-					// A configuration Id can have leading/trailing whitespace.
-					String configurationId = charBuffer.toString();
-					((ArrayList) objectStack.peek()).add(configurationId);
-					// Put the active configuration id back on the stack
-					objectStack.push(isActive ? configurationId : activeConfig);
 					state = S_BUILD_CONFIGS;
+					BuildConfig bc = (BuildConfig)objectStack.pop();
+					// Add the build config to the array list of configs we're processing
+					((ArrayList) objectStack.peek()).add(bc);					
 				}
-			case S_REFERENCES :
-				endReferencesElement(elementName);
 				break;
-			case S_REFERENCES_CONFIG :
-				endReferencesBuildConfigElement(elementName);
+			case S_BUILD_CONFIG_ID :
+				if (elementName.equals(BUILD_CONFIG_ID)) {
+					state = S_BUILD_CONFIG;
+					String configurationId = charBuffer.toString();
+					((BuildConfig) objectStack.peek()).configId  = configurationId;
+				}
 				break;
-			case S_REFERENCES_CONFIG_ID :
-				// Top of stack is a container for the configuration id and references.
-				// A configuration id cannot have leading/trailing whitespace.
-				((ReferencesContainer) objectStack.peek()).configId = charBuffer.toString().trim();
-				state = S_REFERENCES_CONFIG;
-				break;
-			case S_REFERENCE :
+			case S_BUILD_CONFIG_REF :
 				endReferenceElement(elementName);
 				break;
-			case S_REFERENCE_PROJECT_NAME :
+			case S_BUILD_CONFIG_REF_PROJECT_NAME :
 				endReferenceProjectName(elementName);
 				break;
-			case S_REFERENCE_CONFIG_ID :
+			case S_BUILD_CONFIG_REF_CONFIG_ID :
 				endReferenceBuildConfigName(elementName);
 				break;
 		}
@@ -888,109 +869,56 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	/** End of a buildConfigs list */
 	private void endBuildConfigsElement(String elementName) {
 		if (elementName.equals(BUILD_CONFIGS)) {
-			// Pop the active configuration id off the stack
-			String activeConfig = (String) objectStack.pop();
 			// Pop the array list of configuration ids off the stack
-			List configIds = (List) objectStack.pop();
-			state = S_PROJECT_DESC;
-			if (configIds.size() == 0)
+			List bcs = (List) objectStack.pop();
+			state = S_BUILD_SPEC;
+			if (bcs.size() == 0)
 				// All projects have one ore more configurations,
 				// so leave the project with the default config if none
 				// are specified in the project description file
 				return;
-			IBuildConfiguration[] configs = new IBuildConfiguration[configIds.size()];
+
+			// Add the configurations
+			IBuildConfiguration[] configs = new IBuildConfiguration[bcs.size()];
 			int i = 0;
-			for (Iterator it = configIds.iterator(); it.hasNext(); i++)
-				configs[i] = projectDescription.newBuildConfiguration((String) it.next());
+			for (Iterator it = bcs.iterator(); it.hasNext(); i++)
+				configs[i] = projectDescription.newBuildConfiguration(((BuildConfig) it.next()).configId);
 			projectDescription.setBuildConfigurations(configs);
-			projectDescription.setActiveConfiguration(activeConfig);
-		}
-	}
 
-	/**
-	 * End of the top level references tag
-	 * Processes the map on the object stack to add the references
-	 * to the description.
-	 */
-	private void endReferencesElement(String elementName) {
-		if (elementName.equals(REFERENCES)) {
-			Map/*<String, List<ReferenceContainer.Reference>>*/ references = (Map) objectStack.pop();
-			state = S_PROJECT_DESC;
-			if (references.entrySet().isEmpty())
-				return;
-			Iterator i = references.entrySet().iterator();
-			while (i.hasNext()) {
-				Entry entry = (Entry) i.next();
-				String configId = (String) entry.getKey();
-
-				// Ensure the configuration exists, otherwise adding the references would fail
-				IBuildConfiguration[] existing = projectDescription.internalGetBuildConfigs(false);
-				IBuildConfiguration[] configs = new IBuildConfiguration[existing.length + 1];
-				System.arraycopy(existing, 0, configs, 0, existing.length);
-				IBuildConfiguration config = projectDescription.newBuildConfiguration(configId);
-				configs[configs.length - 1] = config;
-				projectDescription.setBuildConfigurations(configs);
-
-				// Convert the List<ReferencesContainer.Reference> to an IBuildConfigReference[]
+			// Now add the references
+			for (Iterator it = bcs.iterator(); it.hasNext(); i++) {
+				BuildConfig bc =  ((BuildConfig) it.next());
+				String configId = bc.configId;
 				List refs = new ArrayList();
 				IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-				for (Iterator it = ((List) entry.getValue()).iterator(); it.hasNext();) {
-					ReferencesContainer.Reference ref = (ReferencesContainer.Reference) it.next();
+				// Convert the List<ReferencesContainer.Reference> to an IBuildConfigReference[]
+				for (Iterator it2 = bc.refs.iterator(); it2.hasNext();) {
+					BuildConfig.Reference ref = (BuildConfig.Reference)it2.next();
 					refs.add(new BuildConfigReference(root.getProject(ref.projectName), ref.configId));
 				}
 				IBuildConfigReference[] refsArray = new IBuildConfigReference[refs.size()];
 				refs.toArray(refsArray);
 
 				projectDescription.setReferencedProjectConfigs(configId, refsArray);
+				// FIXME why do we have this?
+				loadedBuildConfigReferences = true;
 			}
-			loadedBuildConfigReferences = true;
-		}
-	}
-
-	/**
-	 * End the list of references for a specific config Id of the project being described
-	 * Reads the ReferencesContainer off the object stack and updates the reference map
-	 * on the object stack.
-	 */
-	private void endReferencesBuildConfigElement(String elementName) {
-		if (elementName.equals(BUILD_CONFIG)) {
-			state = S_REFERENCES;
-			// Pop off the references container
-			ReferencesContainer data = (ReferencesContainer) objectStack.pop();
-			if (data.refs.isEmpty())
-				return;
-			// The reference map is the next thing on the stack, so add the references to it
-			Map refsMap = (Map) objectStack.peek();
-			// If separate reference lists in the xml had the same config id, combine them
-			// while maintaining the correct order
-			List references;
-			if (refsMap.containsKey(data.configId)) {
-				references = (List) refsMap.get(data.configId);
-				references.addAll(data.refs);
-			} else
-				references = data.refs;
-			refsMap.put(data.configId, references);
 		}
 	}
 
 	/** End a single reference */
 	private void endReferenceElement(String elementName) {
-		if (elementName.equals(REFERENCE)) {
-			state = S_REFERENCES_CONFIG;
+		if (elementName.equals(BUILD_CONFIG_REF)) {
+			state = S_BUILD_CONFIG;
 			// Pop off the reference
-			ReferencesContainer.Reference reference = (ReferencesContainer.Reference) objectStack.pop();
+			BuildConfig.Reference reference = (BuildConfig.Reference) objectStack.pop();
 			// Make sure that you have something reasonable
 			if (reference.projectName == null) {
 				parseProblem(NLS.bind(Messages.projRead_missingReferenceProjectName, project.getName()));
 				return;
 			}
-//			if (reference.configId == null && project != null) {
-//				parseProblem(NLS.bind(Messages.projRead_missingReferenceBuildConfigId, project.getName()));
-//				return;
-//			}
-
-			// The references container is the next thing on the stack
-			((ReferencesContainer) objectStack.peek()).refs.add(reference);
+			// Add the reference to the BuildConfig on the stack
+			((BuildConfig)objectStack.peek()).refs.add(reference);
 		}
 	}
 
@@ -998,8 +926,8 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	private void endReferenceProjectName(String elementName) {
 		if (elementName.equals(PROJECT)) {
 			String value = charBuffer.toString();
-			((ReferencesContainer.Reference) objectStack.peek()).projectName = value;
-			state = S_REFERENCE;
+			((BuildConfig.Reference) objectStack.peek()).projectName = value;
+			state = S_BUILD_CONFIG_REF;
 		}
 	}
 
@@ -1007,8 +935,8 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	private void endReferenceBuildConfigName(String elementName) {
 		if (elementName.equals(BUILD_CONFIG)) {
 			String value = charBuffer.toString();
-			((ReferencesContainer.Reference) objectStack.peek()).configId = value;
-			state = S_REFERENCE;
+			((BuildConfig.Reference) objectStack.peek()).configId = value;
+			state = S_BUILD_CONFIG_REF;
 		}
 	}
 
@@ -1099,21 +1027,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			state = S_SNAPSHOT_LOCATION;
 			return;
 		}
-		if (elementName.equals(BUILD_CONFIGS)) {
-			state = S_BUILD_CONFIGS;
-			// Push an array list to hold all the configuration ids.
-			objectStack.push(new ArrayList());
-			// Push a place holder that will be replaced with the active config id.
-			objectStack.push(null);
-			return;
-		}
-		if (elementName.equals(REFERENCES)) {
-			state = S_REFERENCES;
-			// Push a map on the object stack to hold the references:
-			// config id -> list of IBuildConfiguration
-			objectStack.push(new HashMap());
-			return;
-		}
 	}
 
 	public ProjectDescription read(InputSource input) {
@@ -1198,6 +1111,9 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				if (elementName.equals(BUILD_COMMAND)) {
 					state = S_BUILD_COMMAND;
 					objectStack.push(new BuildCommand());
+				} else if (elementName.equals(BUILD_CONFIGS)) {
+					state = S_BUILD_CONFIGS;
+					objectStack.push(new ArrayList/*<BuildConfiguration>*/());
 				}
 				break;
 			case S_BUILD_COMMAND :
@@ -1304,46 +1220,36 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				break;
 			case S_BUILD_CONFIGS:
 				if (elementName.equals(BUILD_CONFIG)) {
+					state = S_BUILD_CONFIG;
+				}
+				break;
+			case S_BUILD_CONFIG:
+				if (elementName.equals(BUILD_CONFIG_ID)) {
 					state = S_BUILD_CONFIG_ID;
-					objectStack.push(new Boolean(attributes.getValue(ACTIVE_BUILD_CONFIG)));
+					objectStack.push(new BuildConfig());
+				} else if (elementName.equals(BUILD_CONFIG_REF)) {
+					state = S_BUILD_CONFIG_REF;
+					objectStack.push(new BuildConfig.Reference());
 				}
 				break;
-			case S_REFERENCES:
-				if (elementName.equals(BUILD_CONFIG)) {
-					state = S_REFERENCES_CONFIG;
-					// Push place holder for the build configuration
-					// references for this project configuration.
-					objectStack.push(new ReferencesContainer());
-				}
-				break;
-			case S_REFERENCES_CONFIG:
-				if (elementName.equals(NAME)) {
-					state = S_REFERENCES_CONFIG_ID;
-				} else if (elementName.equals(REFERENCE)) {
-					state = S_REFERENCE;
-					// Push place holder for the build config target of this reference.
-					objectStack.push(new ReferencesContainer.Reference());
-				}
-				break;
-			case S_REFERENCE:
+			case S_BUILD_CONFIG_REF:
 				if (elementName.equals(PROJECT)) {
-					state = S_REFERENCE_PROJECT_NAME;
+					state = S_BUILD_CONFIG_REF_PROJECT_NAME;
 				} else if (elementName.equals(BUILD_CONFIG)) {
-					state = S_REFERENCE_CONFIG_ID;
+					state = S_BUILD_CONFIG_REF_CONFIG_ID;
 				}
 				break;
 		}
 	}
 
 	// Container for a reference name and list of references, for storage on the object stack
-	private static class ReferencesContainer {
-		public static class Reference {
+	private static class BuildConfig {
+		private static class Reference {
 			public String projectName;
 			public String configId;
 		}
-		public ReferencesContainer() {}
-		public String configId = null;
-		public List/*<Reference>*/ refs = new ArrayList();
+		String configId;
+		ArrayList/*<Reference>*/ refs = new ArrayList();
 	}
 
 	/**

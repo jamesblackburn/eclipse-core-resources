@@ -15,10 +15,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IBuildConfiguration;
-import org.eclipse.core.resources.IBuildConfigReference;
-
-
 import java.net.URI;
 import java.util.*;
 import org.eclipse.core.filesystem.*;
@@ -47,7 +43,10 @@ public class Project extends Container implements IProject {
 	 * @since 3.6
 	 */
 	public static final int SNAPSHOT_SET_AUTOLOAD = 2;
-	
+
+	/** Key for the active build configuration ID for the project */
+	private static final QualifiedName ACTIVE_BUILD_CONFIGURATION = new QualifiedName(ResourcesPlugin.PI_RESOURCES, "activeConfigId"); //$NON-NLS-1$
+
 	protected Project(IPath path, Workspace container) {
 		super(path, container);
 	}
@@ -88,7 +87,6 @@ public class Project extends Container implements IProject {
 		current.setBuildSpec(description.getBuildSpec(true));
 
 		current.setBuildConfigurations(description.internalGetBuildConfigs(true));
-		current.setActiveConfiguration(description.internalGetActiveConfig(true).getConfigurationId());
 
 		// set the references before the natures 
 		boolean flushOrder = false;
@@ -1429,8 +1427,13 @@ public class Project extends Container implements IProject {
 		return internalGetBuildConfigs();
 	}
 
+	/**
+	 * @return IBuildConfiguration[] or an empty array if the project isn't accessible
+	 */
 	public IBuildConfiguration[] internalGetBuildConfigs() {
 		ProjectDescription desc = internalGetDescription();
+		if (desc == null)
+			return new IBuildConfiguration[0];
 		IBuildConfiguration[] configs = desc.internalGetBuildConfigs(true);
 		updateConfigurations(configs);
 		return configs;
@@ -1439,10 +1442,10 @@ public class Project extends Container implements IProject {
 	/* (non-Javadoc)
 	 * @see IProject#getBuildConfiguration(String)
 	 */
-	public IBuildConfiguration getBuildConfiguration(String name) throws CoreException {
+	public IBuildConfiguration getBuildConfiguration(String id) throws CoreException {
 		IBuildConfiguration[] configs = getBuildConfigurations();
 		for (int i = 0; i < configs.length; i++) {
-			if (configs[i].getConfigurationId().equals(name)) {
+			if (configs[i].getConfigurationId().equals(id)) {
 				return (BuildConfiguration)((BuildConfiguration) configs[i]).clone();
 			}
 		}
@@ -1474,19 +1477,45 @@ public class Project extends Container implements IProject {
 	 * @see IProject#getActiveBuildConfiguration()
 	 */
 	public IBuildConfiguration getActiveBuildConfiguration() throws CoreException {
-		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
-		checkAccessible(getFlags(info));
-		ProjectDescription desc = internalGetDescription();
-		IBuildConfiguration config = desc.internalGetActiveConfig(true);
-		updateConfiguration(config);
-		return config;
+		String configId =  getPersistentProperty(ACTIVE_BUILD_CONFIGURATION);
+		try {
+			return getBuildConfiguration(configId);
+		} catch (CoreException e) {
+			// Build configuration doesn't exist; treat the first as active.
+		}
+		return getBuildConfigurations()[0];
 	}
 
-	public IBuildConfiguration internalGetActiveBuildConfig() {
-		ProjectDescription desc = internalGetDescription();
-		IBuildConfiguration config = desc.internalGetActiveConfig(true);
-		updateConfiguration(config);
-		return config;
+	/**
+	 * Like {@link #getActiveBuildConfiguration()} but doesn't check accessibility.
+	 * Project must be accessible.
+	 * @see #getActiveBuildConfiguration()
+	 */
+	IBuildConfiguration internalGetActiveBuildConfig() {
+		try {
+			return getActiveBuildConfiguration();
+		} catch (CoreException e) {
+			// project not accessible
+		}
+		// Should we just return null here?
+		Assert.isTrue(false, "Project not accessible!"); //$NON-NLS-1$
+		return null;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see IProject#setActiveBuildConfiguration(String configId)
+	 */
+	public void setActiveBuildConfiguration(String configId) throws CoreException {
+		Assert.isNotNull(configId);
+		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
+		checkAccessible(getFlags(info));
+		try {
+			getBuildConfiguration(configId);
+			setPersistentProperty(ACTIVE_BUILD_CONFIGURATION, configId);
+		} catch (CoreException e) {
+			// Configuration doesn't exist in project. Nothing to do.
+		}
 	}
 
 	private void updateConfiguration(IBuildConfiguration value) {

@@ -406,22 +406,10 @@ public interface IProjectDescription {
 	 * 
 	 * @param configs the configurations to set for the described project
 	 * @see IProject#getBuildConfigurations()
-	 * @see IProjectDescription#setActiveConfiguration(String)
+	 * @see IProject#setActiveBuildConfiguration(String)
 	 * @see IProject#getActiveBuildConfiguration()
 	 * @since 3.7
 	 */
 	public void setBuildConfigurations(IBuildConfiguration[] configs);
 
-	/**
-	 * FIXME: Move this to IProject ? 
-	 * Sets the active configuration for the described project.
-	 * <p>
-	 * If a configuration with the specified name does not exist in the project then this has
-	 * no effect.
-	 * </p>
-	 *
-	 * @param configId the configuration to set as the active or default
-	 * @since 3.7
-	 */
-	public void setActiveConfiguration(String configId);
 }

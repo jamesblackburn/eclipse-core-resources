@@ -123,4 +123,16 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 		result.append(name);
 		return result.toString();
 	}
+
+	/**
+	 * @return boolean indicating if this configuration is a default auto-generated one.
+	 */
+	public boolean isDefault() {
+		// FIXME
+		if (!DEFAULT_CONFIG_ID.equals(name))
+			return false;
+		// Check the name
+		// Check the references
+		return true;
+	}
 }
