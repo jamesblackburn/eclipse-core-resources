@@ -14,10 +14,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IBuildConfiguration;
-import org.eclipse.core.resources.IBuildConfigReference;
-
-
 import java.net.URI;
 import java.util.*;
 import org.eclipse.core.filesystem.URIUtil;
@@ -791,8 +787,12 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public void setReferencedProjects(IProject[] projects) {
 		Assert.isLegal(projects != null);
 		// Add all buildConfigs in each of the projects as a reference
-		for (int i = 0; i < buildConfigs.length; i++)
-			setReferencedProjectConfigs(buildConfigs[i].getConfigurationId(), getBuildConfigReferencesFromProjects(projects));
+		for (int i = 0; i < buildConfigs.length; i++) {
+			Set configRefs = new LinkedHashSet();
+			configRefs.addAll(getBuildConfigReferencesFromProjects(projects));
+			configRefs.addAll(Arrays.asList(getReferencedProjectConfigs(buildConfigs[i].getConfigurationId(), false)));
+			setReferencedProjectConfigs(buildConfigs[i].getConfigurationId(), (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
+		}
 	}
 
 	/* (non-Javadoc)
@@ -817,8 +817,14 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public void setDynamicReferences(IProject[] projects) {
 		Assert.isLegal(projects != null);
-		for (int i = 0; i < buildConfigs.length; i++)
-			setDynamicConfigReferences(buildConfigs[i].getConfigurationId(), getBuildConfigReferencesFromProjects(projects));
+		for (int i = 0; i < buildConfigs.length; i++) {
+			// To interact with users of the old API, we just add references to the active configuration
+			// To the set of existing build configuration references
+			Set configRefs = new LinkedHashSet();
+			configRefs.addAll(getBuildConfigReferencesFromProjects(projects));
+			configRefs.addAll(Arrays.asList(getDynamicConfigReferences(buildConfigs[i].getConfigurationId(), false)));
+			setDynamicConfigReferences(buildConfigs[i].getConfigurationId(), (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
+		}
 	}
 
 	/**
@@ -841,27 +847,20 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
-	 * FIXME does this do the right thing?
-	 * Get a list of build config references, without duplicates, from a list of projects.
-	 * A reference to each of the buildConfigs for each of the projects is returned.
+	 * Turns an array of projects into an array of {@link IBuildConfigReference} to the
+	 * projects' active configuration
+
 	 * Order is preserved - the buildConfigs appear for each project in the order
 	 * that the projects were specified.
-	 * If the project is not accessible, a reference is added to its active configuration.
-	 * @param projects projects to get the build configs from
+	 * @param projects projects to get the active configuration from
 	 * @return list of build config references
 	 */
-	private IBuildConfigReference[] getBuildConfigReferencesFromProjects(IProject[] projects) {
+	private List getBuildConfigReferencesFromProjects(IProject[] projects) {
 		List refs = new ArrayList();
 		for (int i = 0; i < projects.length; i++) {
 			IProject project = projects[i];
-			if (project.isAccessible()) {
-				IBuildConfiguration[] configs = ((Project) project).internalGetBuildConfigs();
-				for (int j = 0; j < configs.length; j++) {
-					refs.add(new BuildConfigReference(project, configs[j].getConfigurationId()));
-				}
-			} else
-				refs.add(new BuildConfigReference(project));
+			refs.add(new BuildConfigReference(project));
 		}
-		return (IBuildConfigReference[]) refs.toArray(new IBuildConfigReference[refs.size()]);
+		return refs;
 	}
 }

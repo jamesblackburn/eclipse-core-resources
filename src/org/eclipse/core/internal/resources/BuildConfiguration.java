@@ -10,9 +10,9 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IBuildConfiguration;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.resources.*;
+import org.eclipse.core.runtime.*;
 
 /**
  * Concrete implementation of a build configuration
@@ -142,6 +142,9 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 	}
 
 	/**
+	 * Helper method used to work out if we need to persist the project's build configurations
+	 * need to be persisted in the .project.
+	 * If the user isn't using build configurations then no need to clutter the project XML.
 	 * @return boolean indicating if this configuration is a default auto-generated one.
 	 */
 	public boolean isDefault() {
@@ -149,7 +152,21 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 			return false;
 		if (name != null)
 			return false;
-		// FIXME Check the references
+		// If any of the build configuration references don't track the active conifguration,
+		// then this build configuration isn't default
+		if (project != null) {
+			try {
+				IBuildConfigReference[] refs = project.getDescription().getReferencedProjectConfigs(id);
+				for (int i = 0; i < refs.length; i++)
+					if (refs[i].getConfigurationId() != null)
+						return false;
+			} catch (CoreException e) {
+				// Should never happen
+				IStatus result = new Status(e.getStatus().getSeverity(), ResourcesPlugin.PI_RESOURCES, "Unexpected exception", e); //$NON-NLS-1$
+				Policy.log(result);
+				return false;
+			}
+		}
 		return true;
 	}
 }
