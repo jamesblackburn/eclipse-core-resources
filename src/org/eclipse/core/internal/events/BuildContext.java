@@ -17,7 +17,7 @@ import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 
 /**
- * @noextend This class is not intended to be subclassed by clients.
+ * Concrete implementation of a build context
  */
 public class BuildContext implements IBuildContext {
 	/** The build configuration for which this context applies. */
