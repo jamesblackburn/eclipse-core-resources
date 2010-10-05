@@ -1780,6 +1780,53 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 		output.writeInt(info.getFlags());
 		info.writeTo(output);
 	}
+	
+	/**
+	 * Discovers the trees which need to be saved for the passed in project's builders.
+	 * In a version2 workspace, only one tree is saved per builder.  With version3, one tree may 
+	 * be persisted per build configuration per multi-config builder.
+	 * 
+	 * We still provide one tree per builder first so the workspace can be opened in an older Eclipse.
+	 * Newer eclipses will be able to load the additional per-configuration trees.
+	 * @param project project to fetch builder trees for
+	 * @param trees list of trees to be persisted
+	 * @param builderInfosVersion2 list of builder infos; one per builder 
+	 * @param configIdsVersion2 configuration id persisted in builderInfosVersion2
+	 * @param builderInfosVersion3 remaining trees to be persisted for other configurations
+	 * @param configIdsVersion3 configuration ids of the remaining per-configuration trees
+	 * @throws CoreException
+	 */
+	private void getTreesToSave(IProject project, List trees, List builderInfosVersion2, List configIdsVersion2, List builderInfosVersion3, List configIdsVersion3) throws CoreException {
+		if (project.isOpen()) {
+			String activeConfigId = project.getActiveBuildConfiguration().getConfigurationId();
+			List infos = workspace.getBuildManager().createBuildersPersistentInfo(project);
+			if (infos != null) {
+				for (Iterator it = infos.iterator(); it.hasNext();) {
+					BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
+					// Nothing to persist if there isn't a previous delta tree.
+					// There used to be code which serialized the current workspace tree 
+					// but this will result in the next build of the builder getting an empty delta...
+					if (info.getLastBuiltTree() == null)
+						continue;
+
+					// Add to the correct list of builders info and add to the configuration ids
+					String configId = info.getConfigurationId() == null ? activeConfigId : info.getConfigurationId();
+					if (configId.equals(activeConfigId)) {
+						// Serializes the active configurations's build tree 
+						// TODO could probably do better by serializing the 'oldest' tree
+						builderInfosVersion2.add(info);
+						configIdsVersion2.add(configId);
+					} else {
+						builderInfosVersion3.add(info);
+						configIdsVersion3.add(configId);
+					}
+					// Add the builder's tree
+					ElementTree tree = info.getLastBuiltTree();
+					trees.add(tree);
+				}
+			}
+		}
+	}
 
 	/**
 	 * Attempts to save plugin info, builder info and build states for all projects
@@ -1835,38 +1882,8 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				List configIdsVersion2 = new ArrayList(projects.length);
 				List builderInfosVersion3 = new ArrayList(projects.length * 2);
 				List configIdsVersion3 = new ArrayList(projects.length);
-				for (int i = 0; i < projects.length; i++) {
-					IProject project = projects[i];
-					if (project.isOpen()) {
-						String activeConfigId = project.getActiveBuildConfiguration().getConfigurationId();
-						List infos = workspace.getBuildManager().createBuildersPersistentInfo(project);
-						if (infos != null) {
-							for (Iterator it = infos.iterator(); it.hasNext();) {
-								BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
-								// Nothing to persist if there isn't a previous delta tree.
-								// There used to be code which serialized the current workspace tree 
-								// but this will result in the next build of the builder getting an empty delta...
-								if (info.getLastBuiltTree() == null)
-									continue;
-
-								// Add to the correct list of builders info and add to the configuration ids
-								String configId = info.getConfigurationId() == null ? activeConfigId : info.getConfigurationId();
-								if (configId.equals(activeConfigId)) {
-									// Serializes the active configurations's build tree 
-									// TODO could probably do better by serializing the 'oldest' tree
-									builderInfosVersion2.add(info);
-									configIdsVersion2.add(configId);
-								} else {
-									builderInfosVersion3.add(info);
-									configIdsVersion3.add(configId);
-								}
-								// Add the builder's tree
-								ElementTree tree = info.getLastBuiltTree();
-								trees.add(tree);
-							}
-						}
-					}
-				}
+				for (int i = 0; i < projects.length; i++)
+					getTreesToSave(projects[i], trees, builderInfosVersion2, configIdsVersion2, builderInfosVersion3, configIdsVersion3);
 
 				// Save the version 2 builders info
 				writeBuilderPersistentInfo(output, builderInfosVersion2, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
@@ -1887,10 +1904,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				writeBuilderPersistentInfo(output, builderInfosVersion3, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
 
 				// Save the configuration ids for the builders in the order they were saved
-				List configIds = new ArrayList(configIdsVersion2.size() + configIdsVersion3.size());
-				configIds.addAll(configIdsVersion2);
-				configIds.addAll(configIdsVersion3);
-				for (Iterator it = configIds.iterator(); it.hasNext();)
+				for (Iterator it = configIdsVersion2.iterator(); it.hasNext();)
+					output.writeUTF((String) it.next());
+				for (Iterator it = configIdsVersion3.iterator(); it.hasNext();)
 					output.writeUTF((String) it.next());
 			} finally {
 				if (!wasImmutable)
@@ -1936,36 +1952,11 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				monitor.worked(Policy.totalWork * 10 / 100);
 
 				// Get the the builder info and configuration ids, and add all the associated workspace trees in the correct order
-				List builderInfos = workspace.getBuildManager().createBuildersPersistentInfo(project);
 				List configIdsVersion2 = new ArrayList(5);
 				List builderInfosVersion2 = new ArrayList(5);
 				List configIdsVersion3 = new ArrayList(5);
 				List builderInfosVersion3 = new ArrayList(5);
-				if (builderInfos != null) {
-					String activeConfigId = project.getActiveBuildConfiguration().getConfigurationId();
-					for (Iterator it = builderInfos.iterator(); it.hasNext();) {
-						BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
-						// Nothing to persist if there isn't a previous delta tree.
-						// There used to be code which serialized the current workspace tree 
-						// but this will result in the next build of the builder getting an empty delta...
-						if (info.getLastBuiltTree() == null)
-							continue;
-
-						// Add to the correct list of builders info and add to the configuration ids
-						String configId = info.getConfigurationId() == null ? activeConfigId : info.getConfigurationId();
-						if (configId.equals(activeConfigId)) {
-							// Serializes the active configurations's build tree 
-							builderInfosVersion2.add(info);
-							configIdsVersion2.add(configId);
-						} else {
-							builderInfosVersion3.add(info);
-							configIdsVersion3.add(configId);
-						}
-						// Add the builder's tree
-						ElementTree tree = info.getLastBuiltTree();
-						trees.add(tree);
-					}
-				}
+				getTreesToSave(project, trees, builderInfosVersion2, configIdsVersion2, builderInfosVersion3, configIdsVersion3);
 
 				// Save the version 2 builders info
 				writeBuilderPersistentInfo(output, builderInfosVersion2, Policy.subMonitorFor(monitor, Policy.totalWork * 20 / 100));
@@ -1986,10 +1977,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				writeBuilderPersistentInfo(output, builderInfosVersion3, Policy.subMonitorFor(monitor, Policy.totalWork * 20 / 100));
 
 				// Save configuration ids for the builders in the order they were saved
-				List configIds = new ArrayList(configIdsVersion2.size() + configIdsVersion3.size());
-				configIds.addAll(configIdsVersion2);
-				configIds.addAll(configIdsVersion3);
-				for (Iterator it = configIds.iterator(); it.hasNext();)
+				for (Iterator it = configIdsVersion2.iterator(); it.hasNext();)
+					output.writeUTF((String) it.next());
+				for (Iterator it = configIdsVersion3.iterator(); it.hasNext();)
 					output.writeUTF((String) it.next());
 			} finally {
 				if (output != null)
