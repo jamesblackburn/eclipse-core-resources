@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
+import org.eclipse.core.resources.IBuildConfiguration;
+
 import java.util.*;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
@@ -18,42 +20,42 @@ import org.eclipse.core.runtime.*;
  * @noextend This class is not intended to be subclassed by clients.
  */
 public class BuildContext implements IBuildContext {
-	/** The project variant for which this context applies. */
-	private final IProjectVariant projectVariant;
+	/** The build configuration for which this context applies. */
+	private final IBuildConfiguration buildConfiguration;
 	/** The build order for the build that this context is part of. */
-	private final IProjectVariant[] buildOrder;
-	/** The position in the build order array that this project variant is. */
+	private final IBuildConfiguration[] buildOrder;
+	/** The position in the build order array that this project configuration is. */
 	private final int buildOrderPosition;
 
-	static final IProjectVariant[] EMPTY_PROJECT_VARIANT_ARRAY = new IProjectVariant[0];
+	private static final IBuildConfiguration[] EMPTY_BUILD_CONFIGURATION_ARRAY = new IBuildConfiguration[0];
 
-	/** Cached lists of referenced and referencing projects and project variants */
+	/** Cached lists of referenced and referencing projects and project configurations */
 	private IProject[] cachedReferencedProjects = null;
-	private IProjectVariant[] cachedReferencedProjectVariants = null;
+	private IBuildConfiguration[] cachedReferencedBuildConfigurations = null;
 	private IProject[] cachedReferencingProjects = null;
-	private IProjectVariant[] cachedReferencingProjectVariants = null;
+	private IBuildConfiguration[] cachedReferencingBuildConfigurations = null;
 
 	/**
-	 * Create an empty build context for the given project variant.
-	 * @param projectVariant the project variant being built, that we need the context for
+	 * Create an empty build context for the given project configuration.
+	 * @param buildConfiguration the project configuration being built, that we need the context for
 	 */
-	public BuildContext(IProjectVariant projectVariant) {
-		this.projectVariant = projectVariant;
-		buildOrder = EMPTY_PROJECT_VARIANT_ARRAY;
+	public BuildContext(IBuildConfiguration buildConfiguration) {
+		this.buildConfiguration = buildConfiguration;
+		buildOrder = EMPTY_BUILD_CONFIGURATION_ARRAY;
 		buildOrderPosition = -1;
 	}
 
 	/**
-	 * Create a build context for the given project variant.
-	 * @param projectVariant the project variant being built, that we need the context for
+	 * Create a build context for the given project configuration.
+	 * @param buildConfiguration the project configuration being built, that we need the context for
 	 * @param buildOrder the build order for the entire build, indicating how cycles etc. have been resolved
 	 */
-	public BuildContext(IProjectVariant projectVariant, IProjectVariant[] buildOrder) {
-		this.projectVariant = projectVariant;
+	public BuildContext(IBuildConfiguration buildConfiguration, IBuildConfiguration[] buildOrder) {
+		this.buildConfiguration = buildConfiguration;
 		this.buildOrder = buildOrder;
 		int position = -1;
 		for (int i = 0; i < buildOrder.length; i++) {
-			if (buildOrder[i].equals(projectVariant))
+			if (buildOrder[i].equals(buildConfiguration))
 			{
 				position = i;
 				break;
@@ -68,21 +70,21 @@ public class BuildContext implements IBuildContext {
 	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedProjects()
 	 */
 	public IProject[] getAllReferencedProjects() {
-		if (cachedReferencedProjectVariants == null)
-			cachedReferencedProjectVariants = computeReferenced();
+		if (cachedReferencedBuildConfigurations == null)
+			cachedReferencedBuildConfigurations = computeReferenced();
 		if (cachedReferencedProjects == null)
-			cachedReferencedProjects = projectVariantsToProjects(cachedReferencedProjectVariants);
+			cachedReferencedProjects = projectConfigurationsToProjects(cachedReferencedBuildConfigurations);
 		return (IProject[]) cachedReferencedProjects.clone();
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedProjectVariants()
+	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedBuildConfigurations()
 	 */
-	public IProjectVariant[] getAllReferencedProjectVariants() {
-		if (cachedReferencedProjectVariants == null)
-			cachedReferencedProjectVariants = computeReferenced();
-		return (IProjectVariant[]) cachedReferencedProjectVariants.clone();
+	public IBuildConfiguration[] getAllReferencedBuildConfigurations() {
+		if (cachedReferencedBuildConfigurations == null)
+			cachedReferencedBuildConfigurations = computeReferenced();
+		return (IBuildConfiguration[]) cachedReferencedBuildConfigurations.clone();
 	}
 
 	/*
@@ -90,65 +92,65 @@ public class BuildContext implements IBuildContext {
 	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencingProjects()
 	 */
 	public IProject[] getAllReferencingProjects() {
-		if (cachedReferencingProjectVariants == null)
-			cachedReferencingProjectVariants = computeReferencing();
+		if (cachedReferencingBuildConfigurations == null)
+			cachedReferencingBuildConfigurations = computeReferencing();
 		if (cachedReferencingProjects == null)
-			cachedReferencingProjects = projectVariantsToProjects(cachedReferencingProjectVariants);
+			cachedReferencingProjects = projectConfigurationsToProjects(cachedReferencingBuildConfigurations);
 		return (IProject[]) cachedReferencingProjects.clone();
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencingProjectVariants()
+	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencingBuildConfigurations()
 	 */
-	public IProjectVariant[] getAllReferencingProjectVariants() {
-		if (cachedReferencingProjectVariants == null)
-			cachedReferencingProjectVariants = computeReferencing();
-		return (IProjectVariant[]) cachedReferencingProjectVariants.clone();
+	public IBuildConfiguration[] getAllReferencingBuildConfigurations() {
+		if (cachedReferencingBuildConfigurations == null)
+			cachedReferencingBuildConfigurations = computeReferencing();
+		return (IBuildConfiguration[]) cachedReferencingBuildConfigurations.clone();
 	}
 
-	private IProjectVariant[] computeReferenced() {
-		Set previousVariants = new HashSet();
+	private IBuildConfiguration[] computeReferenced() {
+		Set previousConfigs = new HashSet();
 		for (int i = 0; i < buildOrderPosition; i++)
-			previousVariants.add(buildOrder[i]);
+			previousConfigs.add(buildOrder[i]);
 
-		// Do a depth first search of the project variant's references to construct
+		// Do a depth first search of the project configuration's references to construct
 		// the references graph.
-		return computeReachable(projectVariant, previousVariants, new GetChildrenFunctor() {
-			public IProjectVariant[] run(IProjectVariant variant) {
+		return computeReachable(buildConfiguration, previousConfigs, new GetChildrenFunctor() {
+			public IBuildConfiguration[] run(IBuildConfiguration configuration) {
 				try {
-					return variant.getProject().getReferencedProjectVariants(variant);
+					return configuration.getProject().getReferencedBuildConfigurations(configuration);
 				} catch (CoreException e) {
-					return EMPTY_PROJECT_VARIANT_ARRAY;
+					return EMPTY_BUILD_CONFIGURATION_ARRAY;
 				}
 			}
 		});
 	}
 
-	private IProjectVariant[] computeReferencing() {
-		Set subsequentVariants = new HashSet();
+	private IBuildConfiguration[] computeReferencing() {
+		Set subsequentConfigs = new HashSet();
 		for (int i = buildOrderPosition+1; i < buildOrder.length; i++)
-			subsequentVariants.add(buildOrder[i]);
+			subsequentConfigs.add(buildOrder[i]);
 
-		// Do a depth first search of the project variant's referencing variants
+		// Do a depth first search of the project configuration's referencing configurations
 		// to construct the referencing graph.
-		return computeReachable(projectVariant, subsequentVariants, new GetChildrenFunctor() {
-			public IProjectVariant[] run(IProjectVariant variant) {
-				return variant.getProject().getReferencingProjectVariants(variant);
+		return computeReachable(buildConfiguration, subsequentConfigs, new GetChildrenFunctor() {
+			public IBuildConfiguration[] run(IBuildConfiguration configuration) {
+				return configuration.getProject().getReferencingBuildConfigurations(configuration);
 			}
 		});
 	}
 
 	private static interface GetChildrenFunctor {
-		IProjectVariant[] run(IProjectVariant variant);
+		IBuildConfiguration[] run(IBuildConfiguration configuration);
 	}
 
 	/**
 	 * Perform a depth first search from the given root using the a functor to
 	 * get the children for each item.
-	 * @returns A set containing all the reachable project variants from the given root.
+	 * @returns A set containing all the reachable project configurations from the given root.
 	 */
-	private IProjectVariant[] computeReachable(IProjectVariant root, Set filter, GetChildrenFunctor getChildren) {
+	private IBuildConfiguration[] computeReachable(IBuildConfiguration root, Set filter, GetChildrenFunctor getChildren) {
 		Set result = new HashSet();
 		Stack stack = new Stack();
 		stack.push(root);
@@ -158,11 +160,11 @@ public class BuildContext implements IBuildContext {
 			result.add(root);
 
 		while (!stack.isEmpty()) {
-			IProjectVariant variant = (IProjectVariant) stack.pop();
-			visited.add(variant);
-			IProjectVariant[] refs = getChildren.run(variant);
+			IBuildConfiguration configuration = (IBuildConfiguration) stack.pop();
+			visited.add(configuration);
+			IBuildConfiguration[] refs = getChildren.run(configuration);
 			for (int i = 0; i < refs.length; i++) {
-				IProjectVariant ref = refs[i];
+				IBuildConfiguration ref = refs[i];
 
 				if (!filter.contains(ref))
 					continue;
@@ -176,16 +178,16 @@ public class BuildContext implements IBuildContext {
 			}
 		}
 
-		return (IProjectVariant[]) result.toArray(new IProjectVariant[result.size()]);
+		return (IBuildConfiguration[]) result.toArray(new IBuildConfiguration[result.size()]);
 	}
 
 	/**
-	 * Convert a list of project variants to projects, while removing duplicates.
+	 * Convert a list of project configurations to projects, while removing duplicates.
 	 */
-	private IProject[] projectVariantsToProjects(IProjectVariant[] projectVariants) {
+	private IProject[] projectConfigurationsToProjects(IBuildConfiguration[] configs) {
 		Set set = new HashSet();
-		for (int i = 0; i < projectVariants.length; i++)
-			set.add(projectVariants[i].getProject());
+		for (int i = 0; i < configs.length; i++)
+			set.add(configs[i].getProject());
 		return (IProject[]) set.toArray(new IProject[set.size()]);
 	}
 
@@ -197,7 +199,7 @@ public class BuildContext implements IBuildContext {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + buildOrderPosition;
-		result = prime * result + projectVariant.hashCode();
+		result = prime * result + buildConfiguration.hashCode();
 		for (int i = 0; i < buildOrder.length; i++)
 			result = prime * result + buildOrder[i].hashCode();
 		return result;
@@ -215,7 +217,7 @@ public class BuildContext implements IBuildContext {
 		BuildContext context = (BuildContext) obj;
 		if (buildOrderPosition != context.buildOrderPosition)
 			return false;
-		if (!projectVariant.equals(context.projectVariant))
+		if (!buildConfiguration.equals(context.buildConfiguration))
 			return false;
 		if (!Arrays.equals(buildOrder, context.buildOrder))
 			return false;

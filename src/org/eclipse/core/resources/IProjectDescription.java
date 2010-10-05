@@ -7,9 +7,11 @@
  * 
  *  Contributors:
  *     IBM Corporation - initial API and implementation
- *     Broadcom Corporation - project variants and references
+ *     Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.resources;
+
+
 
 import java.net.URI;
 import org.eclipse.core.runtime.IPath;
@@ -234,7 +236,7 @@ public interface IProjectDescription {
 	 *
 	 * @see #getDynamicReferences()
 	 * @return a list of projects
-	 * @see #getReferencedProjectVariants(String)
+	 * @see #getReferencedProjectConfigs(String)
 	 */
 	public IProject[] getReferencedProjects();
 
@@ -249,7 +251,7 @@ public interface IProjectDescription {
 	 *
 	 * @param projects a list of projects
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @see #setReferencedProjectVariants(String, IProjectVariantReference[])
+	 * @see IProjectDescription#setReferencedProjectConfigs(String, IBuildConfigReference[])
 	 */
 	public void setReferencedProjects(IProject[] projects);
 
@@ -271,7 +273,7 @@ public interface IProjectDescription {
 	 * @see #setDynamicReferences(IProject[])
 	 * @return a list of projects
 	 * @since 3.0
-	 * @see #getDynamicVariantReferences(String)
+	 * @see #getDynamicConfigReferences(String)
 	 */
 	public IProject[] getDynamicReferences();
 
@@ -287,52 +289,53 @@ public interface IProjectDescription {
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
 	 * @param projects list of projects
 	 * @since 3.0
-	 * @see #setDynamicVariantReferences(String, IProjectVariantReference[])
+	 * @see #setDynamicConfigReferences(String, IBuildConfigReference[])
 	 */
 	public void setDynamicReferences(IProject[] projects);
 
 	/**
-	 * Returns the project variants references for the specified variant in the
+	 * Returns the project build configuration references for the specified configuration in the
 	 * described project. These references are persisted in the project description
 	 * file (&quot;.project&quot;) and as such will be shared whenever the project 
 	 * is exported to another workspace. For references that are likely to change from
 	 * one workspace to another, dynamic references should be used instead.
 	 * <p>
-	 * The referenced project variants need not exist in the workspace.
+	 * The referenced build configurations need not exist in the workspace.
 	 * The result will not contain duplicates. The order of the references is preserved
-	 * from the call to {@link #setReferencedProjectVariants(String, IProjectVariantReference[])}.
-	 * Returns an empty array if there are no referenced project variants in this
-	 * description for the given variant, or the given variant does not exist in this description.
+	 * from the call to {@link #setReferencedProjectConfigs(String, IBuildConfigReference[])}.
+	 * Returns an empty array if there are no referenced build configurations in this
+	 * description for the given configuration Id, or the given configuration Id does not exist in 
+	 * this description.
 	 *
-	 * @param variant the variant in the described project to get the references for
-	 * @return a list of project variants; or null if the variant does not exist.
-	 * @see #setReferencedProjectVariants(String, IProjectVariantReference[])
+	 * @param configId the configuration in the described project to get the references for
+	 * @return an array of build configuration references
+	 * @see #setReferencedProjectConfigs(String, IBuildConfigReference[])
 	 * @since 3.7
 	 */
-	public IProjectVariantReference[] getReferencedProjectVariants(String variant);
+	public IBuildConfigReference[] getReferencedProjectConfigs(String configId);
 
 	/**
-	 * Sets the referenced project variants for the specified variant in this description.
+	 * Sets the referenced build configurations for the specified configId in this description.
 	 * <p>
-	 * The variant to which references are being added needs to exist in this
-	 * description, but the referenced projects and variants need not exist.
-	 * Duplicates will be removed. The order of the referenced project variants
-	 * is preserved. If the given variant does not exist in this description then this
+	 * The build configuration id to which references are being added needs to exist in this
+	 * description, but the referenced projects and build configurations need not exist.
+	 * Duplicates will be removed. The order of the referenced build configurations
+	 * is preserved. If a configuration with specified id does not exist in this description then this
 	 * has no effect.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
 	 * </p>
 	 *
-	 * @param variant the variant in the described project to add the references for
-	 * @param references a list of project variant references
-	 * @see #getReferencedProjectVariants(String)
+	 * @param configId the configuration Id in the described project to add the references for
+	 * @param references a list of build configuration references
+	 * @see #getReferencedProjectConfigs(String)
 	 * @since 3.7
 	 */
-	public void setReferencedProjectVariants(String variant, IProjectVariantReference[] references);
+	public void setReferencedProjectConfigs(String configId, IBuildConfigReference[] references);
 
 	/**
-	 * Returns the project variants referenced dynamically by the specified variant for the
+	 * Returns the build configurations referenced dynamically by the specified configuration Id for the
 	 * described project. Dynamic references can be used instead of simple references
 	 * in cases where the reference information is computed dynamically by a third party.
 	 * These references are persisted by the workspace in a private location outside the
@@ -340,83 +343,73 @@ public interface IProjectDescription {
 	 * or persisted in a repository.  A client using dynamic references is always
 	 * responsible for setting these references when a project is created or recreated.
 	 * <p>
-	 * The referenced project variants need not exist in the workspace.
+	 * The referenced build configurations need not exist in the workspace.
 	 * The result will not contain duplicates. The order of the references is preserved
-	 * from the call to {@link #setDynamicVariantReferences(String, IProjectVariantReference[])}.
-	 * Returns an empty array if there are no dynamically referenced project variants on this
-	 * description for the given variant, or the given variant does not exist in this description..
+	 * from the call to {@link #setDynamicConfigReferences(String, IBuildConfigReference[])}.
+	 * Returns an empty array if the provided config doesn't dynamically reference 
+	 * any other build configurations, or the given config does not exist in this description.
 	 * 
-	 * @param variant the variant in the described project to get the references for
-	 * @return a list of dynamic project variants; or null if the variant does not exist.
-	 * @see #getReferencedProjectVariants(String)
-	 * @see #setDynamicVariantReferences(String, IProjectVariantReference[])
+	 * @param configId the configuration Id in the described project to get the references for
+	 * @return a list of dynamic build configurations
+	 * @see #getReferencedProjectConfigs(String)
+	 * @see #setDynamicConfigReferences(String, IBuildConfigReference[])
 	 * @since 3.7
 	 */
-	public IProjectVariantReference[] getDynamicVariantReferences(String variant);
+	public IBuildConfigReference[] getDynamicConfigReferences(String configId);
 
 	/**
-	 * Sets the dynamically referenced project variants for the specified variant.
+	 * Sets the dynamically referenced build configurations for the specified configuration.
 	 * <p>
-	 * The variant to which references are being added needs to exist in this
-	 * description, but the referenced projects and variants need not exist.
-	 * Duplicates will be removed. The order of the referenced project variants is preserved.
-	 * If the given variant does not exist in this description then this has no effect.
+	 * The configuration to which references are being added needs to exist in this
+	 * description, but the referenced projects and build configurations need not exist.
+	 * Duplicates will be removed. The order of the referenced build configurations is preserved.
+	 * If the given configuration does not exist in this description then this has no effect.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
 	 * </p>
 	 * 
-	 * @see #getDynamicVariantReferences(String)
+	 * @see #getDynamicConfigReferences(String)
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @param variant the variant in the described project to set the references for
-	 * @param references list of project variant references
+	 * @param configId the configuration in the described project to set the references for
+	 * @param references list of build configuration references
 	 * @since 3.7
 	 */
-	public void setDynamicVariantReferences(String variant, IProjectVariantReference[] references);
+	public void setDynamicConfigReferences(String configId, IBuildConfigReference[] references);
 
 	/**
-	 * Returns a new project variant for the described project, with the given name.
+	 * Returns a new build configuration for the described project, with the given name.
 	 * <p>
-	 * Note that the new project variant does not become part of this project
-	 * description until it is installed using {@link #setVariants(IProjectVariant[])}
+	 * Note that the new build configuration does not become part of this project
+	 * description until it is installed using {@link #setBuildConfigurations(IBuildConfiguration[])}
 	 * </p>
 	 *
-	 * @param name the name for the variant
-	 * @return a project variant
-	 * @see #setVariants(IProjectVariant[])
+	 * @param id the application specific unique id of the configuration
+	 * @return a project build configuration
+	 * @see #setBuildConfigurations(IBuildConfiguration[])
 	 * @since 3.7
 	 */
-	public IProjectVariant newVariant(String name);
+	public IBuildConfiguration newBuildConfiguration(String id);
 
 	/**
-	 * Sets the variants for the described project.
+	 * Sets the build configurations for the described project.
 	 * <p>
 	 * Before they are set, duplicates are removed from the input.
 	 * <p>
-	 * If the input is null or an empty list, the current variants are removed
-	 * and a default variant is added. It is impossible to configure a project
-	 * to have no variants.
+	 * All projects have one default build configuration, and it is impossible to configure
+	 * the project with no build configurations.
+	 * If the input is null or an empty list, the current configurations are removed,
+	 * and a default build configuration is (re-)added.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
 	 * 
-	 * @param variants the variants to set for the described project
-	 * @see IProject#getVariants()
-	 * @see IProjectDescription#setActiveVariant(String)
-	 * @see IProject#getActiveVariant()
+	 * @param configs the configurations to set for the described project
+	 * @see IProject#getBuildConfigurations()
+	 * @see IProject#setActiveBuildConfiguration(String)
+	 * @see IProject#getActiveBuildConfiguration()
 	 * @since 3.7
 	 */
-	public void setVariants(IProjectVariant[] variants);
+	public void setBuildConfigurations(IBuildConfiguration[] configs);
 
-	/**
-	 * Sets the active variant for the described project.
-	 * <p>
-	 * If a variant with the specified name does not exist in the project then this has
-	 * no effect.
-	 * </p>
-	 *
-	 * @param variantName the variant to set as the active variant
-	 * @since 3.7
-	 */
-	public void setActiveVariant(String variantName);
 }

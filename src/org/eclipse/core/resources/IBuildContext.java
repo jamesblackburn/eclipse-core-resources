@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.eclipse.core.resources;
 
+
 /**
  * Stores information about the context in which a builder was called.
  * This can be interrogated by a builder to determine if it is the top level
@@ -24,8 +25,8 @@ package org.eclipse.core.resources;
  */
 public interface IBuildContext {
 	/**
-	 * Gets a list of projects that were built before this project variant, and
-	 * which this project variant required to be built.
+	 * Gets a list of projects that were built before this build configuration, and
+	 * which this build configuration required to be built.
 	 *
 	 * This includes indirect dependencies as well as direct dependencies. For example
 	 * if we have three projects P1, P2 and P3, where P1 references P2 and P2 references P3,
@@ -38,26 +39,26 @@ public interface IBuildContext {
 	public IProject[] getAllReferencedProjects();
 
 	/**
-	 * Gets a list of project variants that were built before this project variant, and
-	 * which this project variant required to be built.
+	 * Gets a list of build configuration that were built before this build configuration, and
+	 * which this build configuration required to be built.
 	 *
 	 * This includes indirect dependencies as well as direct dependencies.
 	 * @see #getAllReferencedProjects
 	 *
-	 * @return the list of all referenced project variants that have been built
+	 * @return the list of all referenced build configurations that have been built
 	 * in the current build; never null.
 	 */
-	public IProjectVariant[] getAllReferencedProjectVariants();
+	public IBuildConfiguration[] getAllReferencedBuildConfigurations();
 
 	/**
-	 * Gets a list of projects that will be built after this project variant,
-	 * and which reference this project variant.
+	 * Gets a list of projects that will be built after this build configuration,
+	 * and which reference this build configuration.
 	 *
 	 * This includes indirect dependencies as well as direct dependencies.
 	 * @see #getAllReferencedProjects
 	 *
 	 * If the list is empty, then this build occurred due to a top-level request
-	 * (such as a UI action); not as a result of building another project variant's
+	 * (such as a UI action); not as a result of building another build configuration's
 	 * references.
 	 *
 	 * @return a list of all referencing projects that will be built
@@ -66,18 +67,18 @@ public interface IBuildContext {
 	public IProject[] getAllReferencingProjects();
 
 	/**
-	 * Gets a list of project variants that will be built after this project variant,
-	 * and which reference this project variant.
+	 * Gets a list of build configurations that will be built after this build configuration,
+	 * and which reference this build configuration.
 	 *
 	 * This includes indirect dependencies as well as direct dependencies.
 	 * @see #getAllReferencedProjects
 	 *
 	 * If the list is empty, then this build occurred due to a top-level request
-	 * (such as a UI action); not as a result of building another project variant's
+	 * (such as a UI action); not as a result of building another build configuration's
 	 * references.
 	 *
-	 * @return a list of all referencing project variants that will be built
+	 * @return a list of all referencing build configurations that will be built
 	 * in the current build; never null.
 	 */
-	public IProjectVariant[] getAllReferencingProjectVariants();
+	public IBuildConfiguration[] getAllReferencingBuildConfigurations();
 }

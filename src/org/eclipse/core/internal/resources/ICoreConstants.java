@@ -8,7 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group Support
- *     Broadcom Corporation - project variants
+ *     Broadcom Corporation - build configurations
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -120,7 +120,6 @@ public interface ICoreConstants {
 
 	// helper constants for empty structures
 	public static final IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];
-	public static final IProjectVariant[] EMPTY_PROJECT_VARIANT_ARRAY = new IProjectVariant[0];
 	public static final IResource[] EMPTY_RESOURCE_ARRAY = new IResource[0];
 	public static final IFileState[] EMPTY_FILE_STATES = new IFileState[0];
 }

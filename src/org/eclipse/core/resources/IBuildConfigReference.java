@@ -11,30 +11,31 @@
 package org.eclipse.core.resources;
 
 /**
- * Represents a reference to a project variant.
+ * Represents a reference to another build configuration
  *
  * @noimplement This interface is not intended to be implemented by clients.
  * @noextend This interface is not intended to be extended by clients.
  *
  * @since 3.7
  */
-public interface IProjectVariantReference {
+public interface IBuildConfigReference {
 	/**
-	 * @return the project that this project variant reference refers to.
+	 * @return the project which contains the build configuration referenced
+	 * by this.
 	 */
 	public IProject getProject();
 
 	/**
-	 * @return the name of the variant that this project variant reference refers to
-	 * or null if it references the active variant.
+	 * @return the id of the configuration this build configuration reference refers to.
+	 * May be null if this references the active configuration.
 	 */
-	public String getVariantName();
+	public String getConfigurationId();
 
 	/**
-	 * Set the variant name to which this reference points. This is only allowed
-	 * if the variant name has not already been set.
-	 * @param name the variant to reference in the project
+	 * Set the configuration id to which this reference points. This is only allowed
+	 * if the configuration id has not already been set.
+	 * @param id the configuration to reference in the project
 	 */
-	public void setVariantName(String name);
+	public void setConfigurationId(String id);
 
 }

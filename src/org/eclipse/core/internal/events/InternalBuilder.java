@@ -7,9 +7,11 @@
  * 
  * Contributors:
  *     IBM Corporation - initial API and implementation
- *     Broadcom Corporation - project variants and references
+ *     Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.events;
+
+import org.eclipse.core.resources.IBuildConfiguration;
 
 import java.util.Map;
 import org.eclipse.core.internal.resources.ICoreConstants;
@@ -44,9 +46,9 @@ public abstract class InternalBuilder {
 	 */
 	private String pluginId;
 	/**
-	 * The project variant that this builder is to build.
+	 * The build configuration that this builder is to build.
 	 */
-	private IProjectVariant projectVariant;
+	private IBuildConfiguration buildConfiguration;
 	/**
 	 * The context in which the builder was called.
 	 */
@@ -147,14 +149,14 @@ public abstract class InternalBuilder {
 	 * Returns the project for this builder
 	 */
 	protected IProject getProject() {
-		return projectVariant.getProject();
+		return buildConfiguration.getProject();
 	}
 
 	/**
-	 * @see IncrementalProjectBuilder#getProjectVariant()
+	 * @see IncrementalProjectBuilder#getBuildConfiguration()
 	 */
-	protected IProjectVariant getProjectVariant() {
-		return projectVariant;
+	protected IBuildConfiguration getBuildConfiguration() {
+		return buildConfiguration;
 	}
 
 	/*
@@ -167,8 +169,8 @@ public abstract class InternalBuilder {
 	/*
 	 * @see IncrementalProjectBuilder#hasBeenBuilt
 	 */
-	protected boolean hasBeenBuilt(IProjectVariant aProjectVariant) {
-		return buildManager.hasBeenBuilt(aProjectVariant);
+	protected boolean hasBeenBuilt(IBuildConfiguration aBuildConfiguration) {
+		return buildManager.hasBeenBuilt(aBuildConfiguration);
 	}
 
 	/*
@@ -214,15 +216,15 @@ public abstract class InternalBuilder {
 	}
 
 	/**
-	 * Sets the project variant for which this builder operates.
-	 * @see #getProjectVariant()
+	 * Sets the build configuration for which this builder operates.
+	 * @see #getBuildConfiguration()
 	 */
-	final void setProjectVariant(IProjectVariant value) {
-		Assert.isTrue(projectVariant == null);
+	final void setBuildConfiguration(IBuildConfiguration value) {
+		Assert.isTrue(buildConfiguration == null);
 		Assert.isNotNull(value);
-		projectVariant = value;
+		buildConfiguration = value;
 		if (context == null)
-			context = new BuildContext(projectVariant);
+			context = new BuildContext(buildConfiguration);
 	}
 
 	/**
@@ -234,7 +236,7 @@ public abstract class InternalBuilder {
 	}
 
 	/*
-	 * @see IncrementalProjectBuilder#startupOnInitialize
+	 * @see IncrementalProjectBuilder#startupOnInitialize()
 	 */
 	protected abstract void startupOnInitialize();
 

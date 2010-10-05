@@ -10,7 +10,7 @@
  *     Martin Oberhuber (Wind River) - [245937] setLinkLocation() detects non-change
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
- * Broadcom Corporation - project variants and references
+ * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -26,10 +26,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	private static final ICommand[] EMPTY_COMMAND_ARRAY = new ICommand[0];
 	// constants
 	private static final IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];
-	private static final IProjectVariantReference[] EMPTY_PROJECT_VARIANT_REFERENCE_ARRAY = new IProjectVariantReference[0];
+	private static final IBuildConfigReference[] EMPTY_BUILD_CONFIG_REFERENCE_ARRAY = new IBuildConfigReference[0];
 	private static final String[] EMPTY_STRING_ARRAY = new String[0];
 	private static final String EMPTY_STR = ""; //$NON-NLS-1$
-	private static final ProjectVariant[] DEFAULT_VARIANTS = new ProjectVariant[]{new ProjectVariant()};
+	private static final BuildConfiguration[] DEFAULT_BUILD_CONFIGS = new BuildConfiguration[]{new BuildConfiguration()};
 	protected static boolean isReading = false;
 
 	//flags to indicate when we are in the middle of reading or writing a
@@ -41,19 +41,19 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Cached union of static and dynamic references (duplicates omitted).
 	 * This cache is not persisted.
 	 */
-	protected HashMap/*<String, IProjectVariantReference[]>*/ cachedRefs = new HashMap();
+	protected HashMap/*<String, IBuildConfigReference[]>*/ cachedRefs = new HashMap();
 	/*
-	 * Cached union of static and dynamic project variant references (duplicates omitted).
+	 * Cached union of static and dynamic build config references (duplicates omitted).
 	 * This cache is not persisted.
 	 */
 	protected IProject[] cachedProjectRefs = null;
 	/*
-	 * Cached dynamic project references, generated from project variant references (duplicates omitted).
+	 * Cached dynamic project references, generated from build config references (duplicates omitted).
 	 * This cache is not persisted.
 	 */
 	protected  IProject[] cachedDynamicProjectRefs = null;
 	/*
-	 * Cached static project references, generated from project variant references (duplicates omitted).
+	 * Cached static project references, generated from build config references (duplicates omitted).
 	 * This cache is not persisted.
 	 */
 	protected IProject[] cachedStaticProjectRefs = null;
@@ -81,11 +81,11 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	// fields
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
-	protected ProjectVariant[] variants = DEFAULT_VARIANTS;
-	protected Set variantNames = null;
-	protected String activeVariant = null;
-	protected HashMap/*<String, IProjectVariantReference[]>*/ staticRefs = new HashMap();
-	protected HashMap/*<String, IProjectVariantReference[]>*/ dynamicRefs = new HashMap();
+	protected BuildConfiguration[] buildConfigs = DEFAULT_BUILD_CONFIGS;
+	protected Set buildConfigIds = null;
+	/** Map from config id in this project -> build configurations in other projects */
+	protected HashMap/*<String, IBuildConfigReference[]>*/ staticRefs = new HashMap();
+	protected HashMap/*<String, IBuildConfigReference[]>*/ dynamicRefs = new HashMap();
 	protected URI snapshotLocation= null;
 
 	public ProjectDescription() {
@@ -272,9 +272,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			return true;
 		if (!Arrays.equals(natures, description.getNatureIds(false)))
 			return true;
-		if (!internalGetActiveVariant(false).equals(description.internalGetActiveVariant(false)))
-			return true;
-		if (!Arrays.equals(variants, description.variants))
+		if (!Arrays.equals(buildConfigs, description.buildConfigs))
 			return true;
 
 		HashMap otherFilters = description.getFilters();
@@ -558,201 +556,171 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
-	 * Returns the union of the description's static and dynamic project variant references,
-	 * for the variant with the given name, with duplicates omitted. The calculation is
+	 * Returns the union of the description's static and dynamic build config references,
+	 * for the config with the given name, with duplicates omitted. The calculation is
 	 * optimized by caching the result.
-	 * Returns an empty array if the given variant does not exist in the description.
+	 * Returns an empty array if the given configId does not exist in the description.
 	 */
-	public IProjectVariantReference[] getAllVariantReferences(String variant, boolean makeCopy) {
-		if (!hasVariant(variant))
-			return EMPTY_PROJECT_VARIANT_REFERENCE_ARRAY;
-		if (!cachedRefs.containsKey(variant)) {
-			IProjectVariantReference[] statik = getReferencedProjectVariants(variant, false);
-			IProjectVariantReference[] dynamic = getDynamicVariantReferences(variant, false);
+	public IBuildConfigReference[] getAllBuildConfigReferences(String configId, boolean makeCopy) {
+		if (!hasBuildConfig(configId))
+			return EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
+		if (!cachedRefs.containsKey(configId)) {
+			IBuildConfigReference[] statik = getReferencedProjectConfigs(configId, false);
+			IBuildConfigReference[] dynamic = getDynamicConfigReferences(configId, false);
 			if (dynamic.length == 0) {
-				cachedRefs.put(variant, statik);
+				cachedRefs.put(configId, statik);
 			} else if (statik.length == 0) {
-				cachedRefs.put(variant, dynamic);
+				cachedRefs.put(configId, dynamic);
 			} else {
 				//combine all references
-				IProjectVariantReference[] result = new IProjectVariantReference[dynamic.length + statik.length];
+				IBuildConfigReference[] result = new IBuildConfigReference[dynamic.length + statik.length];
 				System.arraycopy(statik, 0, result, 0, statik.length);
 				System.arraycopy(dynamic, 0, result, statik.length, dynamic.length);
-				cachedRefs.put(variant, copyAndRemoveDuplicates(result));
+				cachedRefs.put(configId, copyAndRemoveDuplicates(result));
 			}
 		}
 		//still need to copy the result to prevent tampering with the cache
-		IProjectVariantReference[] result = (IProjectVariantReference[]) cachedRefs.get(variant);
-		return makeCopy ? (IProjectVariantReference[]) result.clone() : result;
+		IBuildConfigReference[] result = (IBuildConfigReference[]) cachedRefs.get(configId);
+		return makeCopy ? (IBuildConfigReference[]) result.clone() : result;
 	}
 
 	/* (non-Javadoc)
-	 * @see IProjectDescription#getReferencedVariants(String)
+	 * @see IProjectDescription#getReferencedConfigs(String)
 	 */
-	public IProjectVariantReference[] getReferencedProjectVariants(String variant) {
-		return getReferencedProjectVariants(variant, true);
+	public IBuildConfigReference[] getReferencedProjectConfigs(String configId) {
+		return getReferencedProjectConfigs(configId, true);
 	}
 
-	public IProjectVariantReference[] getReferencedProjectVariants(String variant, boolean makeCopy) {
-		if (!hasVariant(variant) || !staticRefs.containsKey(variant))
-			return EMPTY_PROJECT_VARIANT_REFERENCE_ARRAY;
-		IProjectVariantReference[] result = (IProjectVariantReference[]) staticRefs.get(variant);
-		return makeCopy ? (IProjectVariantReference[]) result.clone() : result;
+	public IBuildConfigReference[] getReferencedProjectConfigs(String configId, boolean makeCopy) {
+		if (!hasBuildConfig(configId) || !staticRefs.containsKey(configId))
+			return EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
+		IBuildConfigReference[] result = (IBuildConfigReference[]) staticRefs.get(configId);
+		return makeCopy ? (IBuildConfigReference[]) result.clone() : result;
 	}
 
 	/* (non-Javadoc)
-	 * @see IProjectDescription#setReferencedVariants(String, IProjectVariantReference[])
+	 * @see IProjectDescription#setReferencedConfigs(String, IBuildConfigReference[])
 	 */
-	public void setReferencedProjectVariants(String variant, IProjectVariantReference[] references) {
+	public void setReferencedProjectConfigs(String configId, IBuildConfigReference[] references) {
 		Assert.isLegal(references != null);
-		if (!hasVariant(variant))
+		if (!hasBuildConfig(configId))
 			return;
-		staticRefs.put(variant, copyAndRemoveDuplicates(references));
-		clearCachedReferences(variant);
+		staticRefs.put(configId, copyAndRemoveDuplicates(references));
+		clearCachedReferences(configId);
 	}
 
 	/* (non-Javadoc)
-	 * @see IProjectDescription#getDynamicVariantReferences(String)
+	 * @see IProjectDescription#getDynamicConfigReferences(String)
 	 */
-	public IProjectVariantReference[] getDynamicVariantReferences(String variant) {
-		return getDynamicVariantReferences(variant, true);
+	public IBuildConfigReference[] getDynamicConfigReferences(String configId) {
+		return getDynamicConfigReferences(configId, true);
 	}
 
-	public IProjectVariantReference[] getDynamicVariantReferences(String variant, boolean makeCopy) {
-		if (!hasVariant(variant) || !dynamicRefs.containsKey(variant))
-			return EMPTY_PROJECT_VARIANT_REFERENCE_ARRAY;
-		IProjectVariantReference[] result = (IProjectVariantReference[]) dynamicRefs.get(variant);
-		return makeCopy ? (IProjectVariantReference[]) result.clone() : result;
+	public IBuildConfigReference[] getDynamicConfigReferences(String configId, boolean makeCopy) {
+		if (!hasBuildConfig(configId) || !dynamicRefs.containsKey(configId))
+			return EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
+		IBuildConfigReference[] result = (IBuildConfigReference[]) dynamicRefs.get(configId);
+		return makeCopy ? (IBuildConfigReference[]) result.clone() : result;
 	}
 
 	/* (non-Javadoc)
-	 * @see IProjectDescription#setDynamicVariantReferences(String, IProjectVariantReference[])
+	 * @see IProjectDescription#setDynamicConfigReferences(String, IBuildConfigReference[])
 	 */
-	public void setDynamicVariantReferences(String variant, IProjectVariantReference[] references) {
+	public void setDynamicConfigReferences(String configId, IBuildConfigReference[] references) {
 		Assert.isLegal(references != null);
-		if (!hasVariant(variant))
+		if (!hasBuildConfig(configId))
 			return;
-		dynamicRefs.put(variant, copyAndRemoveDuplicates(references));
-		clearCachedReferences(variant);
+		dynamicRefs.put(configId, copyAndRemoveDuplicates(references));
+		clearCachedReferences(configId);
 	}
 
 	/* (non-Javadoc)
-	 * @see IProjectDescription#newVariant(String)
+	 * @see IProjectDescription#newBuildConfiguration(String)
 	 */
-	public IProjectVariant newVariant(String variantName) {
-		return new ProjectVariant(variantName);
+	public IBuildConfiguration newBuildConfiguration(String buildConfigId) {
+		return new BuildConfiguration(buildConfigId);
 	}
 
 	/* (non-Javadoc)
-	 * @see IProjectDescription#setVariants(IProjectVariant[])
+	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
 	 */
-	public void setVariants(IProjectVariant[] value) {
+	public void setBuildConfigurations(IBuildConfiguration[] value) {
 		if (value == null || value.length == 0)
-			variants = DEFAULT_VARIANTS;
+			buildConfigs = DEFAULT_BUILD_CONFIGS;
 		else {
 			// Filter out duplicates
 			Set filtered = new LinkedHashSet(value.length);
 			for (int i = 0; i < value.length; i++) {
-				ProjectVariant variant = (ProjectVariant)((ProjectVariant) value[i]).clone();
+				BuildConfiguration config = (BuildConfiguration)((BuildConfiguration) value[i]).clone();
 				// Ensure the project is not set
-				variant.clearProject();
-				Assert.isTrue(variant.internalGetProject() == null);
-				filtered.add(variant);
+				config.clearProject();
+				Assert.isTrue(config.internalGetProject() == null);
+				filtered.add(config);
 			}
 
 			if (filtered.isEmpty())
-				variants = DEFAULT_VARIANTS;
+				buildConfigs = DEFAULT_BUILD_CONFIGS;
 			else {
-				variants = new ProjectVariant[filtered.size()];
-				filtered.toArray(variants);
+				buildConfigs = new BuildConfiguration[filtered.size()];
+				filtered.toArray(buildConfigs);
 			}
 		}
 
-		// Remove references for deleted variants
-		variantNames = new HashSet(variants.length);
-		for (int i = 0; i < variants.length; i++)
-			variantNames.add(variants[i].getVariantName());
+		// Remove references for deleted buildConfigs
+		buildConfigIds = new HashSet(buildConfigs.length);
+		for (int i = 0; i < buildConfigs.length; i++)
+			buildConfigIds.add(buildConfigs[i].getConfigurationId());
 		boolean modified = false;
-		modified |= staticRefs.keySet().retainAll(variantNames);
-		modified |= dynamicRefs.keySet().retainAll(variantNames);
+		modified |= staticRefs.keySet().retainAll(buildConfigIds);
+		modified |= dynamicRefs.keySet().retainAll(buildConfigIds);
 		if (modified)
 			clearCachedReferences();
 	}
 
 	/**
-	 * Used by Project to get the variants on the description
+	 * Used by Project to get the buildConfigs on the description
 	 */
-	public IProjectVariant[] internalGetVariants(boolean makeCopy) {
-		if (variants == null || variants.length == 0)
-			variants = DEFAULT_VARIANTS;
-		for (int i = 0; i < variants.length; i++)
-			Assert.isTrue(variants[i].internalGetProject() == null);
-		return makeCopy ? copyVariants(variants) : variants;
+	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
+		if (buildConfigs == null || buildConfigs.length == 0)
+			buildConfigs = DEFAULT_BUILD_CONFIGS;
+		for (int i = 0; i < buildConfigs.length; i++)
+			Assert.isTrue(buildConfigs[i].internalGetProject() == null);
+		return makeCopy ? copyBuildConfigs(buildConfigs) : buildConfigs;
 	}
 
-	private IProjectVariant[] copyVariants(ProjectVariant[] pvars) {
-		IProjectVariant[] result = new ProjectVariant[variants.length];
-		for (int i = 0; i < variants.length; i++)
-			result[i] = (ProjectVariant) variants[i].clone();
+	private IBuildConfiguration[] copyBuildConfigs(BuildConfiguration[] pvars) {
+		IBuildConfiguration[] result = new BuildConfiguration[buildConfigs.length];
+		for (int i = 0; i < buildConfigs.length; i++)
+			result[i] = (BuildConfiguration) buildConfigs[i].clone();
 		return result;
 	}
 
 	/**
-	 * Used by Project to get the active variant.
+	 * Internal method to check if the description has a given build configuration.
 	 */
-	public IProjectVariant internalGetActiveVariant(boolean makeCopy) {
-		ProjectVariant result = null;
-		if (!hasVariant(activeVariant)) {
-			activeVariant = variants[0].getVariantName();
-			result = variants[0];
-		}
-		for (int i = 0; i < variants.length; i++) {
-			if (variants[i].getVariantName().equals(activeVariant)) {
-				result = variants[i];
-				break;
-			}
-		}
-		Assert.isTrue(result != null);
-		Assert.isTrue(result.internalGetProject() == null);
-		return makeCopy ? (IProjectVariant) result.clone() : result;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see IProjectDescription#setActiveVariant(String)
-	 */
-	public void setActiveVariant(String variantName) {
-		if (hasVariant(variantName)) {
-			activeVariant = variantName;
-		}
-	}
-
-	/**
-	 * Internal method to check if the description has a given variant.
-	 */
-	private boolean hasVariant(String variantName) {
-		if (variantName == null)
+	private boolean hasBuildConfig(String buildConfigId) {
+		if (buildConfigId == null)
 			return false;
-		for (int i = 0; i < variants.length; i++)
-			if (variants[i].getVariantName().equals(variantName))
+		for (int i = 0; i < buildConfigs.length; i++)
+			if (buildConfigs[i].getConfigurationId().equals(buildConfigId))
 				return true;
 		return false;
 	}
 
 	/**
-	 * Clear all cached references for the given variant
-	 * @param variant the variant to clear cached references for
+	 * Clear all cached references for the given build configuration
+	 * @param configId the configuration Id to clear cached references for
 	 */
-	private void clearCachedReferences(String variant)
+	private void clearCachedReferences(String configId)
 	{
-		cachedRefs.remove(variant);
+		cachedRefs.remove(configId);
 		cachedProjectRefs = null;
 		cachedStaticProjectRefs = null;
 		cachedDynamicProjectRefs = null;
 	}
 
 	/**
-	 * Clear all cached references for all variants
+	 * Clear all cached references for all buildConfigs
 	 */
 	private void clearCachedReferences()
 	{
@@ -763,18 +731,18 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
-	 * Returns a copy of the given array of project variants with all duplicates removed
+	 * Returns a copy of the given array of build configs with all duplicates removed
 	 */
-	private IProjectVariantReference[] copyAndRemoveDuplicates(IProjectVariantReference[] values) {
+	private IBuildConfigReference[] copyAndRemoveDuplicates(IBuildConfigReference[] values) {
 		Set set = new LinkedHashSet();
 		set.addAll(Arrays.asList(values));
-		return (IProjectVariantReference[]) set.toArray(new IProjectVariantReference[set.size()]);
+		return (IBuildConfigReference[]) set.toArray(new IBuildConfigReference[set.size()]);
 	}
 
 	/**
 	 * Returns the union of the description's static and dynamic project references,
 	 * with duplicates omitted. The calculation is optimized by caching the result
-	 * @see #getAllVariantReferences(String, boolean)
+	 * @see #getAllBuildConfigReferences(String, boolean)
 	 */
 	public IProject[] getAllReferences(boolean makeCopy) {
 		if (cachedProjectRefs == null) {
@@ -805,9 +773,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public IProject[] getReferencedProjects(boolean makeCopy) {
 		if (staticRefs == null)
 			return EMPTY_PROJECT_ARRAY;
-		// Generate project references from project variants references
+		// Generate project references from build configs references
 		if (cachedStaticProjectRefs == null) {
-			cachedStaticProjectRefs = getProjectsFromProjectVariantReferences(staticRefs);
+			cachedStaticProjectRefs = getProjectsFromBuildConfigReferences(staticRefs);
 		}
 		//still need to copy the result to prevent tampering with the cache
 		return makeCopy ? (IProject[]) cachedStaticProjectRefs.clone() : cachedStaticProjectRefs;
@@ -818,9 +786,13 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public void setReferencedProjects(IProject[] projects) {
 		Assert.isLegal(projects != null);
-		// Add all variants in each of the projects as a reference
-		for (int i = 0; i < variants.length; i++)
-			setReferencedProjectVariants(variants[i].getVariantName(), getProjectVariantReferencesFromProjects(projects));
+		// Add all buildConfigs in each of the projects as a reference
+		for (int i = 0; i < buildConfigs.length; i++) {
+			Set configRefs = new LinkedHashSet();
+			configRefs.addAll(getBuildConfigReferencesFromProjects(projects));
+			configRefs.addAll(Arrays.asList(getReferencedProjectConfigs(buildConfigs[i].getConfigurationId(), false)));
+			setReferencedProjectConfigs(buildConfigs[i].getConfigurationId(), (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
+		}
 	}
 
 	/* (non-Javadoc)
@@ -833,9 +805,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public IProject[] getDynamicReferences(boolean makeCopy) {
 		if (dynamicRefs == null)
 			return EMPTY_PROJECT_ARRAY;
-		// Generate dynamic project references from dynamic project variants references
+		// Generate dynamic project references from dynamic build configs references
 		if (cachedDynamicProjectRefs == null) {
-			cachedDynamicProjectRefs = getProjectsFromProjectVariantReferences(dynamicRefs);
+			cachedDynamicProjectRefs = getProjectsFromBuildConfigReferences(dynamicRefs);
 		}
 		return makeCopy ? (IProject[]) cachedDynamicProjectRefs.clone() : cachedDynamicProjectRefs;
 	}
@@ -845,22 +817,28 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public void setDynamicReferences(IProject[] projects) {
 		Assert.isLegal(projects != null);
-		for (int i = 0; i < variants.length; i++)
-			setDynamicVariantReferences(variants[i].getVariantName(), getProjectVariantReferencesFromProjects(projects));
+		for (int i = 0; i < buildConfigs.length; i++) {
+			// To interact with users of the old API, we just add references to the active configuration
+			// To the set of existing build configuration references
+			Set configRefs = new LinkedHashSet();
+			configRefs.addAll(getBuildConfigReferencesFromProjects(projects));
+			configRefs.addAll(Arrays.asList(getDynamicConfigReferences(buildConfigs[i].getConfigurationId(), false)));
+			setDynamicConfigReferences(buildConfigs[i].getConfigurationId(), (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
+		}
 	}
 
 	/**
-	 * Get a list of projects, without duplicates, from a list of project variant references.
+	 * Get a list of projects, without duplicates, from a list of build config references.
 	 * Order is preserved, and is according to the first occurrence of a project in the
-	 * array of project variants.
-	 * @param refsMap map containing the project variant references to get the projects from
+	 * array of build configs.
+	 * @param refsMap map containing the build config references to get the projects from
 	 * @return list of projects
 	 */
-	private IProject[] getProjectsFromProjectVariantReferences(Map/*<String, IProjectVariantReference[]>*/ refsMap) {
+	private IProject[] getProjectsFromBuildConfigReferences(Map/*<String, IBuildConfigReference[]>*/ refsMap) {
 		Set projects = new LinkedHashSet();
 		Iterator i = refsMap.values().iterator();
 		while (i.hasNext()) {
-			IProjectVariantReference[] refs = (IProjectVariantReference[]) i.next();
+			IBuildConfigReference[] refs = (IBuildConfigReference[]) i.next();
 			for (int j = 0; j < refs.length; j++) {
 				projects.add(refs[j].getProject());
 			}
@@ -869,26 +847,20 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
-	 * Get a list of project variant references, without duplicates, from a list of projects.
-	 * A reference to each of the variants for each of the projects is returned.
-	 * Order is preserved - the variants appear for each project in the order
+	 * Turns an array of projects into an array of {@link IBuildConfigReference} to the
+	 * projects' active configuration
+
+	 * Order is preserved - the buildConfigs appear for each project in the order
 	 * that the projects were specified.
-	 * If the project is not accessible, a reference is added to its active variant.
-	 * @param projects projects to get the project variants from
-	 * @return list of project variant references
+	 * @param projects projects to get the active configuration from
+	 * @return list of build config references
 	 */
-	private IProjectVariantReference[] getProjectVariantReferencesFromProjects(IProject[] projects) {
+	private List getBuildConfigReferencesFromProjects(IProject[] projects) {
 		List refs = new ArrayList();
 		for (int i = 0; i < projects.length; i++) {
 			IProject project = projects[i];
-			if (project.isAccessible()) {
-				IProjectVariant[] projVariants = ((Project) project).internalGetVariants();
-				for (int j = 0; j < projVariants.length; j++) {
-					refs.add(new ProjectVariantReference(project, projVariants[j].getVariantName()));
-				}
-			} else
-				refs.add(new ProjectVariantReference(project));
+			refs.add(new BuildConfigReference(project));
 		}
-		return (IProjectVariantReference[]) refs.toArray(new IProjectVariantReference[refs.size()]);
+		return refs;
 	}
 }

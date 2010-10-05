@@ -10,9 +10,13 @@
  *     Serge Beauchamp (Freescale Semiconductor) - [252996] add resource filtering
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group and Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
- * Broadcom Corporation - project variants and references
+ * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
+
+import org.eclipse.core.resources.IBuildConfiguration;
+import org.eclipse.core.resources.IBuildConfigReference;
+
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -131,25 +135,45 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		writer.endTag(VARIABLE);
 	}
 
-	protected void write(IProjectVariantReference ref, XMLWriter writer) {
-		writer.startTag(REFERENCE, null);
+	protected void write(IBuildConfigReference ref, XMLWriter writer) {
+		writer.startTag(BUILD_CONFIG_REF, null);
 		if (ref != null) {
 			writer.printSimpleTag(PROJECT, ref.getProject().getName());
-			if (ref.getVariantName() != null)
-				writer.printSimpleTag(VARIANT, ref.getVariantName());
+			if (ref.getConfigurationId() != null)
+				writer.printSimpleTag(BUILD_CONFIG_ID, ref.getConfigurationId());
 		}
-		writer.endTag(REFERENCE);
+		writer.endTag(BUILD_CONFIG_REF);
 	}
 
-	protected void write(IProjectVariant projectVariant, boolean isActive, XMLWriter writer) {
-		if (!isActive)
-			writer.printSimpleTag(VARIANT, projectVariant.getVariantName());
-		else {
-			HashMap params = new HashMap(1);
-			params.put(ACTIVE_VARIANT, Boolean.toString(true));
-			writer.printTag(VARIANT, params, true, false);
-			writer.print(XMLWriter.getEscaped(projectVariant.getVariantName()));
-			writer.printTag('/' + VARIANT, null, false, true);
+	/**
+	 * Writes the contents of the build configurations if there's at least
+	 * one non-default configuration defined.
+	 * <ul>
+	 * <li>Build Configurations</li>
+	 * <li>Build Configuration references</li>
+	 * </ul>
+	 * @param description
+	 * @param writer
+	 */
+	protected void writeBuildConfigurations(ProjectDescription description, XMLWriter writer) throws IOException {
+		// Print the configurations
+		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
+		// Only if there's at least one non-default configuration to serialize
+		if (configs.length > 1 ||
+				!((BuildConfiguration)configs[0]).isDefault()) {
+			writer.startTag(BUILD_CONFIGS, null);
+			for (int i = 0; i < configs.length; i++) {
+				IBuildConfiguration config = configs[i];
+				writer.startTag(BUILD_CONFIG, null);
+				writer.printSimpleTag(BUILD_CONFIG_ID, config.getConfigurationId());
+				if (config.getName() != null)
+					writer.printSimpleTag(BUILD_CONFIG_NAME, config.getName());
+				// Print all the references
+				if (description.staticRefs.containsKey(config.getConfigurationId()))
+					write(description.staticRefs.get(config.getConfigurationId()), writer);
+				writer.endTag(BUILD_CONFIG);
+			}
+			writer.endTag(BUILD_CONFIGS);
 		}
 	}
 
@@ -223,14 +247,14 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			write((VariableDescription) obj, writer);
 			return;
 		}
-		if (obj instanceof IProjectVariantReference[]) {
-			IProjectVariantReference[] array = (IProjectVariantReference[]) obj;
+		if (obj instanceof IBuildConfigReference[]) {
+			IBuildConfigReference[] array = (IBuildConfigReference[]) obj;
 			for (int i = 0; i < array.length; i++)
 				write(array[i], writer);
 			return;
 		}
-		if (obj instanceof IProjectVariantReference) {
-			write((IProjectVariantReference) obj, writer);
+		if (obj instanceof IBuildConfigReference) {
+			write((IBuildConfigReference) obj, writer);
 			return;
 		}
 		writer.printTabulation();
@@ -247,12 +271,12 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			if (snapshotLocation != null) {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
-			write(REFERENCES, VARIANT, NAME, null, description.staticRefs, writer);
-			// Store project references for backwards compatibility
+			// Write out the build configurations
+			writeBuildConfigurations(description, writer);
+			// Project level references written for backwards compatibility
 			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
 			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);
-			write(VARIANTS, Arrays.asList(description.internalGetVariants(false)), description.internalGetActiveVariant(false), writer);
 			HashMap links = description.getLinks();
 			if (links != null) {
 				// ensure consistent order of map elements
@@ -284,15 +308,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		writer.startTag(name, null);
 		for (Iterator it = collection.iterator(); it.hasNext();)
 			write(it.next(), writer);
-		writer.endTag(name);
-	}
-
-	protected void write(String name, Collection collection, IProjectVariant activeVariant, XMLWriter writer) throws IOException {
-		writer.startTag(name, null);
-		for (Iterator it = collection.iterator(); it.hasNext();) {
-			IProjectVariant variant = (IProjectVariant) it.next();
-			write(variant, variant.equals(activeVariant), writer);
-		}
 		writer.endTag(name);
 	}
 
