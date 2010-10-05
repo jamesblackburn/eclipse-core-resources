@@ -72,7 +72,7 @@ public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 			linkPluginsSavedStateToTrees(pluginsToBeLinked, trees, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 			linkBuildersToTrees(buildersToBeLinked, trees, pluginsToBeLinked.size(), Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 
-			// Read the version 3 information if available
+			// Read the version 3 information: per-configuration trees if available
 			if (input.available() > 0 && input.readInt() == ICoreConstants.WORKSPACE_TREE_VERSION_3) {
 
 				buildersToBeLinked.clear();
