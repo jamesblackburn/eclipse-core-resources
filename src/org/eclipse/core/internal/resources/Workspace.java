@@ -364,8 +364,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		Set configSet = new HashSet(configs.length);
 		configSet.addAll(Arrays.asList(configs));
 
-		// Find transitive closure of referenced project buildConfigs, not including
-		// the buildConfigs that were asked to be built
+		// Find transitive closure of referenced project buildConfigs
 		Set refs = new HashSet(configSet);
 		Set buffer = new HashSet();
 		int size = -1;
@@ -378,7 +377,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			refs.addAll(buffer);
 			buffer.clear();
 		}
-		refs.removeAll(configSet);
 		List refsList = new LinkedList(refs);
 
 		// Filter out inaccessible projects, or buildConfigs that do not exist
@@ -391,10 +389,9 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		// Order the referenced project buildConfigs
 		ProjectBuildConfigOrder order = computeProjectBuildConfigOrder((IBuildConfiguration[]) refsList.toArray(new IBuildConfiguration[refs.size()]));
 
-		// Compose the two orderings and run the build
-		IBuildConfiguration[] finalOrder = new IBuildConfiguration[order.buildConfigurations.length + configs.length];
+		// Run the build
+		IBuildConfiguration[] finalOrder = new IBuildConfiguration[order.buildConfigurations.length];
 		System.arraycopy(order.buildConfigurations, 0, finalOrder, 0, order.buildConfigurations.length);
-		System.arraycopy(configs, 0, finalOrder, order.buildConfigurations.length, configs.length);
 		buildInternal(finalOrder, trigger, monitor);
 	}
 

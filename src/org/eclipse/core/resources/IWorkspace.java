@@ -230,6 +230,7 @@ public interface IWorkspace extends IAdaptable {
 	 * @exception OperationCanceledException if the operation is canceled. 
 	 * Cancelation can occur even if no progress monitor is provided.
 	 * 
+	 * @see IWorkspace#build(IBuildConfiguration[], int, IProgressMonitor)
 	 * @see IProject#build(int, IProgressMonitor)
 	 * @see #computeProjectBuildConfigOrder(IBuildConfiguration[])
 	 * @see IncrementalProjectBuilder#FULL_BUILD
@@ -240,11 +241,10 @@ public interface IWorkspace extends IAdaptable {
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * FIXME: is the below right?
-	 * Build all project buildConfigs in the given list along with their references.
-	 * The project buildConfigs are built in the order specified in the list.
-	 * Any referenced project buildConfigs that do not appear in the list are built before any
-	 * of the buildConfigs in the list, in an order specified in the workspace description.
+	 * Build the specified build configuration in the given list along with all accessible references.
+	 * <p>
+	 * References are transitively followed.  Build order is determined by the workspace description 
+	 * and the project build configuration graph.
 	 * If no order is specified, the workspace computes an order determined by build configuration
 	 * references.
 	 * <p>
