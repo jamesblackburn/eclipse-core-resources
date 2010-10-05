@@ -788,9 +788,15 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		Assert.isLegal(projects != null);
 		// Add all buildConfigs in each of the projects as a reference
 		for (int i = 0; i < buildConfigs.length; i++) {
+			// To interact with users of the old API, we just add references to the active configuration (null configId)
+			// to the set of existing non-active build configuration references
 			Set configRefs = new LinkedHashSet();
 			configRefs.addAll(getBuildConfigReferencesFromProjects(projects));
-			configRefs.addAll(Arrays.asList(getReferencedProjectConfigs(buildConfigs[i].getConfigurationId(), false)));
+			// Iterate over the existing refs. Re-add any which aren't to the 'default' configuration
+			IBuildConfigReference[] oldRefs = getReferencedProjectConfigs(buildConfigs[i].getConfigurationId(), false);
+			for (int j = 0; j < oldRefs.length; j++)
+				if (oldRefs[j].getConfigurationId() != null)
+					configRefs.add(oldRefs[j]);
 			setReferencedProjectConfigs(buildConfigs[i].getConfigurationId(), (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
 		}
 	}
@@ -818,11 +824,15 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public void setDynamicReferences(IProject[] projects) {
 		Assert.isLegal(projects != null);
 		for (int i = 0; i < buildConfigs.length; i++) {
-			// To interact with users of the old API, we just add references to the active configuration
-			// To the set of existing build configuration references
+			// To interact with users of the old API, we just add references to the active configuration (null configId)
+			// to the set of existing non-active build configuration references
 			Set configRefs = new LinkedHashSet();
 			configRefs.addAll(getBuildConfigReferencesFromProjects(projects));
-			configRefs.addAll(Arrays.asList(getDynamicConfigReferences(buildConfigs[i].getConfigurationId(), false)));
+			// Iterate over the existing dynamic refs. Re-add any which aren't to the 'default' configuration
+			IBuildConfigReference[] oldRefs = getDynamicConfigReferences(buildConfigs[i].getConfigurationId(), false);
+			for (int j = 0; j < oldRefs.length; j++)
+				if (oldRefs[j].getConfigurationId() != null)
+					configRefs.add(oldRefs[j]);
 			setDynamicConfigReferences(buildConfigs[i].getConfigurationId(), (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
 		}
 	}
