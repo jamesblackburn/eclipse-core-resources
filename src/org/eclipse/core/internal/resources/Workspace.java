@@ -2401,14 +2401,15 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			markerManager.startup(null);
 			synchronizer = new Synchronizer(this);
 			refreshManager = new RefreshManager(this);
+			// Startup property manager before save manager as it's needed for active build configuration
+			propertyManager = ResourcesCompatibilityHelper.createPropertyManager();
+			propertyManager.startup(monitor);
 			saveManager = new SaveManager(this);
 			saveManager.startup(null);
 			//must start after save manager, because (read) access to tree is needed
 			refreshManager.startup(null);
 			aliasManager = new AliasManager(this);
 			aliasManager.startup(null);
-			propertyManager = ResourcesCompatibilityHelper.createPropertyManager();
-			propertyManager.startup(monitor);
 			charsetManager = new CharsetManager(this);
 			charsetManager.startup(null);
 			contentDescriptionManager = new ContentDescriptionManager();
