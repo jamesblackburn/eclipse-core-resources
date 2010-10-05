@@ -10,8 +10,13 @@
  *     Serge Beauchamp (Freescale Semiconductor) - [252996] add resource filtering
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group and Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
+ * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
+
+import org.eclipse.core.resources.IBuildConfiguration;
+import org.eclipse.core.resources.IBuildConfigReference;
+
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -55,13 +60,13 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		return result;
 	}
 
-	protected void write(BuildCommand command, XMLWriter writer) {
+	protected void write(BuildCommand command, XMLWriter writer) throws IOException {
 		writer.startTag(BUILD_COMMAND, null);
 		if (command != null) {
 			writer.printSimpleTag(NAME, command.getName());
 			if (shouldWriteTriggers(command))
 				writer.printSimpleTag(BUILD_TRIGGERS, triggerString(command));
-			write(ARGUMENTS, command.getArguments(false), writer);
+			write(ARGUMENTS, DICTIONARY, KEY, VALUE, command.getArguments(false), writer);
 		}
 		writer.endTag(BUILD_COMMAND);
 	}
@@ -128,6 +133,48 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			writer.printSimpleTag(VALUE, description.getValue());
 		}
 		writer.endTag(VARIABLE);
+	}
+
+	protected void write(IBuildConfigReference ref, XMLWriter writer) {
+		writer.startTag(BUILD_CONFIG_REF, null);
+		if (ref != null) {
+			writer.printSimpleTag(PROJECT, ref.getProject().getName());
+			if (ref.getConfigurationId() != null)
+				writer.printSimpleTag(BUILD_CONFIG_ID, ref.getConfigurationId());
+		}
+		writer.endTag(BUILD_CONFIG_REF);
+	}
+
+	/**
+	 * Writes the contents of the build configurations if there's at least
+	 * one non-default configuration defined.
+	 * <ul>
+	 * <li>Build Configurations</li>
+	 * <li>Build Configuration references</li>
+	 * </ul>
+	 * @param description
+	 * @param writer
+	 */
+	protected void writeBuildConfigurations(ProjectDescription description, XMLWriter writer) throws IOException {
+		// Print the configurations
+		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
+		// Only if there's at least one non-default configuration to serialize
+		if (configs.length > 1 ||
+				!((BuildConfiguration)configs[0]).isDefault()) {
+			writer.startTag(BUILD_CONFIGS, null);
+			for (int i = 0; i < configs.length; i++) {
+				IBuildConfiguration config = configs[i];
+				writer.startTag(BUILD_CONFIG, null);
+				writer.printSimpleTag(BUILD_CONFIG_ID, config.getConfigurationId());
+				if (config.getName() != null)
+					writer.printSimpleTag(BUILD_CONFIG_NAME, config.getName());
+				// Print all the references
+				if (description.staticRefs.containsKey(config.getConfigurationId()))
+					write(description.staticRefs.get(config.getConfigurationId()), writer);
+				writer.endTag(BUILD_CONFIG);
+			}
+			writer.endTag(BUILD_CONFIGS);
+		}
 	}
 
 	/**
@@ -200,6 +247,16 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			write((VariableDescription) obj, writer);
 			return;
 		}
+		if (obj instanceof IBuildConfigReference[]) {
+			IBuildConfigReference[] array = (IBuildConfigReference[]) obj;
+			for (int i = 0; i < array.length; i++)
+				write(array[i], writer);
+			return;
+		}
+		if (obj instanceof IBuildConfigReference) {
+			write((IBuildConfigReference) obj, writer);
+			return;
+		}
 		writer.printTabulation();
 		writer.println(obj.toString());
 	}
@@ -214,6 +271,9 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			if (snapshotLocation != null) {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
+			// Write out the build configurations
+			writeBuildConfigurations(description, writer);
+			// Project level references written for backwards compatibility
 			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
 			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);
@@ -252,9 +312,20 @@ public class ModelObjectWriter implements IModelObjectConstants {
 	}
 
 	/**
-	 * Write maps of (String, String).
+	 * Write maps of (String, Object) as
+	 * <name>
+	 *     <entryname>
+	 *         <keyName>key</keyName>
+	 *         <valueName>Object</valueName>
+	 *     </entryname>
+	 *     ...
+	 * </name>
+	 * where Object is written with a call to:
+	 *  - {@link XMLWriter#printSimpleTag(String, Object)} if it is a String
+	 *  - {@link #write(Object, XMLWriter)} otherwise
+	 * If valueName is null, Object is not surrounded in valueName tags
 	 */
-	protected void write(String name, Map table, XMLWriter writer) {
+	protected void write(String name, String entryName, String keyName, String valueName, Map table, XMLWriter writer) throws IOException {
 		writer.startTag(name, null);
 		if (table != null) {
 			// ensure consistent order of map elements
@@ -264,12 +335,20 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			for (Iterator it = sorted.iterator(); it.hasNext();) {
 				String key = (String) it.next();
 				Object value = table.get(key);
-				writer.startTag(DICTIONARY, null);
+				writer.startTag(entryName, null);
 				{
-					writer.printSimpleTag(KEY, key);
-					writer.printSimpleTag(VALUE, value);
+					writer.printSimpleTag(keyName, key);
+					if (value instanceof String)
+						writer.printSimpleTag(valueName, value);
+					else if (value != null) {
+						if (valueName != null)
+							writer.startTag(valueName, null);
+						write(value, writer);
+						if (valueName != null)
+							writer.endTag(valueName);
+					}
 				}
-				writer.endTag(DICTIONARY);
+				writer.endTag(entryName);
 			}
 		}
 		writer.endTag(name);

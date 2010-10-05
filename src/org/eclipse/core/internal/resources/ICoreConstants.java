@@ -8,6 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group Support
+ *     Broadcom Corporation - build configurations
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -115,6 +116,7 @@ public interface ICoreConstants {
 
 	public static final int WORKSPACE_TREE_VERSION_1 = 67305985;
 	public static final int WORKSPACE_TREE_VERSION_2 = 67305986;
+	public static final int WORKSPACE_TREE_VERSION_3 = 67305987;
 
 	// helper constants for empty structures
 	public static final IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];
