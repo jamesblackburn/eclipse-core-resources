@@ -1261,10 +1261,14 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		private static class Reference {
 			public String projectName;
 			public String configId;
+
+			public Reference() {/*empty constructor*/}
 		}
 		String configId;
 		String configName;
 		ArrayList/*<Reference>*/ refs = new ArrayList();
+
+		public BuildConfig() {/*empty constructor*/}
 	}
 
 	/**
