@@ -655,6 +655,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 				// Ensure the project is not set
 				config.clearProject();
 				Assert.isTrue(config.internalGetProject() == null);
+				config.setReadOnly();
 				filtered.add(config);
 			}
 
@@ -683,11 +684,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
 		if (buildConfigs == null || buildConfigs.length == 0)
 			buildConfigs = DEFAULT_BUILD_CONFIGS;
-		for (int i = 0; i < buildConfigs.length; i++)
-			Assert.isTrue(buildConfigs[i].internalGetProject() == null);
 		return makeCopy ? copyBuildConfigs(buildConfigs) : buildConfigs;
 	}
-
+    // Deep clone() the build configurations array
 	private IBuildConfiguration[] copyBuildConfigs(BuildConfiguration[] pvars) {
 		IBuildConfiguration[] result = new BuildConfiguration[buildConfigs.length];
 		for (int i = 0; i < buildConfigs.length; i++)

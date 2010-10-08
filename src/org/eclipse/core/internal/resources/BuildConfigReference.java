@@ -41,10 +41,10 @@ public class BuildConfigReference implements IBuildConfigReference {
 	/**
 	 * Create a reference to a specific configuration of a project.
 	 */
-	public BuildConfigReference(IProject project, String configurationName) {
+	public BuildConfigReference(IProject project, String configurationId) {
 		Assert.isLegal(project != null);
 		this.project = project;
-		this.configId = configurationName;
+		this.configId = configurationId;
 	}
 
 	/**
@@ -88,20 +88,7 @@ public class BuildConfigReference implements IBuildConfigReference {
 	 * be determined. For example if the references project is not accessible.
 	 */
 	public IBuildConfiguration getConfiguration() throws CoreException {
-		IBuildConfiguration configuration = null;
-		if (configId == null)
-			configuration = project.getActiveBuildConfiguration();
-		else {
-			IBuildConfiguration[] configurations = project.getBuildConfigurations();
-			for (int i = 0; i < configurations.length; i++)
-				if (configurations[i].getConfigurationId().equals(configId)) {
-					configuration = configurations[i];
-					break;
-				}
-		}
-		if (configuration == null)
-			throw new ResourceException(IResourceStatus.BUILD_CONFIGURATION_NOT_FOUND, project.getFullPath(), null, null);
-		return configuration;
+		return project.getBuildConfiguration(configId);
 	}
 
 	/*
