@@ -25,6 +25,9 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 	/** Human readable name; options */
 	private String name;
 
+	/** Ensure we don't expose internal BuildConfigurations to clients */
+	boolean readOnly = false;
+
 	public BuildConfiguration(IProject project, String name) {
 		Assert.isNotNull(name);
 		this.project = project;
@@ -62,7 +65,6 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 
 	void setProject(IProject project) {
 		Assert.isNotNull(project);
-		Assert.isTrue(this.project == null);
 		this.project = project;
 	}
 
@@ -75,6 +77,7 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 	}
 
 	public void setName(String name) {
+		Assert.isLegal(!readOnly, "BuildConfiguration is read-only."); //$NON-NLS-1$
 		this.name = name;
 	}
 
@@ -84,9 +87,12 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 	 */
 	public Object clone() {
 		try {
-			return super.clone();
+			BuildConfiguration bc = ((BuildConfiguration)super.clone());
+			bc.readOnly = false;
+			return bc;
 		} catch (CloneNotSupportedException e) {
 			// won't happen
+			Assert.isTrue(false);
 			return null;
 		}
 	}
@@ -168,5 +174,15 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * Helper method which marks the configuration readonly to ensure
+	 * we don't expose internal BuildConfigurations to clients.
+	 *
+	 * Currently only affects the name attribute via {@link #setName(String)}
+	 */
+	void setReadOnly() {
+		readOnly = true;
 	}
 }

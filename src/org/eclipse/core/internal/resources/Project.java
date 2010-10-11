@@ -1395,18 +1395,17 @@ public class Project extends Container implements IProject {
 		List result = new ArrayList(projects.length);
 		for (int i = 0; i < projects.length; i++) {
 			Project project = (Project) projects[i];
-			if (!project.isAccessible())
-				continue;
 			ProjectDescription description = project.internalGetDescription();
 			if (description == null)
 				continue;
-			IBuildConfiguration[] configs = project.internalGetBuildConfigs();
+			IBuildConfiguration[] configs = project.internalGetBuildConfigs(false);
 			for (int j = 0; j < configs.length; j++) {
 				IBuildConfigReference[] refs = description.getAllBuildConfigReferences(configs[j].getConfigurationId(), false);
 				for (int k = 0; k < refs.length; k++) {
 					try {
-						if (((BuildConfigReference)refs[k]).getConfiguration().equals(config)) {
-							result.add(configs[j]);
+						IBuildConfiguration refdConfig = ((BuildConfigReference)refs[k]).getConfiguration();
+						if (refdConfig.equals(config)) {
+							result.add(refdConfig);
 							break;
 						}
 					} catch (CoreException e) {
@@ -1424,18 +1423,19 @@ public class Project extends Container implements IProject {
 	public IBuildConfiguration[] getBuildConfigurations() throws CoreException {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
-		return internalGetBuildConfigs();
+		return internalGetBuildConfigs(true);
 	}
 
 	/**
 	 * @return IBuildConfiguration[] or an empty array if the project isn't accessible
 	 */
-	public IBuildConfiguration[] internalGetBuildConfigs() {
+	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
 		ProjectDescription desc = internalGetDescription();
 		if (desc == null)
 			return new IBuildConfiguration[0];
-		IBuildConfiguration[] configs = desc.internalGetBuildConfigs(true);
-		updateConfigurations(configs);
+		IBuildConfiguration[] configs = desc.internalGetBuildConfigs(makeCopy);
+		for (int i = 0; i < configs.length; i++)
+			((BuildConfiguration)configs[i]).setProject(this);
 		return configs;
 	}
 
@@ -1443,7 +1443,9 @@ public class Project extends Container implements IProject {
 	 * @see IProject#getBuildConfiguration(String)
 	 */
 	public IBuildConfiguration getBuildConfiguration(String id) throws CoreException {
-		IBuildConfiguration[] configs = getBuildConfigurations();
+		if (id == null)
+			return getActiveBuildConfiguration();
+		IBuildConfiguration[] configs = internalGetBuildConfigs(false);
 		for (int i = 0; i < configs.length; i++) {
 			if (configs[i].getConfigurationId().equals(id)) {
 				return (BuildConfiguration)((BuildConfiguration) configs[i]).clone();
@@ -1465,7 +1467,7 @@ public class Project extends Container implements IProject {
 	public boolean internalHasBuildConfig(IBuildConfiguration config) {
 		if (config == null)
 			return false;
-		IBuildConfiguration[] configs = internalGetBuildConfigs();
+		IBuildConfiguration[] configs = internalGetBuildConfigs(false);
 		for (int i = 0; i < configs.length; i++)
 			if (configs[i].equals(config))
 				return true;
@@ -1477,9 +1479,10 @@ public class Project extends Container implements IProject {
 	 * @see IProject#getActiveBuildConfiguration()
 	 */
 	public IBuildConfiguration getActiveBuildConfiguration() throws CoreException {
-		String configId =  getPersistentProperty(ACTIVE_BUILD_CONFIGURATION);
+		String configId = getPersistentProperty(ACTIVE_BUILD_CONFIGURATION);
 		try {
-			return getBuildConfiguration(configId);
+			if (configId != null)
+				return getBuildConfiguration(configId);
 		} catch (CoreException e) {
 			// Build configuration doesn't exist; treat the first as active.
 		}
@@ -1516,16 +1519,6 @@ public class Project extends Container implements IProject {
 		} catch (CoreException e) {
 			// Configuration doesn't exist in project. Nothing to do.
 		}
-	}
-
-	private void updateConfiguration(IBuildConfiguration value) {
-		BuildConfiguration config = (BuildConfiguration) value;
-		config.setProject(this);
-	}
-
-	private void updateConfigurations(IBuildConfiguration[] configs) {
-		for (int i = 0; i < configs.length; i++)
-			updateConfiguration(configs[i]);
 	}
 
 	/*

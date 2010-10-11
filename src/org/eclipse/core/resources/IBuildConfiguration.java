@@ -12,11 +12,19 @@ package org.eclipse.core.resources;
 
 
 /**
- * Build Configurations are a mechanism to provide orthogonal config specific
- * builds.  The core maintains build deltas per interested builder, per configuration,
- * and allow configs to reference each other.
+ * Build Configurations are a mechanism to provide orthogonal configuration specific
+ * builds for a single project.  The resources plugin maintains build deltas per
+ * interested builder, per configuration, and allow build configurations to reference
+ * each other.
  *<p>
- * All projects have a default configuration with ID {@link #DEFAULT_CONFIG_ID}
+ * All projects have at least one default configuration with ID.  By default this
+ * is {@link #DEFAULT_CONFIG_ID}.  One configuration in the project is defined 
+ * to be 'active'. The active configuration is built by default.  If unset, the
+ * active configuration defaults to the first configuration in the project.
+ *<p>
+ * BuildConfigurations are created on the project description with:
+ * {@link IProjectDescription#newBuildConfiguration(String)}, and
+ * set using {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}.
  *<p>
  * When a project is built, a specific configuration is built. This config
  * is passed to the builders so they can adapt their behavior

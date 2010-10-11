@@ -708,7 +708,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			if (!project.isAccessible())
 				continue;
 
-			IBuildConfiguration[] configs = project.internalGetBuildConfigs();
+			IBuildConfiguration[] configs = project.internalGetBuildConfigs(true);
 			for (int j = 0; j < configs.length; j++) {
 				IBuildConfiguration config = configs[j];
 				allAccessibleBuildConfigurations.add(configs[j]);
@@ -1549,7 +1549,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			ProjectDescription desc = project.internalGetDescription();
 			if (!project.isAccessible())
 				continue;
-			IBuildConfiguration[] configs = project.internalGetBuildConfigs();
+			IBuildConfiguration[] configs = project.internalGetBuildConfigs(false);
 			for (int j = 0; j < configs.length; j++) {
 				IBuildConfigReference[] refs = desc.getReferencedProjectConfigs(configs[j].getConfigurationId());
 				List dangling = new ArrayList(refs.length);
@@ -1565,7 +1565,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					}
 				}
 				if (!dangling.isEmpty())
-					result.put(configs[j], dangling.toArray(new IBuildConfigReference[dangling.size()]));
+					result.put(((BuildConfiguration)configs[j]).clone(), 
+							dangling.toArray(new IBuildConfigReference[dangling.size()]));
 			}
 		}
 		return result;

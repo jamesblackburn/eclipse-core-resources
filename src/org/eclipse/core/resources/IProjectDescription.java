@@ -378,7 +378,8 @@ public interface IProjectDescription {
 	public void setDynamicConfigReferences(String configId, IBuildConfigReference[] references);
 
 	/**
-	 * Returns a new build configuration for the described project, with the given name.
+	 * Returns a new build configuration for the described project, with the given id.  
+	 * The id is an implementation specific unique id for the build configuration
 	 * <p>
 	 * Note that the new build configuration does not become part of this project
 	 * description until it is installed using {@link #setBuildConfigurations(IBuildConfiguration[])}
