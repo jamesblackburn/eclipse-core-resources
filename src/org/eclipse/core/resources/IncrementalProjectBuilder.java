@@ -188,7 +188,9 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	/**
 	 * Requests that this builder remember any state it may be retaining regarding
 	 * previously built states. This means that the next time the builder runs,
-	 * it will receive the same delta. This can be used to indicate that a builder
+	 * it will receive a delta which includes changes reported in the current 
+	 * {@link #getDelta(IProject)}.
+	 * This can be used to indicate that a builder
 	 * didn't run, even though there are changes, and it wants the delta to be preserved
 	 * until the next time it is called.
 	 * This is superseded by a call to {@link #forgetLastBuiltState()}.
