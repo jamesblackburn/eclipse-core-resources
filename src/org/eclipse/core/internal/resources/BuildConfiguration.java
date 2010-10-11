@@ -10,9 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.resources.*;
-import org.eclipse.core.runtime.*;
+import org.eclipse.core.runtime.Assert;
 
 /**
  * Concrete implementation of a build configuration
@@ -148,7 +147,7 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 	}
 
 	/**
-	 * Helper method used to work out if we need to persist the project's build configurations
+	 * Helper method used to work out if the project's build configurations
 	 * need to be persisted in the .project.
 	 * If the user isn't using build configurations then no need to clutter the project XML.
 	 * @return boolean indicating if this configuration is a default auto-generated one.
@@ -161,17 +160,14 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 		// If any of the build configuration references don't track the active conifguration,
 		// then this build configuration isn't default
 		if (project != null) {
-			try {
-				IBuildConfigReference[] refs = project.getDescription().getReferencedProjectConfigs(id);
-				for (int i = 0; i < refs.length; i++)
-					if (refs[i].getConfigurationId() != null)
-						return false;
-			} catch (CoreException e) {
-				// Should never happen
-				IStatus result = new Status(e.getStatus().getSeverity(), ResourcesPlugin.PI_RESOURCES, "Unexpected exception", e); //$NON-NLS-1$
-				Policy.log(result);
-				return false;
-			}
+			IProjectDescription desc = ((Project)project).internalGetDescription();
+			if (desc == null)
+				return true;
+			Assert.isNotNull(desc);
+			IBuildConfigReference[] refs = desc.getReferencedProjectConfigs(id);
+			for (int i = 0; i < refs.length; i++)
+				if (refs[i].getConfigurationId() != null)
+					return false;			
 		}
 		return true;
 	}

@@ -191,6 +191,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				if (clean || currentBuilder.wasForgetStateRequested()) {
 					currentBuilder.setLastBuiltTree(null);
 				} else if (currentBuilder.wasRememberStateRequested()) {
+					// If remember last build state, and FULL_BUILD
+					// last tree must be set to => null for next build
+					if (trigger == IncrementalProjectBuilder.FULL_BUILD)
+						currentBuilder.setLastBuiltTree(null);
 					// Don't modify the last built tree
 				} else {
 					// remember the current state as the last built state.
