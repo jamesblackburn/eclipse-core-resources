@@ -121,8 +121,6 @@ public class Project extends Container implements IProject {
 	 * @see IProject#build(int, IProgressMonitor)
 	 */
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
-		if (!isAccessible())
-			return;
 		internalBuild(getActiveBuildConfiguration(), trigger, null, null, monitor);
 	}
 
@@ -130,8 +128,6 @@ public class Project extends Container implements IProject {
 	 * @see IProject#build(int, String, Map, IProgressMonitor)
 	 */
 	public void build(int trigger, String builderName, Map args, IProgressMonitor monitor) throws CoreException {
-		if (!isAccessible())
-			return;
 		Assert.isNotNull(builderName);
 		internalBuild(getActiveBuildConfiguration(), trigger, builderName, args, monitor);
 	}
@@ -140,8 +136,7 @@ public class Project extends Container implements IProject {
 	 * @see IProject#build(IBuildConfiguration, int, String, Map, IProgressMonitor)
 	 */
 	public void build(IBuildConfiguration config, int trigger, IProgressMonitor monitor) throws CoreException {
-		if (!isAccessible())
-			return;
+		Assert.isNotNull(config);
 		internalBuild(config, trigger, null, null, monitor);
 	}
 
@@ -1504,7 +1499,7 @@ public class Project extends Container implements IProject {
 		} catch (CoreException e) {
 			// project not accessible
 		}
-		// Should we just return null here?
+		//TODO: Should we just return null here?
 		Assert.isTrue(false, "Project not accessible!"); //$NON-NLS-1$
 		return null;
 	}

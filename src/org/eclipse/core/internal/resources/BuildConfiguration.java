@@ -18,6 +18,8 @@ import org.eclipse.core.runtime.Assert;
  */
 public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 
+	/** Project ; Guaranteed to be set when configurations are fetched 
+	 * from the IProject. */
 	private IProject project;
 	/** Configuration id is mandatory */
 	private final String id;
@@ -103,7 +105,6 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 	public int hashCode() {
 		final int prime = 31;
 		int result = prime + id.hashCode();
-		result = prime * result + (project == null ? 0 : project.hashCode());
 		return result;
 	}
 
@@ -121,8 +122,11 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 		BuildConfiguration config = (BuildConfiguration) obj;
 		if (!id.equals(config.id))
 			return false;
+		// If one of the configurations has a project
+		// while the other doesn't, we consider them equal.
 		if ((project == null) != (config.project == null))
-			return false;
+			return true;
+		// If both have projects, they must be equal...
 		if (project != null && !project.equals(config.project))
 			return false;
 		return true;
@@ -157,13 +161,12 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 			return false;
 		if (name != null)
 			return false;
-		// If any of the build configuration references don't track the active conifguration,
+		// If any of the build configuration references don't track the active configuration,
 		// then this build configuration isn't default
 		if (project != null) {
 			IProjectDescription desc = ((Project)project).internalGetDescription();
 			if (desc == null)
 				return true;
-			Assert.isNotNull(desc);
 			IBuildConfigReference[] refs = desc.getReferencedProjectConfigs(id);
 			for (int i = 0; i < refs.length; i++)
 				if (refs[i].getConfigurationId() != null)

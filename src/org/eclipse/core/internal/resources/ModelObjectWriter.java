@@ -14,10 +14,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IBuildConfiguration;
-import org.eclipse.core.resources.IBuildConfigReference;
-
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -60,13 +56,13 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		return result;
 	}
 
-	protected void write(BuildCommand command, XMLWriter writer) throws IOException {
+	protected void write(BuildCommand command, XMLWriter writer) {
 		writer.startTag(BUILD_COMMAND, null);
 		if (command != null) {
 			writer.printSimpleTag(NAME, command.getName());
 			if (shouldWriteTriggers(command))
 				writer.printSimpleTag(BUILD_TRIGGERS, triggerString(command));
-			write(ARGUMENTS, DICTIONARY, KEY, VALUE, command.getArguments(false), writer);
+			write(ARGUMENTS, command.getArguments(false), writer);
 		}
 		writer.endTag(BUILD_COMMAND);
 	}
@@ -312,20 +308,9 @@ public class ModelObjectWriter implements IModelObjectConstants {
 	}
 
 	/**
-	 * Write maps of (String, Object) as
-	 * <name>
-	 *     <entryname>
-	 *         <keyName>key</keyName>
-	 *         <valueName>Object</valueName>
-	 *     </entryname>
-	 *     ...
-	 * </name>
-	 * where Object is written with a call to:
-	 *  - {@link XMLWriter#printSimpleTag(String, Object)} if it is a String
-	 *  - {@link #write(Object, XMLWriter)} otherwise
-	 * If valueName is null, Object is not surrounded in valueName tags
+	 * Write maps of (String, String).
 	 */
-	protected void write(String name, String entryName, String keyName, String valueName, Map table, XMLWriter writer) throws IOException {
+	protected void write(String name, Map table, XMLWriter writer) {
 		writer.startTag(name, null);
 		if (table != null) {
 			// ensure consistent order of map elements
@@ -335,20 +320,12 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			for (Iterator it = sorted.iterator(); it.hasNext();) {
 				String key = (String) it.next();
 				Object value = table.get(key);
-				writer.startTag(entryName, null);
+				writer.startTag(DICTIONARY, null);
 				{
-					writer.printSimpleTag(keyName, key);
-					if (value instanceof String)
-						writer.printSimpleTag(valueName, value);
-					else if (value != null) {
-						if (valueName != null)
-							writer.startTag(valueName, null);
-						write(value, writer);
-						if (valueName != null)
-							writer.endTag(valueName);
-					}
+					writer.printSimpleTag(KEY, key);
+					writer.printSimpleTag(VALUE, value);
 				}
-				writer.endTag(entryName);
+				writer.endTag(DICTIONARY);
 			}
 		}
 		writer.endTag(name);

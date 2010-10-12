@@ -215,7 +215,7 @@ public abstract class InternalBuilder {
 	}
 
 	/*
-	 * @see IncrementalProjectBuilder#startupOnInitialize()
+	 * @see IncrementalProjectBuilder#startupOnInitialize
 	 */
 	protected abstract void startupOnInitialize();
 

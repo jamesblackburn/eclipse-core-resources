@@ -16,8 +16,6 @@ import org.eclipse.core.internal.watson.ElementTree;
 import org.eclipse.core.resources.IProject;
 
 public class BuilderPersistentInfo {
-	protected String projectName;
-	protected String configId;
 	protected String builderName;
 	/**
 	 * Index of this builder in the build spec. A value of -1 indicates
@@ -26,6 +24,8 @@ public class BuilderPersistentInfo {
 	private int buildSpecIndex = -1;
 	protected IProject[] interestingProjects = ICoreConstants.EMPTY_PROJECT_ARRAY;
 	protected ElementTree lastBuildTree;
+	protected String projectName;
+	protected String configId;
 
 	public BuilderPersistentInfo(String projectName, String builderName, int buildSpecIndex) {
 		this(projectName, null, builderName, buildSpecIndex);

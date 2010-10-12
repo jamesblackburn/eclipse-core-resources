@@ -15,19 +15,17 @@ package org.eclipse.core.resources;
  *
  * @noimplement This interface is not intended to be implemented by clients.
  * @noextend This interface is not intended to be extended by clients.
- *
  * @since 3.7
  */
 public interface IBuildConfigReference {
 	/**
-	 * @return the project which contains the build configuration referenced
-	 * by this.
+	 * @return the project container referenced by this build configuration reference
 	 */
 	public IProject getProject();
 
 	/**
 	 * @return the id of the configuration this build configuration reference refers to.
-	 * May be null if this references the active configuration.
+	 * May be null if this references the active configuration in the project.
 	 */
 	public String getConfigurationId();
 
