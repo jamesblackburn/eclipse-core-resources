@@ -1373,6 +1373,11 @@ public class Project extends Container implements IProject {
 		return internalGetReferencedBuildConfigurations(config);
 	}
 
+	/**
+	 * Returns the IBuildConfigurations referenced by the passed in build configuration
+	 * @param config to find references for
+	 * @return IBuildConfiguration[] of referenced configurations; never null.
+	 */
 	public IBuildConfiguration[] internalGetReferencedBuildConfigurations(IBuildConfiguration config) {
 		ProjectDescription description = internalGetDescription();
 		IBuildConfigReference[] refs = description.getAllBuildConfigReferences(config.getConfigurationId(), true);
@@ -1381,7 +1386,7 @@ public class Project extends Container implements IProject {
 			try {
 				configs.add(((BuildConfigReference)refs[i]).getConfiguration());
 			} catch (CoreException e) {
-				// Ignore non-existant configuration reference
+				// Ignore non-existent configuration reference
 			}
 		}
 		return (IBuildConfiguration[]) configs.toArray(new IBuildConfiguration[configs.size()]);

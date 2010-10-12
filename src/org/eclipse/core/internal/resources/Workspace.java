@@ -711,8 +711,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			IBuildConfiguration[] configs = project.internalGetBuildConfigs(true);
 			for (int j = 0; j < configs.length; j++) {
 				IBuildConfiguration config = configs[j];
-				allAccessibleBuildConfigurations.add(configs[j]);
-				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigurations(configs[j]);
+				allAccessibleBuildConfigurations.add(config);
+				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigurations(config);
 				for (int k = 0; k < refs.length; k++) {
 					IBuildConfiguration ref = refs[k];
 
@@ -828,7 +828,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 
 	/* (non-Javadoc)
 	 * @see IWorkspace#computeProjectBuildConfigOrder(IBuildConfiguration[])
-	 * @since 2.1
 	 */
 	public ProjectBuildConfigOrder computeProjectBuildConfigOrder(IBuildConfiguration[] buildConfigs) {
 		// Compute the full project order for all accessible projects
@@ -1464,7 +1463,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * they depend on) in the workspace in the order in which they would be built by <code>IWorkspace.build</code>.
 	 * @see IWorkspace#build(int, IProgressMonitor)
 	 * @see IWorkspaceDescription#getBuildOrder()
-	 * @since 2.1
 	 */
 	public IBuildConfiguration[] getBuildOrder() {
 		// if the build order has not been cached, calculate it
