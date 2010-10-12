@@ -49,10 +49,6 @@ public abstract class InternalBuilder {
 	 * The build configuration that this builder is to build.
 	 */
 	private IBuildConfiguration buildConfiguration;
-	/**
-	 * The context in which the builder was called.
-	 */
-	private IBuildContext context = null;
 
 	/**
 	 * The value of the callOnEmptyDelta builder extension attribute.
@@ -114,13 +110,6 @@ public abstract class InternalBuilder {
 		return buildManager.getDelta(aProject);
 	}
 	
-	/**
-	 * @see IncrementalProjectBuilder#getContext()
-	 */ 
-	protected IBuildContext getContext() {
-		return context;
-	}
-
 	final IProject[] getInterestingProjects() {
 		return interestingProjects;
 	}
@@ -223,16 +212,6 @@ public abstract class InternalBuilder {
 		Assert.isTrue(buildConfiguration == null);
 		Assert.isNotNull(value);
 		buildConfiguration = value;
-		if (context == null)
-			context = new BuildContext(buildConfiguration);
-	}
-
-	/**
-	 * Sets the context in which the builder was last called.
-	 * @see #getContext()
-	 */
-	final void setContext(IBuildContext context) {
-		this.context = context;
 	}
 
 	/*
