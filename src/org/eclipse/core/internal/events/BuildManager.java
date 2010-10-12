@@ -196,7 +196,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 					// last tree must be set to => null for next build
 					if (trigger == IncrementalProjectBuilder.FULL_BUILD)
 						currentBuilder.setLastBuiltTree(null);
-					// Don't modify the last built tree
+					// else don't modify the last built tree
 				} else {
 					// remember the current state as the last built state.
 					ElementTree lastTree = workspace.getElementTree();
@@ -374,9 +374,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 */
 	public IStatus build(IBuildConfiguration buildConfiguration, int trigger, String builderName, Map args, IProgressMonitor monitor) {
 		monitor = Policy.monitorFor(monitor);
-		if (builderName == null) {
+		if (builderName == null)
 			return basicBuild(buildConfiguration, trigger, monitor);
-		}
 		return basicBuild(buildConfiguration, trigger, builderName, args, monitor);
 	}
 
@@ -406,9 +405,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * in the builder spec, and that have a last built state, even if they
 	 * have not been instantiated this session.
 	 *
-	 * e.g.
-	 * The returned Array List is ordered like:
-	 *
+	 * e.g. 
+	 * For a project with 3 builders, 2 build configurations and the second
+	 * builder doesn't support configurations.
+	 * The returned List of BuilderInfos is ordered:
 	 * builder_id, config_id,builder_index
 	 * builder_1,  config_1, 1
 	 * builder_1,  config_2, 1
@@ -416,8 +416,6 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * builder_3,  config_1, 3
 	 * builder_3,  config_1, 3
 	 *
-	 * For a project with 3 builders, 2 build configurations, where the second
-	 * builder doesn't support configurations.
 	 */
 	public ArrayList createBuildersPersistentInfo(IProject project) throws CoreException {
 		/* get the old builders (those not yet instantiated) */
@@ -509,11 +507,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Returns the builder instance corresponding to the given command, or
+	 * 	Returns the builder instance corresponding to the given command, or
 	 * <code>null</code> if the builder was not valid.
-	 * 
-	 * Note that this does not modify the context of the builder.
-	 * 
 	 * @param buildConfiguration The project config this builder corresponds to
 	 * @param command The build command
 	 * @param buildSpecIndex The index of this builder in the build spec, or -1 if
@@ -612,8 +607,6 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * @param project the project to get a delta for
 	 */
 	IResourceDelta getDelta(IProject project) {
-		if (!project.isAccessible())
-			return null;
 		try {
 			lock.acquire();
 			if (currentTree == null) {
@@ -735,8 +728,6 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * during this build cycle; and false otherwise.
 	 */
 	boolean hasBeenBuilt(IProject project) {
-		if (!project.isAccessible())
-			return false;
 		return builtProjects.contains(project);
 	}
 
@@ -768,6 +759,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 */
 	private void hookEndBuild(int trigger) {
 		building = false;
+		builtProjects.clear();
 		builtProjectConfigs.clear();
 		deltaCache.flush();
 		deltaTreeCache.flush();
