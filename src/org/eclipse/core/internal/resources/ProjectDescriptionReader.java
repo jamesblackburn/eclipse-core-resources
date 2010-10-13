@@ -854,7 +854,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		for (int i = 0; i < configs.length; i++)
 			configs[i] = root.getProject((String) referencedProjects.get(i)).newReference();
 		// If no build configuration references were loaded, they weren't specified in the
-		// config file. For backwards compatibility, load the project references.
+		// config file. For backwards compatibility, use the project references.
 		if (!loadedBuildConfigReferences) {
 			projectDescription.setReferencedProjectConfigs(IBuildConfiguration.DEFAULT_CONFIG_ID, configs);
 		}

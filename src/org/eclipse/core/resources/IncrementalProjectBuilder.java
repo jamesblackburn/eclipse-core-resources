@@ -14,7 +14,6 @@
  *******************************************************************************/
 package org.eclipse.core.resources;
 
-
 import java.util.Map;
 import org.eclipse.core.internal.events.InternalBuilder;
 import org.eclipse.core.runtime.*;
@@ -195,9 +194,10 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * previously built states. This means that the next time the builder runs,
 	 * it will receive a delta which includes changes reported in the current 
 	 * {@link #getDelta(IProject)}.
-	 * This can be used to indicate that a builder
-	 * didn't run, even though there are changes, and it wants the delta to be preserved
-	 * until the next time it is called.
+	 *<p>
+	 * This can be used to indicate that a builder didn't run, even though there
+	 * are changes, and the builder wishes that the delta be preserved until its
+	 * next invocation.
 	 * This is superseded by a call to {@link #forgetLastBuiltState()}.
 	 * @since 3.7
 	 */
@@ -310,11 +310,11 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * Returns whether the given project configuration has already been built during this
 	 * build iteration.
 	 * <p>
-	 * When the entire workspace is being built, the project buildConfigs are built in
-	 * linear sequence. This method can be used to determine if another project configuration
-	 * precedes this builder's project in that build sequence. If only a single
-	 * project is being built, then there is no build order and this method will
-	 * always return <code>false</code>.
+	 * When the entire workspace, or a set of build configurations are being built, the project 
+	 * build configurations are built in linear sequence. This method can be used to determine 
+	 * if another project configuration precedes this builder's project in that build sequence. 
+	 * If only a single configuration is being built, then there is no build order and this 
+	 * method will always return <code>false</code>.
 	 * </p>
 	 * 
 	 * @param buildConfiguration the project to check against in the current build order

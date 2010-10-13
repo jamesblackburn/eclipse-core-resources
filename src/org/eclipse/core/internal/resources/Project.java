@@ -122,7 +122,7 @@ public class Project extends Container implements IProject {
 	 */
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
 		if (!isAccessible())
-			return;
+			return;		
 		internalBuild(getActiveBuildConfiguration(), trigger, null, null, monitor);
 	}
 
@@ -142,6 +142,7 @@ public class Project extends Container implements IProject {
 	public void build(IBuildConfiguration config, int trigger, IProgressMonitor monitor) throws CoreException {
 		if (!isAccessible())
 			return;
+		Assert.isNotNull(config);
 		internalBuild(config, trigger, null, null, monitor);
 	}
 
@@ -1410,7 +1411,7 @@ public class Project extends Container implements IProject {
 					try {
 						IBuildConfiguration refdConfig = ((BuildConfigReference)refs[k]).getConfiguration();
 						if (refdConfig.equals(config)) {
-							result.add(refdConfig);
+							result.add(configs[j]);
 							break;
 						}
 					} catch (CoreException e) {
@@ -1431,19 +1432,6 @@ public class Project extends Container implements IProject {
 		return internalGetBuildConfigs(true);
 	}
 
-	/**
-	 * @return IBuildConfiguration[] or an empty array if the project isn't accessible
-	 */
-	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
-		ProjectDescription desc = internalGetDescription();
-		if (desc == null)
-			return new IBuildConfiguration[0];
-		IBuildConfiguration[] configs = desc.internalGetBuildConfigs(makeCopy);
-		for (int i = 0; i < configs.length; i++)
-			((BuildConfiguration)configs[i]).setProject(this);
-		return configs;
-	}
-
 	/* (non-Javadoc)
 	 * @see IProject#getBuildConfiguration(String)
 	 */
@@ -1457,6 +1445,19 @@ public class Project extends Container implements IProject {
 			}
 		}
 		throw new ResourceException(IResourceStatus.BUILD_CONFIGURATION_NOT_FOUND, getFullPath(), null, null);
+	}
+
+	/**
+	 * @return IBuildConfiguration[] or an empty array if the project isn't accessible
+	 */
+	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
+		ProjectDescription desc = internalGetDescription();
+		if (desc == null)
+			return new IBuildConfiguration[0];
+		IBuildConfiguration[] configs = desc.internalGetBuildConfigs(makeCopy);
+		for (int i = 0; i < configs.length; i++)
+			((BuildConfiguration)configs[i]).setProject(this);
+		return configs;
 	}
 
 	/*
@@ -1505,7 +1506,7 @@ public class Project extends Container implements IProject {
 		} catch (CoreException e) {
 			// project not accessible
 		}
-		// Should we just return null here?
+		//TODO: Should we just return null here?
 		Assert.isTrue(false, "Project not accessible!"); //$NON-NLS-1$
 		return null;
 	}

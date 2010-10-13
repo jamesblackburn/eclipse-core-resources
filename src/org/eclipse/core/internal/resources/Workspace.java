@@ -14,10 +14,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IBuildConfiguration;
-import org.eclipse.core.resources.IBuildConfigReference;
-
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -183,6 +179,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 
 	// Comparator used to provide a stable ordering of project buildConfigs
 	private static class BuildConfigurationComparator implements Comparator {
+		public BuildConfigurationComparator() {}
 		public int compare(Object x, Object y) {
 			IBuildConfiguration px = (IBuildConfiguration) x;
 			IBuildConfiguration py = (IBuildConfiguration) y;
@@ -604,7 +601,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * </p>
 	 *
 	 * @return result describing the global active build configuration order
-	 * @since 2.1
 	 */
 	private VertexOrder computeActiveBuildConfigurationOrder() {
 		// Determine the full set of accessible active project buildConfigs in the workspace,
@@ -810,6 +806,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @since 2.1
 	 */
 	public ProjectOrder computeProjectOrder(IProject[] projects) {
+
 		// Compute the full project order for all accessible projects
 		VertexOrder fullProjectOrder = computeFullProjectOrder();
 
