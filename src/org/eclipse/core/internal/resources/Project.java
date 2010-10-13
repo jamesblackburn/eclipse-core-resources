@@ -1410,7 +1410,7 @@ public class Project extends Container implements IProject {
 					try {
 						IBuildConfiguration refdConfig = ((BuildConfigReference)refs[k]).getConfiguration();
 						if (refdConfig.equals(config)) {
-							result.add(refdConfig);
+							result.add(configs[j]);
 							break;
 						}
 					} catch (CoreException e) {
