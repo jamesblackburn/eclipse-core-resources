@@ -10,15 +10,17 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
-import java.io.*;
-import org.eclipse.core.runtime.*;
-import org.eclipse.core.resources.*;
+import org.eclipse.core.internal.events.BuilderPersistentInfo;
 import org.eclipse.core.internal.utils.Messages;
 import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.internal.watson.ElementTree;
-import org.eclipse.core.internal.events.BuilderPersistentInfo;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResourceStatus;
+import org.eclipse.core.runtime.*;
 
 /**
  * Reads version 3 of the workspace tree file format. Note: this version is 

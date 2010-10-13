@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.core.resources;
 
-
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
@@ -479,6 +478,7 @@ public interface IWorkspace extends IAdaptable {
 	 * 
 	 * @param projects the projects to order
 	 * @return result describing the project order
+	 * @see IWorkspace#computeProjectBuildConfigOrder(IBuildConfiguration[])
 	 * @since 2.1
 	 */
 	public ProjectOrder computeProjectOrder(IProject[] projects);

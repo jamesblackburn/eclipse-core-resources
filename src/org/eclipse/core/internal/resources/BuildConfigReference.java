@@ -20,10 +20,10 @@ import org.eclipse.core.runtime.*;
 import org.eclipse.core.resources.*;
 
 /**
- * Represents a reference to a specific project configuration. The project is
+ * Represents a reference to a specific project build configuration. The project is
  * stored as an IProject handle, and the configuration as the configurations unique name.
  * This allows references to project configurations that do not exist in the workspace,
- * or configurations that do not exist in the project.
+ * or configurations that do not exist in the referenced project.
  */
 public class BuildConfigReference implements IBuildConfigReference {
 	private final IProject project;
@@ -81,11 +81,12 @@ public class BuildConfigReference implements IBuildConfigReference {
 	}
 
 	/**
-	 * @return the configuration that this project configuration reference refers to.
+	 * @return the configuration that this build configuration reference refers to.
 	 * If this references the active configuration of a project, the projects current
 	 * active configuration is returned.
-	 * @throws CoreException if the active configuration for the referenced project cannot
-	 * be determined. For example if the references project is not accessible.
+	 * @throws CoreException if the configuration could not be found on the referenced
+	 * project.
+	 * @see IProject#getBuildConfiguration(String)
 	 */
 	public IBuildConfiguration getConfiguration() throws CoreException {
 		return project.getBuildConfiguration(configId);
@@ -138,4 +139,4 @@ public class BuildConfigReference implements IBuildConfigReference {
 			result.append("<active>"); //$NON-NLS-1$
 		return result.toString();
 	}
- }
+}

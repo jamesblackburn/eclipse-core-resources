@@ -12,8 +12,6 @@
  *******************************************************************************/
 package org.eclipse.core.resources;
 
-
-
 import java.net.URI;
 
 import java.util.Map;

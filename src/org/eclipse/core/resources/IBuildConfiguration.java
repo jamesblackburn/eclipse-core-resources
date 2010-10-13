@@ -12,8 +12,8 @@ package org.eclipse.core.resources;
 
 
 /**
- * Build Configurations are a mechanism to provide orthogonal configuration specific
- * builds for a single project.  The resources plugin maintains build deltas per
+ * Build Configurations provide a mechanism for orthogonal configuration specific
+ * builds within a single project.  The resources plugin maintains build deltas per
  * interested builder, per configuration, and allow build configurations to reference
  * each other.
  *<p>
@@ -33,7 +33,6 @@ package org.eclipse.core.resources;
  *
  * @noimplement This interface is not intended to be implemented by clients.
  * @noextend This interface is not intended to be extended by clients.
- *
  * @since 3.7
  */
 public interface IBuildConfiguration {

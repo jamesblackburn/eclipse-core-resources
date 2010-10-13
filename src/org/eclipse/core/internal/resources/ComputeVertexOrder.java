@@ -18,7 +18,7 @@ import java.util.*;
  * Implementation of a sort algorithm for computing the order of vertexes that are part
  * of a reference graph. This algorithm handles cycles in the graph in a reasonable way.
  * 
- * @since 2.1
+ * @since 3.7
  */
 class ComputeVertexOrder {
 
