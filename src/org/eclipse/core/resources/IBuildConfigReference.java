@@ -12,6 +12,10 @@ package org.eclipse.core.resources;
 
 /**
  * Represents a reference to another build configuration
+ *<p>
+ * Build configuration references are created by {@link IProject#newReference()}
+ * on the referenced project, and set on the referencing project with 
+ * {@link IProjectDescription#setReferencedProjectConfigs(String, IBuildConfigReference[])}
  *
  * @noimplement This interface is not intended to be implemented by clients.
  * @noextend This interface is not intended to be extended by clients.

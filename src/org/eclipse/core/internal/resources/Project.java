@@ -1425,19 +1425,6 @@ public class Project extends Container implements IProject {
 		return internalGetBuildConfigs(true);
 	}
 
-	/**
-	 * @return IBuildConfiguration[] or an empty array if the project isn't accessible
-	 */
-	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
-		ProjectDescription desc = internalGetDescription();
-		if (desc == null)
-			return new IBuildConfiguration[0];
-		IBuildConfiguration[] configs = desc.internalGetBuildConfigs(makeCopy);
-		for (int i = 0; i < configs.length; i++)
-			((BuildConfiguration)configs[i]).setProject(this);
-		return configs;
-	}
-
 	/* (non-Javadoc)
 	 * @see IProject#getBuildConfiguration(String)
 	 */
@@ -1451,6 +1438,19 @@ public class Project extends Container implements IProject {
 			}
 		}
 		throw new ResourceException(IResourceStatus.BUILD_CONFIGURATION_NOT_FOUND, getFullPath(), null, null);
+	}
+
+	/**
+	 * @return IBuildConfiguration[] or an empty array if the project isn't accessible
+	 */
+	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
+		ProjectDescription desc = internalGetDescription();
+		if (desc == null)
+			return new IBuildConfiguration[0];
+		IBuildConfiguration[] configs = desc.internalGetBuildConfigs(makeCopy);
+		for (int i = 0; i < configs.length; i++)
+			((BuildConfiguration)configs[i]).setProject(this);
+		return configs;
 	}
 
 	/*

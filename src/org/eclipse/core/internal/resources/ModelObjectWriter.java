@@ -267,7 +267,7 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			if (snapshotLocation != null) {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
-			// Write out the build configurations
+			// Write out the build configurations before project references
 			writeBuildConfigurations(description, writer);
 			// Project level references written for backwards compatibility
 			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);

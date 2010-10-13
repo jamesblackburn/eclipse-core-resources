@@ -1780,7 +1780,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 		output.writeInt(info.getFlags());
 		info.writeTo(output);
 	}
-	
+
 	/**
 	 * Discovers the trees which need to be saved for the passed in project's builders.
 	 * In a version2 workspace, only one tree is saved per builder.  With version3, one tree may 
