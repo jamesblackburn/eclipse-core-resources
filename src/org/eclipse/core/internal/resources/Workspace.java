@@ -350,41 +350,45 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		buildInternal(getBuildOrder(), trigger, monitor);
 	}
 
+	/**
+	 * Add all IBuildConfigurations reachable from config to the configs collection.
+	 * @param configs collection of configurations to extend
+	 * @param config config to find reachable configurations to.
+	 */
+	private void recursivelyAddBuildConfigs(Collection/*<IBuildConfiguration>*/ configs, IBuildConfiguration config) throws CoreException {
+		IBuildConfiguration[] referenced = config.getProject().getReferencedBuildConfigurations(config);
+		for (int i = 0; i < referenced.length; i++) {
+			if (configs.contains(referenced[i]))
+				continue;
+			configs.add(referenced[i]);
+			recursivelyAddBuildConfigs(configs, referenced[i]);
+		}
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see IWorkspace#build(IBuildConfiguration[], int, IProgressMonitor)
 	 */
-	public void build(IBuildConfiguration[] configs, int trigger, IProgressMonitor monitor) throws CoreException {
+	public void build(IBuildConfiguration[] configs, int trigger, boolean buildReferences, IProgressMonitor monitor) throws CoreException {
 		if (configs.length == 0)
 			return;
 
-		Set configSet = new HashSet(configs.length);
-		configSet.addAll(Arrays.asList(configs));
-
+		LinkedHashSet refsList = new LinkedHashSet(Arrays.asList(configs));
 		// Find transitive closure of referenced project buildConfigs
-		Set refs = new HashSet(configSet);
-		Set buffer = new HashSet();
-		int size = -1;
-		while (size != refs.size()) {
-			size = refs.size();
-			for (Iterator it = refs.iterator(); it.hasNext();) {
-				IBuildConfiguration config = (IBuildConfiguration) it.next();
-				buffer.addAll(Arrays.asList(config.getProject().getReferencedBuildConfigurations(config)));
-			}
-			refs.addAll(buffer);
-			buffer.clear();
+		if (buildReferences) {
+			for (int i = 0 ; i < configs.length ; i++)
+				recursivelyAddBuildConfigs(refsList, configs[i]);
 		}
-		List refsList = new LinkedList(refs);
 
 		// Filter out inaccessible projects, or buildConfigs that do not exist
-		for (ListIterator it = refsList.listIterator(); it.hasNext();) {
+		for (Iterator it = refsList.iterator(); it.hasNext();) {
 			IBuildConfiguration config = (IBuildConfiguration) it.next();
 			if (!config.getProject().isAccessible() || !config.getProject().hasBuildConfiguration(config))
 				it.remove();
 		}
 
 		// Order the referenced project buildConfigs
-		ProjectBuildConfigOrder order = computeProjectBuildConfigOrder((IBuildConfiguration[]) refsList.toArray(new IBuildConfiguration[refs.size()]));
+		ProjectBuildConfigOrder order = computeProjectBuildConfigOrder((IBuildConfiguration[]) refsList.toArray(new IBuildConfiguration[refsList.size()]));
 
 		// Run the build
 		IBuildConfiguration[] finalOrder = new IBuildConfiguration[order.buildConfigurations.length];
@@ -720,7 +724,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					if (!((Project) ref.getProject()).internalHasBuildConfig(ref))
 						continue;
 
-					// Add the referenced accessible config
+					// Add the reference to the set of reachable configs + add an edge
+					allAccessibleBuildConfigurations.add(ref);
 					edges.add(new IBuildConfiguration[] {config, ref});
 				}
 			}
