@@ -10,10 +10,7 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
-import java.util.Arrays;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 import org.eclipse.core.internal.resources.BuildConfiguration;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.Assert;
@@ -25,6 +22,8 @@ public class BuildContext implements IBuildContext {
 
 	private static final IBuildConfiguration[] EMPTY_BUILD_CONFIGURATION_ARRAY = new IBuildConfiguration[0];
 
+	/** Configurations requested to be built */
+	private final IBuildConfiguration[] requestedBuilt;
 	/** The configurations built before this {@link BuildConfiguration} */
 	private final IBuildConfiguration[] builtBefore;
 	/** The configurations to be build after this {@link BuildConfiguration} */
@@ -40,6 +39,7 @@ public class BuildContext implements IBuildContext {
 	 */
 	public BuildContext(IBuildConfiguration buildConfiguration) {
 		builtBefore = builtAfter = EMPTY_BUILD_CONFIGURATION_ARRAY;
+		requestedBuilt = new IBuildConfiguration[] {buildConfiguration};
 	}
 
 	/**
@@ -47,7 +47,8 @@ public class BuildContext implements IBuildContext {
 	 * @param buildConfiguration the project configuration being built, that we need the context for
 	 * @param buildOrder the build order for the entire build, indicating how cycles etc. have been resolved
 	 */
-	public BuildContext(IBuildConfiguration buildConfiguration, IBuildConfiguration[] buildOrder) {
+	public BuildContext(IBuildConfiguration buildConfiguration, IBuildConfiguration[] requestedBuilt, IBuildConfiguration[] buildOrder) {
+		this.requestedBuilt = requestedBuilt;
 		int position = -1;
 		for (int i = 0; i < buildOrder.length; i++) {
 			if (buildOrder[i].equals(buildConfiguration))
@@ -61,6 +62,10 @@ public class BuildContext implements IBuildContext {
 		builtAfter = new IBuildConfiguration[buildOrder.length - position - 1];
 		System.arraycopy(buildOrder, 0, builtBefore, 0, builtBefore.length);
 		System.arraycopy(buildOrder, position + 1, builtAfter, 0, builtAfter.length);
+	}
+
+	public IBuildConfiguration[] getRequestedConfigs() {
+		return requestedBuilt;
 	}
 
 	/*
@@ -131,4 +136,5 @@ public class BuildContext implements IBuildContext {
 			return false;
 		return true;
 	}
+
 }

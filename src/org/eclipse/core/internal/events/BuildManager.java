@@ -306,7 +306,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, Messages.events_errors, null);
 				ICommand command = getCommand(project, builderName, args);
 				try {
-					IBuildContext context = new BuildContext(buildConfiguration, new IBuildConfiguration[]{buildConfiguration});
+					IBuildContext context = new BuildContext(buildConfiguration);
 					IncrementalProjectBuilder builder = getBuilder(buildConfiguration, command, -1, status, context);
 					if (builder != null)
 						basicBuild(trigger, builder, args, status, Policy.subMonitorFor(monitor, 1));
@@ -325,7 +325,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	/**
 	 * Loop the workspace build until no more builders request a rebuild.
 	 */
-	private void basicBuildLoop(IBuildConfiguration[] configs, int trigger, MultiStatus status, IProgressMonitor monitor) {
+	private void basicBuildLoop(IBuildConfiguration[] configs, IBuildConfiguration[] requestedConfigs, int trigger, MultiStatus status, IProgressMonitor monitor) {
 		int projectWork = configs.length;
 		if (projectWork > 0)
 			projectWork = TOTAL_BUILD_WORK / projectWork;
@@ -339,7 +339,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			builtProjectConfigs.clear();
 			for (int i = 0; i < configs.length; i++) {
 				if (configs[i].getProject().isAccessible()) {
-					IBuildContext context = new BuildContext(configs[i], configs);
+					IBuildContext context = new BuildContext(configs[i], requestedConfigs, configs);
 					basicBuild(configs[i], trigger, context, status, Policy.subMonitorFor(monitor, projectWork));
 					builtProjects.add(configs[i].getProject());
 					builtProjectConfigs.add(configs[i]);
@@ -355,7 +355,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * they are given.
 	 * @return A status indicating if the build succeeded or failed
 	 */
-	public IStatus build(IBuildConfiguration[] configs, int trigger, IProgressMonitor monitor) {
+	public IStatus build(IBuildConfiguration[] configs, IBuildConfiguration[] requestedConfigs, int trigger, IProgressMonitor monitor) {
 		monitor = Policy.monitorFor(monitor);
 		try {
 			monitor.beginTask(Messages.events_building_0, TOTAL_BUILD_WORK);
@@ -364,7 +364,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			try {
 				hookStartBuild(configs, trigger);
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.BUILD_FAILED, Messages.events_errors, null);
-				basicBuildLoop(configs, trigger, status, monitor);
+				basicBuildLoop(configs, requestedConfigs, trigger, status, monitor);
 				return status;
 			} finally {
 				hookEndBuild(trigger);
@@ -383,7 +383,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	public IStatus build(IBuildConfiguration buildConfiguration, int trigger, String builderName, Map args, IProgressMonitor monitor) {
 		monitor = Policy.monitorFor(monitor);
 		if (builderName == null) {
-			IBuildContext context = new BuildContext(buildConfiguration, new IBuildConfiguration[]{buildConfiguration});
+			IBuildContext context = new BuildContext(buildConfiguration);
 			return basicBuild(buildConfiguration, trigger, context, monitor);
 		}
 		return basicBuild(buildConfiguration, trigger, builderName, args, monitor);
@@ -1116,7 +1116,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				for (int i = 0; i < commands.length; i++) {
 					BuildCommand command = (BuildCommand) commands[i];
 					try {
-						BuildContext context = new BuildContext(buildConfiguration, buildOrder);
+						BuildContext context = new BuildContext(buildConfiguration, buildOrder, buildOrder);
 						IncrementalProjectBuilder builder = getBuilder(buildConfiguration, command, i, status, context);
 						if (builder != null) {
 							ISchedulingRule builderRule = builder.getRule(trigger, args);

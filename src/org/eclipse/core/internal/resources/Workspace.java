@@ -347,55 +347,59 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @see IWorkspace#build(int, IProgressMonitor)
 	 */
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
-		buildInternal(getBuildOrder(), trigger, monitor);
+		buildInternal(getBuildOrder(), new IBuildConfiguration[0], trigger, monitor);
+	}
+
+	/**
+	 * Add all IBuildConfigurations reachable from config to the configs collection.
+	 * @param configs collection of configurations to extend
+	 * @param config config to find reachable configurations to.
+	 */
+	private void recursivelyAddBuildConfigs(Collection/*<IBuildConfiguration>*/ configs, IBuildConfiguration config) throws CoreException {
+		IBuildConfiguration[] referenced = config.getProject().getReferencedBuildConfigurations(config);
+		for (int i = 0; i < referenced.length; i++) {
+			if (configs.contains(referenced[i]))
+				continue;
+			configs.add(referenced[i]);
+			recursivelyAddBuildConfigs(configs, referenced[i]);
+		}
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * @see IWorkspace#build(IBuildConfiguration[], int, IProgressMonitor)
 	 */
-	public void build(IBuildConfiguration[] configs, int trigger, IProgressMonitor monitor) throws CoreException {
+	public void build(IBuildConfiguration[] configs, int trigger, boolean buildReferences, IProgressMonitor monitor) throws CoreException {
 		if (configs.length == 0)
 			return;
 
-		Set configSet = new HashSet(configs.length);
-		configSet.addAll(Arrays.asList(configs));
-
+		LinkedHashSet refsList = new LinkedHashSet(Arrays.asList(configs));
 		// Find transitive closure of referenced project buildConfigs
-		Set refs = new HashSet(configSet);
-		Set buffer = new HashSet();
-		int size = -1;
-		while (size != refs.size()) {
-			size = refs.size();
-			for (Iterator it = refs.iterator(); it.hasNext();) {
-				IBuildConfiguration config = (IBuildConfiguration) it.next();
-				buffer.addAll(Arrays.asList(config.getProject().getReferencedBuildConfigurations(config)));
-			}
-			refs.addAll(buffer);
-			buffer.clear();
+		if (buildReferences) {
+			for (int i = 0 ; i < configs.length ; i++)
+				recursivelyAddBuildConfigs(refsList, configs[i]);
 		}
-		List refsList = new LinkedList(refs);
 
 		// Filter out inaccessible projects, or buildConfigs that do not exist
-		for (ListIterator it = refsList.listIterator(); it.hasNext();) {
+		for (Iterator it = refsList.iterator(); it.hasNext();) {
 			IBuildConfiguration config = (IBuildConfiguration) it.next();
 			if (!config.getProject().isAccessible() || !config.getProject().hasBuildConfiguration(config))
 				it.remove();
 		}
 
 		// Order the referenced project buildConfigs
-		ProjectBuildConfigOrder order = computeProjectBuildConfigOrder((IBuildConfiguration[]) refsList.toArray(new IBuildConfiguration[refs.size()]));
+		ProjectBuildConfigOrder order = computeProjectBuildConfigOrder((IBuildConfiguration[]) refsList.toArray(new IBuildConfiguration[refsList.size()]));
 
 		// Run the build
 		IBuildConfiguration[] finalOrder = new IBuildConfiguration[order.buildConfigurations.length];
 		System.arraycopy(order.buildConfigurations, 0, finalOrder, 0, order.buildConfigurations.length);
-		buildInternal(finalOrder, trigger, monitor);
+		buildInternal(finalOrder, configs, trigger, monitor);
 	}
 
 	/**
 	 * Builds the given project buildConfigs in the order supplied.
 	 */
-	private void buildInternal(IBuildConfiguration[] configs, int trigger, IProgressMonitor monitor) throws CoreException {
+	private void buildInternal(IBuildConfiguration[] configs, IBuildConfiguration[] requestedConfigs, int trigger, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		final ISchedulingRule rule = getRuleFactory().buildRule();
 		try {
@@ -406,7 +410,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 				aboutToBuild(this, trigger);
 				IStatus result;
 				try {
-					result = getBuildManager().build(configs, trigger, Policy.subMonitorFor(monitor, Policy.opWork));
+					result = getBuildManager().build(configs, requestedConfigs, trigger, Policy.subMonitorFor(monitor, Policy.opWork));
 				} finally {
 					//must fire POST_BUILD if PRE_BUILD has occurred
 					broadcastBuildEvent(this, IResourceChangeEvent.POST_BUILD, trigger);
