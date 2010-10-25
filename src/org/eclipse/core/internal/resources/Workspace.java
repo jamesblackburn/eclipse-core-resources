@@ -720,7 +720,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					if (!((Project) ref.getProject()).internalHasBuildConfig(ref))
 						continue;
 
-					// Add the referenced accessible config
+					// Add the reference to the set of reachable configs + add an edge
+					allAccessibleBuildConfigurations.add(ref);
 					edges.add(new IBuildConfiguration[] {config, ref});
 				}
 			}
