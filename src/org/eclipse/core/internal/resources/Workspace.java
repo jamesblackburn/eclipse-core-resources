@@ -347,7 +347,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @see IWorkspace#build(int, IProgressMonitor)
 	 */
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
-		buildInternal(getBuildOrder(), trigger, monitor);
+		buildInternal(getBuildOrder(), new IBuildConfiguration[0], trigger, monitor);
 	}
 
 	/**
@@ -393,13 +393,13 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		// Run the build
 		IBuildConfiguration[] finalOrder = new IBuildConfiguration[order.buildConfigurations.length];
 		System.arraycopy(order.buildConfigurations, 0, finalOrder, 0, order.buildConfigurations.length);
-		buildInternal(finalOrder, trigger, monitor);
+		buildInternal(finalOrder, configs, trigger, monitor);
 	}
 
 	/**
 	 * Builds the given project buildConfigs in the order supplied.
 	 */
-	private void buildInternal(IBuildConfiguration[] configs, int trigger, IProgressMonitor monitor) throws CoreException {
+	private void buildInternal(IBuildConfiguration[] configs, IBuildConfiguration[] requestedConfigs, int trigger, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		final ISchedulingRule rule = getRuleFactory().buildRule();
 		try {
@@ -410,7 +410,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 				aboutToBuild(this, trigger);
 				IStatus result;
 				try {
-					result = getBuildManager().build(configs, trigger, Policy.subMonitorFor(monitor, Policy.opWork));
+					result = getBuildManager().build(configs, requestedConfigs, trigger, Policy.subMonitorFor(monitor, Policy.opWork));
 				} finally {
 					//must fire POST_BUILD if PRE_BUILD has occurred
 					broadcastBuildEvent(this, IResourceChangeEvent.POST_BUILD, trigger);

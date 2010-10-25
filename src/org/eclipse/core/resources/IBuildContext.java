@@ -27,6 +27,17 @@ package org.eclipse.core.resources;
 public interface IBuildContext {
 
 	/**
+	 * Returns the configurations that were actually requested to be built
+	 * by the API user.  These configurations may be anywhere in the build
+	 * order (depending on how the build graph has been flattened).
+	 *
+	 * May return the empty list if the entire Workspace is being built.
+	 *
+	 * @return an array of configurations that were requested to be built.
+	 */
+	public IBuildConfiguration[] getRequestedConfigs();
+
+	/**
 	 * Gets a list of projects that were built before this one,
 	 * as part of the current top-level build invocation.
 	 *
