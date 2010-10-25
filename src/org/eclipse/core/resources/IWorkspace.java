@@ -229,7 +229,7 @@ public interface IWorkspace extends IAdaptable {
 	 * @exception OperationCanceledException if the operation is canceled. 
 	 * Cancelation can occur even if no progress monitor is provided.
 	 * 
-	 * @see IWorkspace#build(IBuildConfiguration[], int, IProgressMonitor)
+	 * @see IWorkspace#build(IBuildConfiguration[], int, boolean, IProgressMonitor)
 	 * @see IProject#build(int, IProgressMonitor)
 	 * @see #computeProjectBuildConfigOrder(IBuildConfiguration[])
 	 * @see IncrementalProjectBuilder#FULL_BUILD
@@ -240,12 +240,15 @@ public interface IWorkspace extends IAdaptable {
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Build the specified build configuration in the given list along with all accessible references.
+	 * Build the specified build configuration in the given list.  If buildReferences accessible referenced
+	 * configurations will also be built.
 	 * <p>
-	 * References are transitively followed.  Build order is determined by the workspace description 
-	 * and the project build configuration graph.
+	 * Build order is determined by the workspace description and the project build configuration graph.
 	 * If no order is specified, the workspace computes an order determined by build configuration
 	 * references.
+	 * <p>
+	 * If buildReferences is true, build configurations reachable through the build configuration graph are
+	 * built as part of this build invocation.
 	 * <p>
 	 * This method may change resources; these changes will be reported in a
 	 * subsequent resource change event.
@@ -254,7 +257,6 @@ public interface IWorkspace extends IAdaptable {
 	 * This method is long-running; progress and cancellation are provided by
 	 * the given progress monitor.
 	 * </p>
-	 * 
 	 * @param kind the kind of build being requested. Valid values are
 	 *	<ul>
 	 * <li>{@link IncrementalProjectBuilder#FULL_BUILD}- indicates a full build.</li>
@@ -262,6 +264,7 @@ public interface IWorkspace extends IAdaptable {
 	 * <li>{@link IncrementalProjectBuilder#CLEAN_BUILD}- indicates a clean request.  Clean does
 	 * not actually build anything, but rather discards all problems and build states.</li>
 	 *	</ul>
+	 * @param buildReferences boolean indicating if references should be transitively built.
 	 * @param monitor a progress monitor, or <code>null</code> if progress
 	 * reporting is not desired
 	 * @exception CoreException if the build fails.
@@ -279,7 +282,7 @@ public interface IWorkspace extends IAdaptable {
 	 * @see IResourceRuleFactory#buildRule()
 	 * @since 3.7
 	 */
-	public void build(IBuildConfiguration buildConfigs[], int kind, IProgressMonitor monitor) throws CoreException;
+	public void build(IBuildConfiguration buildConfigs[], int kind, boolean buildReferences, IProgressMonitor monitor) throws CoreException;
 
 	/**
 	 * Checkpoints the operation currently in progress. This method is used in
