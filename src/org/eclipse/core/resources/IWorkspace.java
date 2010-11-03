@@ -818,21 +818,6 @@ public interface IWorkspace extends IAdaptable {
 	public Map getDanglingReferences();
 
 	/**
-	 * Finds all dangling build configuration references in this workspace. Projects
-	 * which are not open are ignored. Returns a map with one entry for each open
-	 * project's build configuration in the workspace that has at least one dangling
-	 * configuration reference; the value of the entry is an array of project buildConfigs
-	 * which are referenced by that build configuration but do not exist in the workspace.
-	 * Returns an empty Map if there are no projects in the workspace.
-	 * 
-	 * @return a map (key type: <code>IBuildConfiguration</code>, value type:
-	 * <code>IBuildConfiguration[]</code>) from project build configuration to dangling
-	 * build configuration references
-	 * @since 3.7
-	 */
-	public Map getDanglingBuildConfigReferences();
-
-	/**
 	 * Returns the workspace description. This object is responsible for
 	 * defining workspace preferences. The returned value is a modifiable copy
 	 * but changes are not automatically applied to the workspace. In order to
