@@ -347,7 +347,15 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @see IWorkspace#build(int, IProgressMonitor)
 	 */
 	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
-		buildInternal(getBuildOrder(), trigger, monitor);
+		// If this is a workspace level clean, clean everything...
+		if (trigger == IncrementalProjectBuilder.CLEAN_BUILD) {
+			ArrayList configs = new ArrayList();
+			IProject[] prjs = getRoot().getProjects();
+			for (int i = 0; i < prjs.length; i++)
+				configs.addAll(Arrays.asList(prjs[i].getBuildConfigurations()));
+			buildInternal((IBuildConfiguration[])configs.toArray(new IBuildConfiguration[configs.size()]), trigger, monitor);			
+		} else
+			buildInternal(getBuildOrder(), trigger, monitor);
 	}
 
 	/**
