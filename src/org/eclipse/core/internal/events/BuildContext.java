@@ -114,11 +114,20 @@ public class BuildContext implements IBuildContext {
 		return (IProject[]) set.toArray(new IProject[set.size()]);
 	}
 
+	private static final int hashCode(IBuildConfiguration[] array) {
+		final int prime = 31;
+		int result = 1;
+		for (int i = 0; i < array.length; i++)
+			result = prime * result + array[i].hashCode();
+		return result;
+	}
+
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + Arrays.hashCode(builtAfter);
-		result = prime * result + Arrays.hashCode(builtBefore);
+		result = prime * result + hashCode(requestedBuilt);
+		result = prime * result + hashCode(builtAfter);
+		result = prime * result + hashCode(builtBefore);
 		return result;
 	}
 
@@ -130,6 +139,8 @@ public class BuildContext implements IBuildContext {
 		if (getClass() != obj.getClass())
 			return false;
 		BuildContext other = (BuildContext) obj;
+		if (!Arrays.equals(requestedBuilt, other.requestedBuilt))
+			return false;
 		if (!Arrays.equals(builtAfter, other.builtAfter))
 			return false;
 		if (!Arrays.equals(builtBefore, other.builtBefore))
