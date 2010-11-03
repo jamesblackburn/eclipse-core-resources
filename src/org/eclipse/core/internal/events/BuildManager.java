@@ -798,7 +798,11 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		}
 		if (Policy.DEBUG_BUILD_INVOKING) {
 			overallTimeStamp = System.currentTimeMillis();
-			Policy.debug("Top-level build-start of: " + Arrays.toString(configs) + " " + debugTrigger(trigger));  //$NON-NLS-1$//$NON-NLS-2$
+			StringBuffer sb = new StringBuffer("Top-level build-start of: "); //$NON-NLS-1$
+			for (int i = 0; i < configs.length; i++)
+				sb.append(configs[i]).append(", "); //$NON-NLS-1$
+			sb.append(debugTrigger(trigger));
+			Policy.debug(sb.toString());
 		}
 	}
 

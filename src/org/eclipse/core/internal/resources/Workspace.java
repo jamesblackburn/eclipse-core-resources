@@ -734,18 +734,24 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	}
 
 	private static ProjectOrder vertexOrderToProjectOrder(VertexOrder order) {
-		IProject[] projects = (IProject[]) Arrays.copyOf(order.vertexes, order.vertexes.length, IProject[].class);
+		IProject[] projects = new IProject[order.vertexes.length];
+		System.arraycopy(order.vertexes, 0, projects, 0, order.vertexes.length);
 		IProject[][] knots = new IProject[order.knots.length][];
-		for (int i = 0; i < order.knots.length; i++)
-			knots[i] = (IProject[]) Arrays.copyOf(order.knots[i], order.knots[i].length, IProject[].class);
+		for (int i = 0; i < order.knots.length; i++) {
+			knots[i] = new IProject[order.knots[i].length];
+			System.arraycopy(order.knots[i], 0, knots[i], 0, order.knots[i].length);
+		}
 		return new ProjectOrder(projects, order.hasCycles, knots);
 	}
 
 	private static ProjectBuildConfigOrder vertexOrderToProjectBuildConfigOrder(VertexOrder order) {
-		IBuildConfiguration[] buildConfigs = (IBuildConfiguration[]) Arrays.copyOf(order.vertexes, order.vertexes.length, IBuildConfiguration[].class);
+		IBuildConfiguration[] buildConfigs = new IBuildConfiguration[order.vertexes.length];
+		System.arraycopy(order.vertexes, 0, buildConfigs, 0, order.vertexes.length);
 		IBuildConfiguration[][] knots = new IBuildConfiguration[order.knots.length][];
-		for (int i = 0; i < order.knots.length; i++)
-			knots[i] = (IBuildConfiguration[]) Arrays.copyOf(order.knots[i], order.knots[i].length, IBuildConfiguration[].class);
+		for (int i = 0; i < order.knots.length; i++) {
+			knots[i] = new IBuildConfiguration[order.knots[i].length];
+			System.arraycopy(order.knots[i], 0, knots[i], 0, order.knots[i].length);
+		}
 		return new ProjectBuildConfigOrder(buildConfigs, order.hasCycles, knots);
 	}
 
@@ -1534,40 +1540,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					dangling.add(refs[i]);
 			if (!dangling.isEmpty())
 				result.put(projects[i], dangling.toArray(new IProject[dangling.size()]));
-		}
-		return result;
-	}
-
-	/* (non-Javadoc)
-	 * @see IWorkspace#getDanglingBuildConfigReferences()
-	 */
-	public Map getDanglingBuildConfigReferences() {
-		IProject[] projects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
-		Map result = new HashMap(projects.length);
-		for (int i = 0; i < projects.length; i++) {
-			Project project = (Project) projects[i];
-			ProjectDescription desc = project.internalGetDescription();
-			if (!project.isAccessible())
-				continue;
-			IBuildConfiguration[] configs = project.internalGetBuildConfigs(false);
-			for (int j = 0; j < configs.length; j++) {
-				IBuildConfigReference[] refs = desc.getReferencedProjectConfigs(configs[j].getConfigurationId());
-				List dangling = new ArrayList(refs.length);
-				for (int k = 0; k < refs.length; k++) {
-					// Check the referenced project and config exists
-					try {
-						if (!refs[k].getProject().exists() ||
-							!((Project) refs[k].getProject()).internalHasBuildConfig(((BuildConfigReference)refs[k]).getConfiguration()))
-							dangling.add(refs[k]);
-					} catch (CoreException e) {
-						// Project did not exist, as the active config could not be found
-						dangling.add(refs[k]);
-					}
-				}
-				if (!dangling.isEmpty())
-					result.put(((BuildConfiguration)configs[j]).clone(), 
-							dangling.toArray(new IBuildConfigReference[dangling.size()]));
-			}
 		}
 		return result;
 	}
