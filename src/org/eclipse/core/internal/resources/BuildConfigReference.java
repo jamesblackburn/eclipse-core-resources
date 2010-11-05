@@ -70,12 +70,7 @@ public class BuildConfigReference implements IBuildConfigReference {
 		return configId;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see IBuildConfigReference#setConfigurationName(String)
-	 */
 	public void setConfigurationId(String name) {
-		Assert.isLegal(name != null);
 		Assert.isTrue(configId == null);
 		configId = name;
 	}

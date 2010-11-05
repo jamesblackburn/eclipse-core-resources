@@ -1552,7 +1552,9 @@ public class Project extends Container implements IProject {
 	 * (non-Javadoc)
 	 * @see IProject#newReference()
 	 */
-	public IBuildConfigReference newReference() {
-		return new BuildConfigReference(this);
+	public IBuildConfigReference newBuildConfigurationReference(String configurationId) {
+		BuildConfigReference ref = new BuildConfigReference(this);
+		ref.setConfigurationId(configurationId);
+		return ref;
 	}
 }

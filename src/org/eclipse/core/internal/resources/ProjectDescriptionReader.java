@@ -852,7 +852,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 		IBuildConfigReference[] configs = new IBuildConfigReference[referencedProjects.size()];
 		for (int i = 0; i < configs.length; i++)
-			configs[i] = root.getProject((String) referencedProjects.get(i)).newReference();
+			configs[i] = root.getProject((String) referencedProjects.get(i)).newBuildConfigurationReference(null);
 		// If no build configuration references were loaded, they weren't specified in the
 		// config file. For backwards compatibility, use the project references.
 		if (!loadedBuildConfigReferences) {

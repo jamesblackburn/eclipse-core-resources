@@ -1014,7 +1014,7 @@ public interface IProject extends IContainer, IAdaptable {
 
 	/**
 	 * Returns the project build configuration with the given id for this project.
-	 * @param id the id of the configuration to get
+	 * @param configurationId the id of the configuration to get
 	 * @return a project configuration
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
@@ -1025,12 +1025,12 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @see #getBuildConfigurations()
 	 * @since 3.7
 	 */
-	public IBuildConfiguration getBuildConfiguration(String id) throws CoreException;
+	public IBuildConfiguration getBuildConfiguration(String configurationId) throws CoreException;
 
 	/**
 	 * Checks whether the project has the specified build configuration.
 	 *
-	 * @param configuration the configuration
+	 * @param configurationId the configuration
 	 * @return <code>true</code> if the project has the specified configuration, false otherwise
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
@@ -1039,7 +1039,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @since 3.7
 	 */
-	public boolean hasBuildConfiguration(IBuildConfiguration configuration) throws CoreException;
+	public boolean hasBuildConfiguration(IBuildConfiguration configurationId) throws CoreException;
 
 	/**
 	 * Returns the active build configuration for the project.
@@ -1068,7 +1068,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * no effect.
 	 * </p>
 	 *
-	 * @param configId the configuration to set as the active or default
+	 * @param configurationId the configuration to set as the active or default
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
 	 * <li> This project does not exist.</li>
@@ -1076,7 +1076,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @since 3.7
 	 */
-	public void setActiveBuildConfiguration(String configId) throws CoreException;
+	public void setActiveBuildConfiguration(String configurationId) throws CoreException;
 
 	/**
 	 * Returns a new build configuration for this project, with the given id.  
@@ -1096,12 +1096,22 @@ public interface IProject extends IContainer, IAdaptable {
 	public IBuildConfiguration newBuildConfiguration(String configurationId);
 
 	/**
-	 * Returns a new project build configuration reference that points to this project.
-	 * The reference points to the project's active configuration by default,
-	 * but this can be set using {@link IBuildConfigReference#setConfigurationId(String)}.
+	 * Returns a new project build configuration reference that points to a configuration
+	 * in this project.
+	 * <p>
+	 * configurationId specifies the configuration this reference points to.  A configuration
+	 * with the specified Id needn't exist in this project.  A null configurationId 
+	 * is resolved to the current active build configuration in the project whenever
+	 * the build conifguration references is used.
+	 * <p>
+	 * Note that this reference does not become part of a project's references until it's
+	 * explicitly set with {@link IProjectDescription#setReferencedProjectConfigs(String, IBuildConfigReference[])}
+	 * and the referencing project's description has been applied.
 	 *
-	 * @return a project build configuration reference to this project
+	 * @param configurationId
+	 * @return a build configuration reference referencing the configuration in this project
+	 * @see IBuildConfigReference
 	 * @since 3.7
 	 */
-	public IBuildConfigReference newReference();
+	public IBuildConfigReference newBuildConfigurationReference(String configurationId);
 }
