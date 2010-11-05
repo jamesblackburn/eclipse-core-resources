@@ -392,7 +392,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Helper method to compare two maps of Configuration ID -> IBuildConfigurationReference[]
 	 * @return boolean indicating if there are differences between the two maps
 	 */
-	private boolean configRefsHaveChanges(Map m1, Map m2) {
+	static boolean configRefsHaveChanges(Map m1, Map m2) {
 		if (m1.size() != m2.size())
 			return true;
 		for (Iterator it = m1.entrySet().iterator(); it.hasNext();) {

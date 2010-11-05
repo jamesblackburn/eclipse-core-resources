@@ -15,6 +15,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import org.eclipse.core.resources.IBuildConfiguration;
+
 import java.net.URI;
 import java.util.*;
 import org.eclipse.core.filesystem.*;
@@ -82,28 +84,26 @@ public class Project extends Container implements IProject {
 		ProjectDescription current = internalGetDescription();
 		current.setComment(description.getComment());
 		current.setSnapshotLocationURI(description.getSnapshotLocationURI());
-		
+
 		// set the build order before setting the references or the natures
 		current.setBuildSpec(description.getBuildSpec(true));
 
-		current.setBuildConfigurations(description.internalGetBuildConfigs(true));
+		// Ensure that when the API user sets description, the BuildConfigurations really reference this project
+		IBuildConfiguration[] oldConfigs = description.internalGetBuildConfigs(false);
+		IBuildConfiguration[] newConfigs = new IBuildConfiguration[oldConfigs.length];
+		for (int i = 0; i < oldConfigs.length; i++)
+			newConfigs[i] = new BuildConfiguration(oldConfigs[i], this);
+		current.setBuildConfigurations(newConfigs);
 
 		// set the references before the natures 
 		boolean flushOrder = false;
-		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
-		for (int i = 0; i < configs.length; i++) {
-			IBuildConfigReference[] oldReferences = current.getReferencedProjectConfigs(configs[i].getConfigurationId());
-			IBuildConfigReference[] newReferences = description.getReferencedProjectConfigs(configs[i].getConfigurationId());
-			if (!Arrays.equals(oldReferences, newReferences)) {
-				current.setReferencedProjectConfigs(configs[i].getConfigurationId(), newReferences);
-				flushOrder = true;
-			}
-			oldReferences = current.getDynamicConfigReferences(configs[i].getConfigurationId());
-			newReferences = description.getDynamicConfigReferences(configs[i].getConfigurationId());
-			if (!Arrays.equals(oldReferences, newReferences)) {
-				current.setDynamicConfigReferences(configs[i].getConfigurationId(), newReferences);
-				flushOrder = true;
-			}
+		if (ProjectDescription.configRefsHaveChanges(current.staticRefs, description.staticRefs)) {
+			current.staticRefs = new HashMap(description.staticRefs);
+			flushOrder = true;
+		}
+		if (ProjectDescription.configRefsHaveChanges(current.dynamicRefs, description.dynamicRefs)) {
+			current.dynamicRefs = new HashMap(description.dynamicRefs);
+			flushOrder = true;
 		}
 
 		if (flushOrder)
