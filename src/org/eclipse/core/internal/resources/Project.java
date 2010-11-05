@@ -88,12 +88,10 @@ public class Project extends Container implements IProject {
 		// set the build order before setting the references or the natures
 		current.setBuildSpec(description.getBuildSpec(true));
 
-		// Ensure that when the API user sets description, the BuildConfigurations really reference this project
-		IBuildConfiguration[] oldConfigs = description.internalGetBuildConfigs(false);
-		IBuildConfiguration[] newConfigs = new IBuildConfiguration[oldConfigs.length];
-		for (int i = 0; i < oldConfigs.length; i++)
-			newConfigs[i] = new BuildConfiguration(oldConfigs[i], this);
-		current.setBuildConfigurations(newConfigs);
+		// Update the build configurations, and ensure they point at this project
+		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
+		current.setBuildConfigurations(configs);
+		current.updateBuildConfigurations(this);
 
 		// set the references before the natures 
 		boolean flushOrder = false;
@@ -755,6 +753,7 @@ public class Project extends Container implements IProject {
 	 * during workspace restore (i.e., when you cannot do an operation)
 	 */
 	void internalSetDescription(IProjectDescription value, boolean incrementContentId) {
+		((ProjectDescription)value).updateBuildConfigurations(this);
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, true);
 		info.setDescription((ProjectDescription) value);
 		getLocalManager().setLocation(this, info, value.getLocationURI());

@@ -814,6 +814,16 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		return LinkDescription.VIRTUAL_LOCATION;
 	}
 
+	/**
+	 * Update the build configurations w.r.t. the parent project
+	 * @param project that owns the build configurations
+	 */
+	void updateBuildConfigurations(IProject project) {
+		for (int i = 0; i < buildConfigs.length; i++)
+			if (!buildConfigs[i].getProject().equals(project))
+				buildConfigs[i] = new BuildConfiguration(buildConfigs[i], project);
+	}
+
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
 	 */
