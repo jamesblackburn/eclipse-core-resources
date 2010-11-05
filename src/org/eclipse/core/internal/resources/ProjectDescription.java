@@ -106,7 +106,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			clone.variableDescriptions = (HashMap) variableDescriptions.clone();
 		clone.staticRefs = (HashMap) staticRefs.clone();
 		clone.dynamicRefs = (HashMap) dynamicRefs.clone();
-		clone.cachedRefs = new HashMap(1);
+		clone.clearCachedReferences(null);
 		clone.buildSpec = getBuildSpec(true);
 		return clone;
 	}
@@ -820,7 +820,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	void updateBuildConfigurations(IProject project) {
 		for (int i = 0; i < buildConfigs.length; i++)
-			if (!buildConfigs[i].getProject().equals(project))
+			if (!project.equals(buildConfigs[i].getProject()))
 				buildConfigs[i] = new BuildConfiguration(buildConfigs[i], project);
 	}
 
@@ -856,7 +856,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		modified |= staticRefs.keySet().retainAll(buildConfigIds);
 		modified |= dynamicRefs.keySet().retainAll(buildConfigIds);
 		if (modified)
-			clearCachedReferences();
+			clearCachedReferences(null);
 	}
 
 	/**
@@ -890,23 +890,15 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
-	 * Clear all cached references for the given build configuration
-	 * @param configId the configuration Id to clear cached references for
+	 * Clear cached references for the specified build config Id
+	 * or all if configId is null.
 	 */
-	private void clearCachedReferences(String configId)
+	void clearCachedReferences(String configId)
 	{
-		cachedRefs.remove(configId);
-		cachedProjectRefs = null;
-		cachedStaticProjectRefs = null;
-		cachedDynamicProjectRefs = null;
-	}
-
-	/**
-	 * Clear all cached references for all buildConfigs
-	 */
-	private void clearCachedReferences()
-	{
-		cachedRefs = new HashMap(1);
+		if (configId == null)
+			cachedRefs.clear();
+		else
+			cachedRefs.remove(configId);
 		cachedProjectRefs = null;
 		cachedStaticProjectRefs = null;
 		cachedDynamicProjectRefs = null;

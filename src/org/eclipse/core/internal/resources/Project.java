@@ -93,14 +93,16 @@ public class Project extends Container implements IProject {
 		current.setBuildConfigurations(configs);
 		current.updateBuildConfigurations(this);
 
-		// set the references before the natures 
+		// set the references before the natures
 		boolean flushOrder = false;
 		if (ProjectDescription.configRefsHaveChanges(current.staticRefs, description.staticRefs)) {
 			current.staticRefs = new HashMap(description.staticRefs);
+			current.clearCachedReferences(null);
 			flushOrder = true;
 		}
 		if (ProjectDescription.configRefsHaveChanges(current.dynamicRefs, description.dynamicRefs)) {
 			current.dynamicRefs = new HashMap(description.dynamicRefs);
+			current.clearCachedReferences(null);
 			flushOrder = true;
 		}
 
@@ -753,7 +755,9 @@ public class Project extends Container implements IProject {
 	 * during workspace restore (i.e., when you cannot do an operation)
 	 */
 	void internalSetDescription(IProjectDescription value, boolean incrementContentId) {
+		// Reconcile the current IProject into the BuildConfigurations
 		((ProjectDescription)value).updateBuildConfigurations(this);
+
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, true);
 		info.setDescription((ProjectDescription) value);
 		getLocalManager().setLocation(this, info, value.getLocationURI());
