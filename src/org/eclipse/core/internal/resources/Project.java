@@ -1392,8 +1392,19 @@ public class Project extends Container implements IProject {
 		return (IBuildConfiguration[]) configs.toArray(new IBuildConfiguration[configs.size()]);
 	}
 
-	/* (non-Javadoc)
-	 * @see IProject#getReferencingBuildConfigurations(IBuildConfiguration)
+	/**
+	 * Returns the list of all open projects' existing build configurations which reference
+	 * this project and the specified configuration. This project and configuration may
+	 * or may not exist. Returns an empty array if there are no
+	 * referencing build configurations.
+	 * <p>
+	 * If this configuration is the project's active build config, then the result will include
+	 * build configs that reference the active configuration of this project.
+	 * </p>
+	 *
+	 * @param config the configuration to find references to
+	 * @return an array of build configurations referencing this project
+	 * @since 3.7
 	 */
 	public IBuildConfiguration[] getReferencingBuildConfigurations(IBuildConfiguration config) {
 		IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
@@ -1447,15 +1458,15 @@ public class Project extends Container implements IProject {
 	}
 
 	/**
-	 * @return IBuildConfiguration[] or an empty array if the project isn't accessible
+	 * @return IBuildConfiguration[] containing at least one build configuration
 	 */
 	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
 		ProjectDescription desc = internalGetDescription();
 		if (desc == null)
-			return new IBuildConfiguration[0];
+			return new IBuildConfiguration[] {new BuildConfiguration(this)};
 		IBuildConfiguration[] configs = desc.internalGetBuildConfigs(makeCopy);
-		for (int i = 0; i < configs.length; i++)
-			((BuildConfiguration)configs[i]).setProject(this);
+		if (configs.length == 0)
+			return new IBuildConfiguration[] {new BuildConfiguration(this)};
 		return configs;
 	}
 
@@ -1524,6 +1535,14 @@ public class Project extends Container implements IProject {
 		} catch (CoreException e) {
 			// Configuration doesn't exist in project. Nothing to do.
 		}
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see org.eclipse.core.resources.IProject#newBuildConfiguration(java.lang.String)
+	 */
+	public IBuildConfiguration newBuildConfiguration(String configurationId) {
+		return new BuildConfiguration(this, configurationId);
 	}
 
 	/*

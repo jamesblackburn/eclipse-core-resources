@@ -692,6 +692,10 @@ class ResourceTree implements IResourceTree {
 
 			// Write the new project description on the destination project.
 			try {
+				// Fix-up the build configurations to contain the new project
+				IBuildConfiguration[] configs = ((ProjectDescription) destDescription).internalGetBuildConfigs(false);
+				for (int i = 0; i < configs.length; i++)
+					configs[i] = new BuildConfiguration(configs[i], destination);
 				//moving linked resources may have modified the description in memory
 				((ProjectDescription) destDescription).setLinkDescriptions(destination.internalGetDescription().getLinks());
 				// moving filters may have modified the description in memory

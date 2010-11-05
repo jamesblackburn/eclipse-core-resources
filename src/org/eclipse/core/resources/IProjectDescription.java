@@ -181,21 +181,6 @@ public interface IProjectDescription {
 	public boolean hasNature(String natureId);
 
 	/**
-	 * Returns a new build configuration for the described project, with the given id.  
-	 * The id is an implementation specific unique id for the build configuration
-	 * <p>
-	 * Note that the new build configuration does not become part of this project
-	 * description until it is installed using {@link #setBuildConfigurations(IBuildConfiguration[])}
-	 * </p>
-	 *
-	 * @param id the application specific unique id of the configuration
-	 * @return a project build configuration
-	 * @see #setBuildConfigurations(IBuildConfiguration[])
-	 * @since 3.7
-	 */
-	public IBuildConfiguration newBuildConfiguration(String id);
-
-	/**
 	 * Returns a new build command.
 	 * <p>
 	 * Note that the new command does not become part of this project

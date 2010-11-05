@@ -23,10 +23,10 @@ package org.eclipse.core.resources;
  * active configuration defaults to the first configuration in the project.
  *<p>
  * BuildConfigurations are created on the project description with:
- * {@link IProjectDescription#newBuildConfiguration(String)}, and
+ * {@link IProject#newBuildConfiguration(String)}, and
  * set using {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}.
  *<p>
- * When a project is built, a specific configuration is built. This config
+ * When a project is built, a specific configuration is built. This configuration
  * is passed to the builders so they can adapt their behavior
  * appropriately. Builders which don't care about configurations may ignore this,
  * and work as before.

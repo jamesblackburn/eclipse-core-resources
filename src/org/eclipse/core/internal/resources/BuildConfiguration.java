@@ -18,31 +18,40 @@ import org.eclipse.core.runtime.Assert;
  */
 public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 
-	/** Project ; Guaranteed to be set when configurations are fetched 
-	 * from the IProject. */
-	private IProject project;
-	/** Configuration id is mandatory */
+	/** Project on which this build configuration is set */
+	private final IProject project;
+	/** Configuration id is mandatory; never null */
 	private final String id;
-	/** Human readable name; options */
+	/** Human readable name; optional */
 	private String name;
+	
 
 	/** Ensure we don't expose internal BuildConfigurations to clients */
 	boolean readOnly = false;
-
-	public BuildConfiguration(IProject project, String name) {
-		Assert.isNotNull(name);
-		this.project = project;
-		this.id = name;
-	}
-
-	public BuildConfiguration(String name) {
-		this(null, name);
-	}
 
 	public BuildConfiguration() {
 		this(null, DEFAULT_CONFIG_ID);
 	}
 
+	public BuildConfiguration(String id) {
+		this(null, id);
+	}
+	
+	public BuildConfiguration(IProject project) {
+		this(project, DEFAULT_CONFIG_ID);
+	}
+
+	public BuildConfiguration(IBuildConfiguration config, IProject project) {
+		this(project, config.getConfigurationId());
+		this.name = config.getName();
+	}
+
+	public BuildConfiguration(IProject project, String configurationId) {
+		Assert.isNotNull(configurationId);
+		this.project = project;
+		this.id = configurationId;
+	}
+	
 	/*
 	 * (non-Javadoc)
 	 * @see IBuildConfiguration#getConfigurationId()
@@ -53,33 +62,57 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 
 	/*
 	 * (non-Javadoc)
+	 * @see org.eclipse.core.resources.IBuildConfiguration#getName()
+	 */
+	public String getName() {
+		return name;
+	}
+
+	/*
+	 * (non-Javadoc)
 	 * @see IBuildConfiguration#getProject()
 	 */
 	public IProject getProject() {
-		Assert.isNotNull(project);
 		return project;
 	}
 
-	IProject internalGetProject() {
-		return project;
-	}
-
-	void setProject(IProject project) {
-		Assert.isNotNull(project);
-		this.project = project;
-	}
-
-	void clearProject() {
-		project = null;
-	}
-
-	public String getName() {
-		return name;
+	/**
+	 * Helper method used to work out if the project's build configurations
+	 * need to be persisted in the .project.
+	 * If the user isn't using build configurations then no need to clutter the project XML.
+	 * @return boolean indicating if this configuration is a default auto-generated one.
+	 */
+	public boolean isDefault() {
+		if (!DEFAULT_CONFIG_ID.equals(id))
+			return false;
+		if (name != null)
+			return false;
+		return true;
+//		// If any of the build configuration references don't track the active configuration,
+//		// then this build configuration isn't default
+//		IProjectDescription desc = ((Project)project).internalGetDescription();
+//		if (desc == null)
+//			return true;
+//		IBuildConfigReference[] refs = desc.getReferencedProjectConfigs(id);
+//		for (int i = 0; i < refs.length; i++)
+//			if (refs[i].getConfigurationId() != null)
+//				return false;
+//		return true;
 	}
 
 	public void setName(String name) {
 		Assert.isLegal(!readOnly, "BuildConfiguration is read-only."); //$NON-NLS-1$
 		this.name = name;
+	}
+
+	/**
+	 * Helper method which marks the configuration readonly to ensure
+	 * we don't expose internal BuildConfigurations to clients.
+	 *
+	 * Currently only affects the name attribute via {@link #setName(String)}
+	 */
+	void setReadOnly() {
+		readOnly = true;
 	}
 
 	/*
@@ -100,17 +133,7 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 
 	/*
 	 * (non-Javadoc)
-	 * @see Object#hashCode()
-	 */
-	public int hashCode() {
-		final int prime = 31;
-		int result = prime + id.hashCode();
-		return result;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see Object#equals(Object)
+	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -119,24 +142,36 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		BuildConfiguration config = (BuildConfiguration) obj;
-		if (!id.equals(config.id))
+		BuildConfiguration other = (BuildConfiguration) obj;
+		if (id == null) {
+			if (other.id != null)
+				return false;
+		} else if (!id.equals(other.id))
 			return false;
-		// If one of the configurations has a project
-		// while the other doesn't, we consider them equal.
-		if ((project == null) != (config.project == null))
-			return true;
-		// If both have projects, they must be equal...
-		if (project != null && !project.equals(config.project))
+		if (project == null) {
+			if (other.project != null)
+				return false;
+		} else if (!project.equals(other.project))
 			return false;
 		return true;
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see Object#toString()
+	 * @see java.lang.Object#hashCode()
 	 */
-	/** For debugging purposes only. */
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((project == null) ? 0 : project.hashCode());
+		return result;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
 	public String toString() {
 		StringBuffer result = new StringBuffer();
 		if (project != null)
@@ -150,38 +185,4 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 		return result.toString();
 	}
 
-	/**
-	 * Helper method used to work out if the project's build configurations
-	 * need to be persisted in the .project.
-	 * If the user isn't using build configurations then no need to clutter the project XML.
-	 * @return boolean indicating if this configuration is a default auto-generated one.
-	 */
-	public boolean isDefault() {
-		if (!DEFAULT_CONFIG_ID.equals(id))
-			return false;
-		if (name != null)
-			return false;
-		// If any of the build configuration references don't track the active configuration,
-		// then this build configuration isn't default
-		if (project != null) {
-			IProjectDescription desc = ((Project)project).internalGetDescription();
-			if (desc == null)
-				return true;
-			IBuildConfigReference[] refs = desc.getReferencedProjectConfigs(id);
-			for (int i = 0; i < refs.length; i++)
-				if (refs[i].getConfigurationId() != null)
-					return false;			
-		}
-		return true;
-	}
-
-	/**
-	 * Helper method which marks the configuration readonly to ensure
-	 * we don't expose internal BuildConfigurations to clients.
-	 *
-	 * Currently only affects the name attribute via {@link #setName(String)}
-	 */
-	void setReadOnly() {
-		readOnly = true;
-	}
 }

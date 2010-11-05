@@ -25,13 +25,14 @@ import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 
 public class ProjectDescription extends ModelObject implements IProjectDescription {
-	private static final ICommand[] EMPTY_COMMAND_ARRAY = new ICommand[0];
 	// constants
-	private static final IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];
+	private static final BuildConfiguration[] EMPTY_BUILD_CONFIGS = new BuildConfiguration[0];
 	private static final IBuildConfigReference[] EMPTY_BUILD_CONFIG_REFERENCE_ARRAY = new IBuildConfigReference[0];
+	private static final ICommand[] EMPTY_COMMAND_ARRAY = new ICommand[0];
+	private static final IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];
 	private static final String[] EMPTY_STRING_ARRAY = new String[0];
 	private static final String EMPTY_STR = ""; //$NON-NLS-1$
-	private static final BuildConfiguration[] DEFAULT_BUILD_CONFIGS = new BuildConfiguration[]{new BuildConfiguration()};
+
 	protected static boolean isReading = false;
 
 	//flags to indicate when we are in the middle of reading or writing a
@@ -83,8 +84,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	// fields
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
-	protected BuildConfiguration[] buildConfigs = DEFAULT_BUILD_CONFIGS;
-	protected Set buildConfigIds = null;
+	/** The 'real' build configurations set on this project. 
+	 *  NB This doesn't contain the generated 'default' build configuration where 
+	 *  no build configurations have been defined. */
+	protected BuildConfiguration[] buildConfigs = EMPTY_BUILD_CONFIGS;
 	/** Map from config id in this project -> build configurations in other projects */
 	protected HashMap/*<String, IBuildConfigReference[]>*/ staticRefs = new HashMap(1);
 	protected HashMap/*<String, IBuildConfigReference[]>*/ dynamicRefs = new HashMap(1);
@@ -464,13 +467,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/* (non-Javadoc)
-	 * @see IProjectDescription#newBuildConfiguration(String)
-	 */
-	public IBuildConfiguration newBuildConfiguration(String buildConfigId) {
-		return new BuildConfiguration(buildConfigId);
-	}
-
-	/* (non-Javadoc)
 	 * @see IProjectDescription#newCommand()
 	 */
 	public ICommand newCommand() {
@@ -527,18 +523,27 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public void setDynamicReferences(IProject[] projects) {
 		Assert.isLegal(projects != null);
-		for (int i = 0; i < buildConfigs.length; i++) {
+
+		int i = 0;
+		do {
+			// Handle the case where there's a default configuration
+			String configId;
+			if (buildConfigs.length == 0)
+				configId = IBuildConfiguration.DEFAULT_CONFIG_ID;
+			else
+				configId = buildConfigs[i].getConfigurationId();
+
 			// To interact with users of the old API, we just add references to the active configuration (null configId)
 			// to the set of existing non-active build configuration references
 			Set configRefs = new LinkedHashSet();
 			configRefs.addAll(getBuildConfigReferencesFromProjects(projects));
 			// Iterate over the existing dynamic refs. Re-add any which aren't to the 'default' configuration
-			IBuildConfigReference[] oldRefs = getDynamicConfigReferences(buildConfigs[i].getConfigurationId(), false);
+			IBuildConfigReference[] oldRefs = getDynamicConfigReferences(configId, false);
 			for (int j = 0; j < oldRefs.length; j++)
 				if (oldRefs[j].getConfigurationId() != null)
 					configRefs.add(oldRefs[j]);
-			setDynamicConfigReferences(buildConfigs[i].getConfigurationId(), (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
-		}
+			setDynamicConfigReferences(configId, (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
+		} while (++i < buildConfigs.length);
 	}
 
 	/* (non-Javadoc)
@@ -753,19 +758,26 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public void setReferencedProjects(IProject[] projects) {
 		Assert.isLegal(projects != null);
-		// Add all buildConfigs in each of the projects as a reference
-		for (int i = 0; i < buildConfigs.length; i++) {
+		int i = 0;
+		do {
+			// Handle the case where there's a default configuration
+			String configId;
+			if (buildConfigs.length == 0)
+				configId = IBuildConfiguration.DEFAULT_CONFIG_ID;
+			else
+				configId = buildConfigs[i].getConfigurationId();
+
 			// To interact with new API, we just add references to the active configuration (null configId)
 			// to the set of existing non-active build configuration references
 			Set configRefs = new LinkedHashSet();
 			configRefs.addAll(getBuildConfigReferencesFromProjects(projects));
 			// Iterate over the existing refs. Re-add any which aren't to the 'default' configuration
-			IBuildConfigReference[] oldRefs = getReferencedProjectConfigs(buildConfigs[i].getConfigurationId(), false);
+			IBuildConfigReference[] oldRefs = getReferencedProjectConfigs(configId, false);
 			for (int j = 0; j < oldRefs.length; j++)
 				if (oldRefs[j].getConfigurationId() != null)
 					configRefs.add(oldRefs[j]);
-			setReferencedProjectConfigs(buildConfigs[i].getConfigurationId(), (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
-		}
+			setReferencedProjectConfigs(configId, (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
+		} while (++i < buildConfigs.length);
 	}
 
 	/* (non-Javadoc)
@@ -807,21 +819,19 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public void setBuildConfigurations(IBuildConfiguration[] value) {
 		if (value == null || value.length == 0)
-			buildConfigs = DEFAULT_BUILD_CONFIGS;
+			buildConfigs = EMPTY_BUILD_CONFIGS;
 		else {
 			// Filter out duplicates
 			Set filtered = new LinkedHashSet(value.length);
 			for (int i = 0; i < value.length; i++) {
 				BuildConfiguration config = (BuildConfiguration)((BuildConfiguration) value[i]).clone();
-				// Ensure the project is not set
-				config.clearProject();
-				Assert.isTrue(config.internalGetProject() == null);
 				config.setReadOnly();
 				filtered.add(config);
 			}
 
-			if (filtered.isEmpty())
-				buildConfigs = DEFAULT_BUILD_CONFIGS;
+			if (filtered.isEmpty() || 
+					(filtered.size() ==1 && ((BuildConfiguration)(filtered.iterator().next())).isDefault()))
+				buildConfigs = EMPTY_BUILD_CONFIGS;
 			else {
 				buildConfigs = new BuildConfiguration[filtered.size()];
 				filtered.toArray(buildConfigs);
@@ -829,9 +839,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		}
 
 		// Remove references for deleted buildConfigs
-		buildConfigIds = new HashSet(buildConfigs.length);
-		for (int i = 0; i < buildConfigs.length; i++)
-			buildConfigIds.add(buildConfigs[i].getConfigurationId());
+		Set buildConfigIds = new HashSet(Arrays.asList(buildConfigs));
+		if (buildConfigIds.isEmpty())
+			buildConfigIds.add(IBuildConfiguration.DEFAULT_CONFIG_ID);
 		boolean modified = false;
 		modified |= staticRefs.keySet().retainAll(buildConfigIds);
 		modified |= dynamicRefs.keySet().retainAll(buildConfigIds);
@@ -840,11 +850,12 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
-	 * Used by Project to get the buildConfigs on the description
+	 * Used by Project to get the buildConfigs on the description.
+	 * @return the project configurations of an empty array if none exist.
 	 */
 	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
-		if (buildConfigs == null || buildConfigs.length == 0)
-			buildConfigs = DEFAULT_BUILD_CONFIGS;
+		if (buildConfigs.length == 0)
+			return EMPTY_BUILD_CONFIGS;
 		return makeCopy ? copyBuildConfigs(buildConfigs) : buildConfigs;
 	}
     // Deep clone() the build configurations array
@@ -859,8 +870,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Internal method to check if the description has a given build configuration.
 	 */
 	private boolean hasBuildConfig(String buildConfigId) {
-		if (buildConfigId == null)
-			return false;
+		Assert.isNotNull(buildConfigId);
+		if (buildConfigs.length == 0)
+			return IBuildConfiguration.DEFAULT_CONFIG_ID.equals(buildConfigId);
 		for (int i = 0; i < buildConfigs.length; i++)
 			if (buildConfigs[i].getConfigurationId().equals(buildConfigId))
 				return true;

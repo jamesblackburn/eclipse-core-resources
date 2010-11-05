@@ -154,6 +154,8 @@ public class ModelObjectWriter implements IModelObjectConstants {
 	protected void writeBuildConfigurations(ProjectDescription description, XMLWriter writer) throws IOException {
 		// Print the configurations
 		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
+		if (configs.length == 0)
+			return;
 		// Only if there's at least one non-default configuration to serialize
 		if (configs.length > 1 ||
 				!((BuildConfiguration)configs[0]).isDefault()) {

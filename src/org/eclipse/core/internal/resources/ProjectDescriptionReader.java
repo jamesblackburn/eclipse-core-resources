@@ -105,7 +105,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	protected int state = S_INITIAL;
 
 	// Set to true if build configuration references existed in the description and were loaded.
-	// Used to work out if the old style project references should be loaded.
+	// Used to work out if the old style project references should be used.
 	private boolean loadedBuildConfigReferences;
 
 	/**
@@ -890,7 +890,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			int i = 0;
 			for (Iterator it = bcs.iterator(); it.hasNext(); i++) {
 				BuildConfig config = (BuildConfig) it.next();
-				configs[i] = projectDescription.newBuildConfiguration(config.configId);
+				configs[i] = new BuildConfiguration(project, config.configId);
 				configs[i].setName(config.configName);
 			}
 			projectDescription.setBuildConfigurations(configs);

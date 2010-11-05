@@ -1079,6 +1079,23 @@ public interface IProject extends IContainer, IAdaptable {
 	public void setActiveBuildConfiguration(String configId) throws CoreException;
 
 	/**
+	 * Returns a new build configuration for this project, with the given id.  
+	 * The id is an implementation specific unique id for the build configuration
+	 * <p>
+	 * Note that the new build configuration does not become part of this project
+	 * description until it is installed using 
+	 * {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}
+	 * </p>
+	 *
+	 * @param configurationId the application specific unique id of the configuration
+	 * @return a build configuration
+	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
+	 * @see IBuildConfiguration
+	 * @since 3.7
+	 */
+	public IBuildConfiguration newBuildConfiguration(String configurationId);
+
+	/**
 	 * Returns a new project build configuration reference that points to this project.
 	 * The reference points to the project's active configuration by default,
 	 * but this can be set using {@link IBuildConfigReference#setConfigurationId(String)}.
