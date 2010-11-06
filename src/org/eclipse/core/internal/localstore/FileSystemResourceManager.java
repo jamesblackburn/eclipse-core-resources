@@ -800,7 +800,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 			if (!isDefaultLocation)
 				description.setLocationURI(projectLocation);
 			if (creation && privateDescription != null)
-				description.setDynamicReferences(privateDescription.getDynamicReferences(false));
+				description.internalSetDynamicBuildConfigReferences(privateDescription.internalGetDynamicBuildConfigReferences());
 		}
 		long lastModified = descriptionStore.fetchInfo().getLastModified();
 		IFile descriptionFile = target.getFile(IProjectDescription.DESCRIPTION_FILE_NAME);

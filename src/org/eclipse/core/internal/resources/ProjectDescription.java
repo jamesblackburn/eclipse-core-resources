@@ -833,6 +833,15 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			if (!project.equals(buildConfigs[i].getProject()))
 				buildConfigs[i] = new BuildConfiguration(buildConfigs[i], project);
 	}
+	
+	public void internalSetDynamicBuildConfigReferences(HashMap refs) {
+		dynamicRefs = refs;
+		clearCachedReferences(null);
+	}
+	
+	public HashMap internalGetDynamicBuildConfigReferences() {
+		return dynamicRefs;
+	}
 
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
