@@ -317,13 +317,23 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	private IProject[] getProjectsFromBuildConfigReferences(Map/*<String, IBuildConfigReference[]>*/ refsMap) {
 		Set projects = new LinkedHashSet();
-		Iterator i = refsMap.values().iterator();
-		while (i.hasNext()) {
-			IBuildConfigReference[] refs = (IBuildConfigReference[]) i.next();
-			for (int j = 0; j < refs.length; j++) {
+		// FIXME
+		// Should start with active configuration
+		// Then iterate over project configs deterministically.
+		int i = 0;
+		do {
+			String id;
+			if (buildConfigs.length == 0)
+				id = IBuildConfiguration.DEFAULT_CONFIG_ID;
+			else
+				id = buildConfigs[i].getConfigurationId();
+
+			IBuildConfigReference[] refs = (IBuildConfigReference[])refsMap.get(id);
+			if (refs == null)
+				continue;
+			for (int j = 0; j < refs.length; j++)
 				projects.add(refs[j].getProject());
-			}
-		}
+		} while (++i < buildConfigs.length);
 		return (IProject[]) projects.toArray(new Project[projects.size()]);
 	}
 
