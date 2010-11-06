@@ -313,6 +313,7 @@ public class LocalMetaArea implements ICoreConstants {
 	 *    UTF - project reference 1
 	 *    ... repeat for remaining references
 	 * since 3.7:
+	 *    UTF - active build configuration name
 	 *    int - number of build configurations with refs
 	 *      UTF - build configuration id
 	 *      int - number of referenced configuration
@@ -357,7 +358,10 @@ public class LocalMetaArea implements ICoreConstants {
 				for (int i = 0; i < numRefs; i++)
 					references[i] = root.getProject(dataIn.readUTF());
 				description.setDynamicReferences(references);
-				// Since 3.7: Are there any build configuration references?
+				// Since 3.7: 
+				// Active configuration Id
+				description.setActiveBuildConfiguration(dataIn.readUTF());
+				// Build configuration references?
 				int numBuildConifgsWithRefs = dataIn.readInt();
 				HashMap m = new HashMap(1);
 				for (int i = 0; i < numBuildConifgsWithRefs; i++) {
@@ -433,6 +437,9 @@ public class LocalMetaArea implements ICoreConstants {
 				dataOut.writeInt(numRefs);
 				for (int i = 0; i < numRefs; i++)
 					dataOut.writeUTF(references[i].getName());
+				// Since 3.7
+				// Write active configuration id
+				dataOut.writeUTF(target.getActiveBuildConfiguration().getConfigurationId());
 				// Write out the configuration level references
 				IBuildConfiguration[] configs = desc.internalGetBuildConfigs(false);
 				dataOut.writeInt(configs.length);

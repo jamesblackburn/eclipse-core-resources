@@ -46,9 +46,6 @@ public class Project extends Container implements IProject {
 	 */
 	public static final int SNAPSHOT_SET_AUTOLOAD = 2;
 
-	/** Key for the active build configuration ID for the project */
-	private static final QualifiedName ACTIVE_BUILD_CONFIGURATION = new QualifiedName(ResourcesPlugin.PI_RESOURCES, "activeConfigId"); //$NON-NLS-1$
-
 	protected Project(IPath path, Workspace container) {
 		super(path, container);
 	}
@@ -92,6 +89,7 @@ public class Project extends Container implements IProject {
 		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
 		current.setBuildConfigurations(configs);
 		current.updateBuildConfigurations(this);
+		current.setActiveBuildConfiguration(description.getActiveBuildConfigurationId());
 
 		// set the references before the natures
 		boolean flushOrder = false;
@@ -1498,7 +1496,11 @@ public class Project extends Container implements IProject {
 	 * @see IProject#getActiveBuildConfiguration()
 	 */
 	public IBuildConfiguration getActiveBuildConfiguration() throws CoreException {
-		String configId = getPersistentProperty(ACTIVE_BUILD_CONFIGURATION);
+		ResourceInfo info = getResourceInfo(false, false);
+		int flags = getFlags(info);
+		checkAccessible(flags);
+
+		String configId = internalGetDescription().activeConfigurationId;
 		try {
 			if (configId != null)
 				return getBuildConfiguration(configId);
@@ -1524,22 +1526,6 @@ public class Project extends Container implements IProject {
 		return null;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see IProject#setActiveBuildConfiguration(String configId)
-	 */
-	public void setActiveBuildConfiguration(String configId) throws CoreException {
-		Assert.isNotNull(configId);
-		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
-		checkAccessible(getFlags(info));
-		try {
-			getBuildConfiguration(configId);
-			setPersistentProperty(ACTIVE_BUILD_CONFIGURATION, configId);
-		} catch (CoreException e) {
-			// Configuration doesn't exist in project. Nothing to do.
-		}
-	}
-	
 	/*
 	 * (non-Javadoc)
 	 * @see org.eclipse.core.resources.IProject#newBuildConfiguration(java.lang.String)

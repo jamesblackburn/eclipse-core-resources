@@ -194,6 +194,18 @@ public interface IProjectDescription {
 	public ICommand newCommand();
 
 	/**
+	 * Sets the active configuration Id for the described project.
+	 * <p>
+	 * If a configuration with the specified id does not exist in the project then the
+	 * first configuration in the project is treated as the active configuration.
+	 * </p>
+	 *
+	 * @param configurationId the configuration to set as the active or default
+	 * @since 3.7
+	 */
+	public void setActiveBuildConfiguration(String configurationId);
+
+	/**
 	 * Sets the build configurations for the described project.
 	 * <p>
 	 * Before they are set, duplicates are removed from the input.
@@ -208,8 +220,8 @@ public interface IProjectDescription {
 	 * 
 	 * @param configs the configurations to set for the described project
 	 * @see IProject#getBuildConfigurations()
-	 * @see IProject#setActiveBuildConfiguration(String)
 	 * @see IProject#getActiveBuildConfiguration()
+	 * @see #setActiveBuildConfiguration(String)
 	 * @since 3.7
 	 */
 	public void setBuildConfigurations(IBuildConfiguration[] configs);

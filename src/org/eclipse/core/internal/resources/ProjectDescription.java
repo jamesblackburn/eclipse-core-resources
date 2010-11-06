@@ -14,10 +14,9 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import java.util.Map.Entry;
-
 import java.net.URI;
 import java.util.*;
+import java.util.Map.Entry;
 import org.eclipse.core.filesystem.URIUtil;
 import org.eclipse.core.internal.events.BuildCommand;
 import org.eclipse.core.internal.utils.FileUtil;
@@ -84,6 +83,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	// fields
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
+	protected String activeConfigurationId = IBuildConfiguration.DEFAULT_CONFIG_ID;
 	/** The 'real' build configurations set on this project. 
 	 *  NB This doesn't contain the generated 'default' build configuration where 
 	 *  no build configurations have been defined. */
@@ -423,6 +423,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public boolean hasPrivateChanges(ProjectDescription description) {
 		if (configRefsHaveChanges(dynamicRefs, description.dynamicRefs))
+			return true;
+		if (!activeConfigurationId.equals(description.activeConfigurationId))
 			return true;
 		IPath otherLocation = description.getLocation();
 		if (location == null)
@@ -824,6 +826,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		return LinkDescription.VIRTUAL_LOCATION;
 	}
 
+	public String getActiveBuildConfigurationId() {
+		return activeConfigurationId;
+	}
+
 	/**
 	 * Update the build configurations w.r.t. the parent project
 	 * @param project that owns the build configurations
@@ -833,14 +839,19 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			if (!project.equals(buildConfigs[i].getProject()))
 				buildConfigs[i] = new BuildConfiguration(buildConfigs[i], project);
 	}
-	
+
 	public void internalSetDynamicBuildConfigReferences(HashMap refs) {
 		dynamicRefs = refs;
 		clearCachedReferences(null);
 	}
-	
+
 	public HashMap internalGetDynamicBuildConfigReferences() {
 		return dynamicRefs;
+	}
+
+	public void setActiveBuildConfiguration(String configurationId) {
+		Assert.isNotNull(configurationId);
+		activeConfigurationId = configurationId;
 	}
 
 	/* (non-Javadoc)

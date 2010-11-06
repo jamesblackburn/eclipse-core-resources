@@ -1062,23 +1062,6 @@ public interface IProject extends IContainer, IAdaptable {
 	public IBuildConfiguration getActiveBuildConfiguration() throws CoreException;
 
 	/**
-	 * Sets the active configuration for the described project.
-	 * <p>
-	 * If a configuration with the specified id does not exist in the project then this has
-	 * no effect.
-	 * </p>
-	 *
-	 * @param configurationId the configuration to set as the active or default
-	 * @exception CoreException if this method fails. Reasons include:
-	 * <ul>
-	 * <li> This project does not exist.</li>
-	 * <li> This project is not open.</li>
-	 * </ul>
-	 * @since 3.7
-	 */
-	public void setActiveBuildConfiguration(String configurationId) throws CoreException;
-
-	/**
 	 * Returns a new build configuration for this project, with the given id.  
 	 * The id is an implementation specific unique id for the build configuration
 	 * <p>
