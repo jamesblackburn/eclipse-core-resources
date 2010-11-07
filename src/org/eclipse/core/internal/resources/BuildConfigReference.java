@@ -10,14 +10,9 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IBuildConfiguration;
-import org.eclipse.core.resources.IBuildConfigReference;
-
-
-import org.eclipse.core.runtime.CoreException;
-
-import org.eclipse.core.runtime.*;
 import org.eclipse.core.resources.*;
+import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.CoreException;
 
 /**
  * Represents a reference to a specific project build configuration. The project is
@@ -27,7 +22,7 @@ import org.eclipse.core.resources.*;
  */
 public class BuildConfigReference implements IBuildConfigReference {
 	private final IProject project;
-	private String configId;
+	private final String configId;
 
 	/**
 	 * Create a reference to a project's active configuration.
@@ -68,11 +63,6 @@ public class BuildConfigReference implements IBuildConfigReference {
 	 */
 	public String getConfigurationId() {
 		return configId;
-	}
-
-	public void setConfigurationId(String name) {
-		Assert.isTrue(configId == null);
-		configId = name;
 	}
 
 	/**

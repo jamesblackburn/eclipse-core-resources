@@ -439,7 +439,7 @@ public class LocalMetaArea implements ICoreConstants {
 					dataOut.writeUTF(references[i].getName());
 				// Since 3.7
 				// Write active configuration id
-				dataOut.writeUTF(target.getActiveBuildConfiguration().getConfigurationId());
+				dataOut.writeUTF(desc.getActiveBuildConfigurationId());
 				// Write out the configuration level references
 				IBuildConfiguration[] configs = desc.internalGetBuildConfigs(false);
 				dataOut.writeInt(configs.length);

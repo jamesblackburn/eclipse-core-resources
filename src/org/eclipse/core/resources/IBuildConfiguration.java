@@ -17,20 +17,32 @@ package org.eclipse.core.resources;
  * interested builder, per configuration, and allow build configurations to reference
  * each other.
  *<p>
- * All projects have at least one default configuration with ID.  By default this
- * is {@link #DEFAULT_CONFIG_ID}.  One configuration in the project is defined 
+ * All projects have at least one build configuration.  By default this
+ * has Id {@link #DEFAULT_CONFIG_ID}.  One configuration in the project is defined 
  * to be 'active'. The active configuration is built by default.  If unset, the
  * active configuration defaults to the first configuration in the project.
+ *</p>
  *<p>
  * BuildConfigurations are created on the project description with:
  * {@link IProject#newBuildConfiguration(String)}, and
  * set using {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}.
+ *</p>
  *<p>
  * When a project is built, a specific configuration is built. This configuration
  * is passed to the builders so they can adapt their behavior
  * appropriately. Builders which don't care about configurations may ignore this,
  * and work as before.
+ *</p>
+ *<p>
+ *  Build configuration can reference other builds configurations using {@link IBuildConfigReference}. 
+ *  Workspace build will ensure that the projects are built in an appropriate order as defined
+ *  by the reference graph.
+ *</p>
  *
+ * @see IBuildConfigReference
+ * @see IProject#newBuildConfiguration(String)
+ * @see IProjectDescription#setActiveBuildConfiguration(String)
+ * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
  * @noimplement This interface is not intended to be implemented by clients.
  * @noextend This interface is not intended to be extended by clients.
  * @since 3.7

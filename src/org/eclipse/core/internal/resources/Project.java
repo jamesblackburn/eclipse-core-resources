@@ -89,10 +89,10 @@ public class Project extends Container implements IProject {
 		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
 		current.setBuildConfigurations(configs);
 		current.updateBuildConfigurations(this);
-		current.setActiveBuildConfiguration(description.getActiveBuildConfigurationId());
 
 		// set the references before the natures
-		boolean flushOrder = false;
+		boolean flushOrder = !current.getActiveBuildConfigurationId().equals(description.getActiveBuildConfigurationId());
+		current.setActiveBuildConfiguration(description.getActiveBuildConfigurationId());
 		if (ProjectDescription.configRefsHaveChanges(current.staticRefs, description.staticRefs)) {
 			current.staticRefs = new HashMap(description.staticRefs);
 			current.clearCachedReferences(null);
@@ -128,9 +128,9 @@ public class Project extends Container implements IProject {
 	 * @see IProject#build(int, String, Map, IProgressMonitor)
 	 */
 	public void build(int trigger, String builderName, Map args, IProgressMonitor monitor) throws CoreException {
+		Assert.isNotNull(builderName);
 		if (!isAccessible())
 			return;
-		Assert.isNotNull(builderName);
 		internalBuild(getActiveBuildConfiguration(), trigger, builderName, args, monitor);
 	}
 
@@ -138,9 +138,10 @@ public class Project extends Container implements IProject {
 	 * @see IProject#build(IBuildConfiguration, int, String, Map, IProgressMonitor)
 	 */
 	public void build(IBuildConfiguration config, int trigger, IProgressMonitor monitor) throws CoreException {
-		if (!isAccessible())
-			return;
 		Assert.isNotNull(config);
+		// If project isn't accessible, or doesn't contain the build configuration, nothing to do.
+		if (!isAccessible() || !hasBuildConfiguration(config))
+			return;
 		internalBuild(config, trigger, null, null, monitor);
 	}
 
@@ -755,6 +756,8 @@ public class Project extends Container implements IProject {
 	void internalSetDescription(IProjectDescription value, boolean incrementContentId) {
 		// Reconcile the current IProject into the BuildConfigurations
 		((ProjectDescription)value).updateBuildConfigurations(this);
+		// Project has been added / removed. Build order is out-of-step
+		workspace.flushBuildOrder();
 
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, true);
 		info.setDescription((ProjectDescription) value);
@@ -1459,7 +1462,7 @@ public class Project extends Container implements IProject {
 	}
 
 	/**
-	 * @return IBuildConfiguration[] containing at least one build configuration
+	 * @return IBuildConfiguration[] always contains at least one build configuration
 	 */
 	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
 		ProjectDescription desc = internalGetDescription();
@@ -1500,14 +1503,7 @@ public class Project extends Container implements IProject {
 		int flags = getFlags(info);
 		checkAccessible(flags);
 
-		String configId = internalGetDescription().activeConfigurationId;
-		try {
-			if (configId != null)
-				return getBuildConfiguration(configId);
-		} catch (CoreException e) {
-			// Build configuration doesn't exist; treat the first as active.
-		}
-		return getBuildConfigurations()[0];
+		return internalGetActiveBuildConfig();
 	}
 
 	/**
@@ -1516,14 +1512,14 @@ public class Project extends Container implements IProject {
 	 * @see #getActiveBuildConfiguration()
 	 */
 	IBuildConfiguration internalGetActiveBuildConfig() {
+		String configId = internalGetDescription().activeConfigurationId;
 		try {
-			return getActiveBuildConfiguration();
+			if (configId != null)
+				return getBuildConfiguration(configId);
 		} catch (CoreException e) {
-			// project not accessible
+			// Build configuration doesn't exist; treat the first as active.
 		}
-		//TODO: Should we just return null here?
-		Assert.isTrue(false, "Project not accessible!"); //$NON-NLS-1$
-		return null;
+		return (BuildConfiguration)((BuildConfiguration) internalGetBuildConfigs(false)[0]).clone();
 	}
 
 	/*
@@ -1539,8 +1535,6 @@ public class Project extends Container implements IProject {
 	 * @see IProject#newReference()
 	 */
 	public IBuildConfigReference newBuildConfigurationReference(String configurationId) {
-		BuildConfigReference ref = new BuildConfigReference(this);
-		ref.setConfigurationId(configurationId);
-		return ref;
+		return new BuildConfigReference(this, configurationId);
 	}
 }

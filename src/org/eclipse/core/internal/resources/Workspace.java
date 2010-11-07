@@ -87,7 +87,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	protected WorkManager _workManager;
 	protected AliasManager aliasManager;
 	protected BuildManager buildManager;
-	protected IBuildConfiguration[] buildOrder = null;
+	protected volatile IBuildConfiguration[] buildOrder = null;
 	protected CharsetManager charsetManager;
 	protected ContentDescriptionManager contentDescriptionManager;
 	/** indicates if the workspace crashed in a previous session */
@@ -1426,13 +1426,12 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	}
 
 	/**
-	 * Flush the build order cache for the workspace.  Only needed if the
-	 * description does not already have a build order.  That is, if this
-	 * is really a cache.
+	 * Flush the build order cache for the workspace.  The buildOrder cache contains the total
+	 * order of the build configurations in the workspace, including projects not mentioned in
+	 * the workspace description.
 	 */
 	protected void flushBuildOrder() {
-		if (description.getBuildOrder(false) == null)
-			buildOrder = null;
+		buildOrder = null;
 	}
 
 	/* (non-Javadoc)
@@ -1481,46 +1480,36 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @see IWorkspaceDescription#getBuildOrder()
 	 */
 	public IBuildConfiguration[] getBuildOrder() {
-		// if the build order has not been cached, calculate it
-		if (buildOrder == null) {
-			// see if a particular build order is specified
-			String[] order = description.getBuildOrder(false);
-			if (order != null) {
-				// convert from project names to active project buildConfigs
-				// and eliminate non-existent and closed projects
-				List configs = new ArrayList(order.length);
-				for (int i = 0; i < order.length; i++) {
-					IProject project = getRoot().getProject(order[i]);
-					if (project.isAccessible()) {
-						configs.add(((Project) project).internalGetActiveBuildConfig());
-					}
-				}
-				buildOrder = new IBuildConfiguration[configs.size()];
-				configs.toArray(buildOrder);
-			} else {
-				// use default project build order
-				// computed for all accessible projects in workspace
-				buildOrder = vertexOrderToProjectBuildConfigOrder(computeActiveBuildConfigurationOrder()).buildConfigurations;
-			}
-		}
+		// Return the build order cache.
+		if (buildOrder != null)
+			return buildOrder;
 
-		// Add projects not mentioned in the build order to the end, in name order
-		LinkedHashSet configs = new LinkedHashSet(Arrays.asList(buildOrder));
-		SortedSet missing = new TreeSet(new Comparator() {
-			public int compare(Object left, Object right) {
-				return ((IBuildConfiguration) left).getProject().getName().compareTo(
-							((IBuildConfiguration) right).getProject().getName());
+		// see if a particular build order is specified
+		String[] order = description.getBuildOrder(false);
+		if (order != null) {
+			LinkedHashSet configs = new LinkedHashSet();
+
+			// convert from project names to active project buildConfigs
+			// and eliminate non-existent and closed projects
+			for (int i = 0; i < order.length; i++) {
+				IProject project = getRoot().getProject(order[i]);
+				if (project.isAccessible())
+					configs.add(((Project) project).internalGetActiveBuildConfig());
 			}
-		});
-		IProject[] allProjects = getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
-		for (int i = 0; i < allProjects.length; i++) {
-			IProject project = allProjects[i];
-			if (project.isAccessible()) {
-				missing.add(((Project) project).internalGetActiveBuildConfig());
-			}
-		}
-		configs.addAll(missing);
-		return (IBuildConfiguration[]) configs.toArray(new IBuildConfiguration[configs.size()]);
+
+			// Add projects not mentioned in the build order to the end, in a sensible reference order
+			configs.addAll(Arrays.asList(vertexOrderToProjectBuildConfigOrder(computeActiveBuildConfigurationOrder()).buildConfigurations));
+
+			// Update the cache - Java 5 volatile memory barrier semantics
+			IBuildConfiguration[] bo = new IBuildConfiguration[configs.size()];
+			configs.toArray(bo);
+			this.buildOrder = bo;
+		} else
+			// use default project build order
+			// computed for all accessible projects in workspace
+			buildOrder = vertexOrderToProjectBuildConfigOrder(computeActiveBuildConfigurationOrder()).buildConfigurations;
+
+		return buildOrder;
 	}
 
 	public CharsetManager getCharsetManager() {
