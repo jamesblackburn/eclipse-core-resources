@@ -39,29 +39,25 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	//these can be static because only one description can be read at once.
 	protected static boolean isWriting = false;
 	protected ICommand[] buildSpec = EMPTY_COMMAND_ARRAY;
-	/*
-	 * Cached union of static and dynamic references (duplicates omitted).
-	 * This cache is not persisted.
-	 */
-	protected HashMap/*<String, IBuildConfigReference[]>*/ cachedRefs = new HashMap(1);
-	/*
-	 * Cached union of static and dynamic build config references (duplicates omitted).
-	 * This cache is not persisted.
-	 */
-	protected IProject[] cachedProjectRefs = null;
-	/*
-	 * Cached dynamic project references, generated from build config references (duplicates omitted).
-	 * This cache is not persisted.
-	 */
-	protected  IProject[] cachedDynamicProjectRefs = null;
-	/*
-	 * Cached static project references, generated from build config references (duplicates omitted).
-	 * This cache is not persisted.
-	 */
-	protected IProject[] cachedStaticProjectRefs = null;
-
 	protected String comment = EMPTY_STR;
-	
+
+	// Build configuration + References state
+	/** Id of the currently active build configuration */
+	protected String activeConfigurationId = IBuildConfiguration.DEFAULT_CONFIG_ID;
+	/** The 'real' build configurations set on this project. 
+	 *  This doesn't contain the generated 'default' build configuration added by IProject
+	 *  no build configurations have been defined. */
+	protected BuildConfiguration[] buildConfigs = EMPTY_BUILD_CONFIGS;
+	/** Map from config id in this project -> build configurations in other projects */
+	protected IProject[] staticRefs = EMPTY_PROJECT_ARRAY;
+	protected IProject[] dynamicRefs = EMPTY_PROJECT_ARRAY;
+	protected HashMap/*<String, IBuildConfigReference[]>*/ dynamicConfigRefs = new HashMap(1);
+
+	// Cached build configuration references. Not persisted.
+	protected HashMap/*<String, IBuildConfigReference[]>*/ cachedConfigRefs = new HashMap(1);
+	// Cached project level references.
+	protected IProject[] cachedRefs = null;
+
 	/**
 	 * Map of (IPath -> LinkDescription) pairs for each linked resource
 	 * in this project, where IPath is the project relative path of the resource.
@@ -83,14 +79,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	// fields
 	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
-	protected String activeConfigurationId = IBuildConfiguration.DEFAULT_CONFIG_ID;
-	/** The 'real' build configurations set on this project. 
-	 *  NB This doesn't contain the generated 'default' build configuration where 
-	 *  no build configurations have been defined. */
-	protected BuildConfiguration[] buildConfigs = EMPTY_BUILD_CONFIGS;
-	/** Map from config id in this project -> build configurations in other projects */
-	protected HashMap/*<String, IBuildConfigReference[]>*/ staticRefs = new HashMap(1);
-	protected HashMap/*<String, IBuildConfigReference[]>*/ dynamicRefs = new HashMap(1);
 	protected URI snapshotLocation= null;
 
 	public ProjectDescription() {
@@ -104,8 +92,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		clone.filterDescriptions = null;
 		if (variableDescriptions != null)
 			clone.variableDescriptions = (HashMap) variableDescriptions.clone();
-		clone.staticRefs = (HashMap) staticRefs.clone();
-		clone.dynamicRefs = (HashMap) dynamicRefs.clone();
+		clone.dynamicConfigRefs = (HashMap) dynamicConfigRefs.clone();
 		clone.clearCachedReferences(null);
 		clone.buildSpec = getBuildSpec(true);
 		return clone;
@@ -121,27 +108,76 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
+	 * Returns a copy of the given array with all duplicates removed
+	 */
+    private IProject[] copyAndRemoveDuplicates(IProject[] projects) {
+        IProject[] result = new IProject[projects.length];
+        int count = 0;
+        next: for (int i = 0; i < projects.length; i++) {
+                IProject project = projects[i];
+                // scan to see if there are any other projects by the same name
+                for (int j = 0; j < count; j++)
+                        if (project.equals(result[j]))
+                                continue next;
+                // not found
+                result[count++] = project;
+        }
+        if (count < projects.length) {
+                //shrink array
+                IProject[] reduced = new IProject[count];
+                System.arraycopy(result, 0, reduced, 0, count);
+                return reduced;
+        }
+        return result;
+    }
+
+	/**
+	 * Helper to turn an array of projects into an array of {@link IBuildConfigReference} to the
+	 * projects' active configuration
+	 * Order is preserved - the buildConfigs appear for each project in the order
+	 * that the projects were specified.
+	 * @param projects projects to get the active configuration from
+	 * @return collection of build config references
+	 */
+	private Collection getBuildConfigReferencesFromProjects(IProject[] projects) {
+		List refs = new ArrayList(projects.length);
+		for (int i = 0; i < projects.length; i++)
+			refs.add(new BuildConfigReference(projects[i]));
+		return refs;
+	}
+
+	/**
+	 * Helper to fetch projects from an array of build configuration references
+	 * @param refs
+	 * @return List<IProject>
+	 */
+	private Collection getProjectsFromBuildConfigRefs(IBuildConfigReference[] refs) {
+		LinkedHashSet projects = new LinkedHashSet(refs.length);
+		for (int i = 0; i < refs.length; i++)
+			projects.add(refs[i].getProject());
+		return projects;
+	}
+
+	/**
 	 * Returns the union of the description's static and dynamic project references,
 	 * with duplicates omitted. The calculation is optimized by caching the result
+	 * Call the configuration based implementation.
 	 * @see #getAllBuildConfigReferences(String, boolean)
 	 */
 	public IProject[] getAllReferences(boolean makeCopy) {
-		if (cachedProjectRefs == null) {
-			IProject[] statik = getReferencedProjects(false);
-			IProject[] dynamic = getDynamicReferences(false);
-			if (dynamic.length == 0) {
-				cachedProjectRefs = statik;
-			} else if (statik.length == 0) {
-				cachedProjectRefs = dynamic;
-			} else {
-				Set set = new LinkedHashSet();
-				set.addAll(Arrays.asList(statik));
-				set.addAll(Arrays.asList(dynamic));
-				cachedProjectRefs = (IProject[]) set.toArray(new IProject[set.size()]);
-			}
+		if (cachedRefs == null) {
+			IBuildConfigReference[] refs;
+			if (hasBuildConfig(activeConfigurationId))
+				refs = getAllBuildConfigReferences(activeConfigurationId, false);
+			else if (buildConfigs.length > 0)
+				refs = getAllBuildConfigReferences(buildConfigs[0].getConfigurationId(), false);
+			else // No build configuration => fall-back to default
+				refs = getAllBuildConfigReferences(IBuildConfiguration.DEFAULT_CONFIG_ID, false);
+			Collection l = getProjectsFromBuildConfigRefs(refs);
+			cachedRefs = (IProject[])l.toArray(new IProject[l.size()]);
 		}
 		//still need to copy the result to prevent tampering with the cache
-		return makeCopy ? (IProject[]) cachedProjectRefs.clone() : cachedProjectRefs;
+		return makeCopy ? (IProject[]) cachedRefs.clone() : cachedRefs;
 	}
 
 	/**
@@ -153,23 +189,23 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public IBuildConfigReference[] getAllBuildConfigReferences(String configId, boolean makeCopy) {
 		if (!hasBuildConfig(configId))
 			return EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
-		if (!cachedRefs.containsKey(configId)) {
-			IBuildConfigReference[] statik = getReferencedProjectConfigs(configId, false);
-			IBuildConfigReference[] dynamic = getDynamicConfigReferences(configId, false);
-			if (dynamic.length == 0) {
-				cachedRefs.put(configId, statik);
-			} else if (statik.length == 0) {
-				cachedRefs.put(configId, dynamic);
-			} else {
-				//combine all references
-				IBuildConfigReference[] result = new IBuildConfigReference[dynamic.length + statik.length];
-				System.arraycopy(statik, 0, result, 0, statik.length);
-				System.arraycopy(dynamic, 0, result, statik.length, dynamic.length);
-				cachedRefs.put(configId, copyAndRemoveDuplicates(result));
-			}
+		if (!cachedConfigRefs.containsKey(configId)) {
+			Set references = new LinkedHashSet();
+			Collection statik = getBuildConfigReferencesFromProjects(staticRefs);
+			IBuildConfigReference[] dynamicBuildConfigs = dynamicConfigRefs.containsKey(configId) ? 
+														(IBuildConfigReference[])dynamicConfigRefs.get(configId) : EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
+			Collection dynamic = getBuildConfigReferencesFromProjects(dynamicRefs);
+
+			// Combine all references:
+			// We preserve the previous order of static project references before dynamic project references
+			// However as build config references only come in dynamic form, those trump all others.
+			references.addAll(Arrays.asList(dynamicBuildConfigs));
+			references.addAll(statik);
+			references.addAll(dynamic);
+			cachedConfigRefs.put(configId, references.toArray(new IBuildConfigReference[references.size()]));
 		}
 		//still need to copy the result to prevent tampering with the cache
-		IBuildConfigReference[] result = (IBuildConfigReference[]) cachedRefs.get(configId);
+		IBuildConfigReference[] result = (IBuildConfigReference[]) cachedConfigRefs.get(configId);
 		return makeCopy ? (IBuildConfigReference[]) result.clone() : result;
 	}
 
@@ -207,13 +243,38 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		return getDynamicReferences(true);
 	}
 
+	/*
+	 * Get project level dynamic references.  Contains a union of Configuration level
+	 * references and project level references.  Configuration level references take
+	 * precedence.
+	 */
 	public IProject[] getDynamicReferences(boolean makeCopy) {
-		if (dynamicRefs == null)
-			return EMPTY_PROJECT_ARRAY;
-		// Generate dynamic project references from dynamic build configs references
-		if (cachedDynamicProjectRefs == null)
-			cachedDynamicProjectRefs = getProjectsFromBuildConfigReferences(dynamicRefs);
-		return makeCopy ? (IProject[]) cachedDynamicProjectRefs.clone() : cachedDynamicProjectRefs;
+		// Need to create union of dynamicConfigRefs & dyamicRefs
+		// The former has priority.
+		Set projects = new LinkedHashSet();
+
+		// Add dynamic references from the active configuration first.
+		if (dynamicConfigRefs.containsKey(activeConfigurationId))
+			projects.addAll(getProjectsFromBuildConfigRefs((IBuildConfigReference[])dynamicConfigRefs.get(activeConfigurationId)));
+
+		// Add all the other build configuration references
+		int i = 0;
+		do {
+			String id;
+			if (buildConfigs.length == 0)
+				id = IBuildConfiguration.DEFAULT_CONFIG_ID;
+			else
+				id = buildConfigs[i].getConfigurationId();
+
+			if (!dynamicConfigRefs.containsKey(id))
+				continue;
+			projects.addAll(getProjectsFromBuildConfigRefs((IBuildConfigReference[])dynamicConfigRefs.get(id)));
+		} while (++i < buildConfigs.length);
+
+		// Finally add all dynamic project references
+		projects.addAll(Arrays.asList(dynamicRefs));
+
+		return (IProject[])projects.toArray(new IProject[projects.size()]);
 	}
 
 	/* (non-Javadoc)
@@ -224,10 +285,16 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	public IBuildConfigReference[] getDynamicConfigReferences(String configId, boolean makeCopy) {
-		if (!hasBuildConfig(configId) || !dynamicRefs.containsKey(configId))
+		if (!hasBuildConfig(configId))
 			return EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
-		IBuildConfigReference[] result = (IBuildConfigReference[]) dynamicRefs.get(configId);
-		return makeCopy ? (IBuildConfigReference[]) result.clone() : result;
+		if (!dynamicConfigRefs.containsKey(configId) && dynamicRefs.length == 0)
+			return EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
+
+		LinkedHashSet refs = new LinkedHashSet();
+		if (dynamicConfigRefs.containsKey(configId))
+			refs.addAll(Arrays.asList((IBuildConfigReference[])dynamicConfigRefs.get(configId)));
+		refs.addAll(getBuildConfigReferencesFromProjects(dynamicRefs));
+		return (IBuildConfigReference[])refs.toArray(new IBuildConfigReference[refs.size()]);
 	}
 
 	/**
@@ -308,35 +375,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		return makeCopy ? (String[]) natures.clone() : natures;
 	}
 
-	/**
-	 * Helper to get a list of projects, without duplicates, from a list of build config references.
-	 * Order is preserved, and is according to the first occurrence of a project in the
-	 * array of build configs.
-	 * @param refsMap map containing the build config references to get the projects from
-	 * @return list of projects
-	 */
-	private IProject[] getProjectsFromBuildConfigReferences(Map/*<String, IBuildConfigReference[]>*/ refsMap) {
-		Set projects = new LinkedHashSet();
-		// FIXME
-		// Should start with active configuration
-		// Then iterate over project configs deterministically.
-		int i = 0;
-		do {
-			String id;
-			if (buildConfigs.length == 0)
-				id = IBuildConfiguration.DEFAULT_CONFIG_ID;
-			else
-				id = buildConfigs[i].getConfigurationId();
-
-			IBuildConfigReference[] refs = (IBuildConfigReference[])refsMap.get(id);
-			if (refs == null)
-				continue;
-			for (int j = 0; j < refs.length; j++)
-				projects.add(refs[j].getProject());
-		} while (++i < buildConfigs.length);
-		return (IProject[]) projects.toArray(new Project[projects.size()]);
-	}
-
 	/* (non-Javadoc)
 	 * @see IProjectDescription#getReferencedProjects()
 	 */
@@ -347,25 +385,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public IProject[] getReferencedProjects(boolean makeCopy) {
 		if (staticRefs == null)
 			return EMPTY_PROJECT_ARRAY;
-		// Generate project references from build configs references
-		if (cachedStaticProjectRefs == null)
-			cachedStaticProjectRefs = getProjectsFromBuildConfigReferences(staticRefs);
-		//still need to copy the result to prevent tampering with the cache
-		return makeCopy ? (IProject[]) cachedStaticProjectRefs.clone() : cachedStaticProjectRefs;
-	}
-
-	/* (non-Javadoc)
-	 * @see IProjectDescription#getReferencedConfigs(String)
-	 */
-	public IBuildConfigReference[] getReferencedProjectConfigs(String configId) {
-		return getReferencedProjectConfigs(configId, true);
-	}
-
-	public IBuildConfigReference[] getReferencedProjectConfigs(String configId, boolean makeCopy) {
-		if (!hasBuildConfig(configId) || !staticRefs.containsKey(configId))
-			return EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
-		IBuildConfigReference[] result = (IBuildConfigReference[]) staticRefs.get(configId);
-		return makeCopy ? (IBuildConfigReference[]) result.clone() : result;
+		return makeCopy ? (IProject[]) staticRefs.clone() : staticRefs;
 	}
 
 	/** 
@@ -417,12 +437,37 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
+	 * Updates the references based on the passed in project description.
+	 * @param description to get references from
+	 * @return boolean indicating any change
+	 */
+	public boolean updateReferences(ProjectDescription description) {
+		boolean changed = false;
+		if (!Arrays.equals(staticRefs, description.staticRefs)) {
+			changed = true;
+			setReferencedProjects(description.staticRefs);
+		}
+		if (!Arrays.equals(dynamicRefs, description.dynamicRefs)) {
+			changed = true;
+			setDynamicReferences(description.dynamicRefs);
+		}
+		if (configRefsHaveChanges(dynamicConfigRefs, description.dynamicConfigRefs)) {
+			changed = true;
+			dynamicConfigRefs = new HashMap(description.dynamicConfigRefs);
+			clearCachedReferences(null);
+		}
+		return changed;
+	}
+
+	/**
 	 * Returns true if any private attributes of the description have changed.
 	 * Private attributes are those that are not stored in the project description
 	 * file (.project).
 	 */
 	public boolean hasPrivateChanges(ProjectDescription description) {
-		if (configRefsHaveChanges(dynamicRefs, description.dynamicRefs))
+		if (!Arrays.equals(dynamicRefs, description.getDynamicReferences(false)))
+			return true;
+		if (configRefsHaveChanges(dynamicConfigRefs, description.dynamicConfigRefs))
 			return true;
 		if (!activeConfigurationId.equals(description.activeConfigurationId))
 			return true;
@@ -445,7 +490,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		//don't bother optimizing if the order has changed
 		if (!Arrays.equals(buildSpec, description.getBuildSpec(false)))
 			return true;
-		if (configRefsHaveChanges(staticRefs, description.staticRefs))
+		if (!Arrays.equals(staticRefs, description.getReferencedProjects(false)))
 			return true;
 		if (!Arrays.equals(natures, description.getNatureIds(false)))
 			return true;
@@ -513,49 +558,13 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		comment = value;
 	}
 
-	/**
-	 * Helper to turn an array of projects into an array of {@link IBuildConfigReference} to the
-	 * projects' active configuration
-	 * Order is preserved - the buildConfigs appear for each project in the order
-	 * that the projects were specified.
-	 * @param projects projects to get the active configuration from
-	 * @return list of build config references
-	 */
-	private List getBuildConfigReferencesFromProjects(IProject[] projects) {
-		List refs = new ArrayList();
-		for (int i = 0; i < projects.length; i++) {
-			IProject project = projects[i];
-			refs.add(new BuildConfigReference(project));
-		}
-		return refs;
-	}
-
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setDynamicReferences(IProject[])
 	 */
-	public void setDynamicReferences(IProject[] projects) {
-		Assert.isLegal(projects != null);
-
-		int i = 0;
-		do {
-			// Handle the case where there's a default configuration
-			String configId;
-			if (buildConfigs.length == 0)
-				configId = IBuildConfiguration.DEFAULT_CONFIG_ID;
-			else
-				configId = buildConfigs[i].getConfigurationId();
-
-			// To interact with users of the old API, we just add references to the active configuration (null configId)
-			// to the set of existing non-active build configuration references
-			Set configRefs = new LinkedHashSet();
-			configRefs.addAll(getBuildConfigReferencesFromProjects(projects));
-			// Iterate over the existing dynamic refs. Re-add any which aren't to the 'default' configuration
-			IBuildConfigReference[] oldRefs = getDynamicConfigReferences(configId, false);
-			for (int j = 0; j < oldRefs.length; j++)
-				if (oldRefs[j].getConfigurationId() != null)
-					configRefs.add(oldRefs[j]);
-			setDynamicConfigReferences(configId, (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
-		} while (++i < buildConfigs.length);
+	public void setDynamicReferences(IProject[] value) {
+		Assert.isLegal(value != null);
+		dynamicRefs = copyAndRemoveDuplicates(value);
+		clearCachedReferences(null);
 	}
 
 	/* (non-Javadoc)
@@ -565,7 +574,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		Assert.isLegal(references != null);
 		if (!hasBuildConfig(configId))
 			return;
-		dynamicRefs.put(configId, copyAndRemoveDuplicates(references));
+		dynamicConfigRefs.put(configId, copyAndRemoveDuplicates(references));
 		clearCachedReferences(configId);
 	}
 
@@ -768,39 +777,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setReferencedProjects(IProject[])
 	 */
-	public void setReferencedProjects(IProject[] projects) {
-		Assert.isLegal(projects != null);
-		int i = 0;
-		do {
-			// Handle the case where there's a default configuration
-			String configId;
-			if (buildConfigs.length == 0)
-				configId = IBuildConfiguration.DEFAULT_CONFIG_ID;
-			else
-				configId = buildConfigs[i].getConfigurationId();
-
-			// To interact with new API, we just add references to the active configuration (null configId)
-			// to the set of existing non-active build configuration references
-			Set configRefs = new LinkedHashSet();
-			configRefs.addAll(getBuildConfigReferencesFromProjects(projects));
-			// Iterate over the existing refs. Re-add any which aren't to the 'default' configuration
-			IBuildConfigReference[] oldRefs = getReferencedProjectConfigs(configId, false);
-			for (int j = 0; j < oldRefs.length; j++)
-				if (oldRefs[j].getConfigurationId() != null)
-					configRefs.add(oldRefs[j]);
-			setReferencedProjectConfigs(configId, (IBuildConfigReference[])configRefs.toArray(new IBuildConfigReference[configRefs.size()]));
-		} while (++i < buildConfigs.length);
-	}
-
-	/* (non-Javadoc)
-	 * @see IProjectDescription#setReferencedConfigs(String, IBuildConfigReference[])
-	 */
-	public void setReferencedProjectConfigs(String configId, IBuildConfigReference[] references) {
-		Assert.isLegal(references != null);
-		if (!hasBuildConfig(configId))
-			return;
-		staticRefs.put(configId, copyAndRemoveDuplicates(references));
-		clearCachedReferences(configId);
+	public void setReferencedProjects(IProject[] value) {
+		Assert.isLegal(value != null);
+		staticRefs = copyAndRemoveDuplicates(value);
+		clearCachedReferences(null);
 	}
 
 	/**
@@ -831,7 +811,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
-	 * Update the build configurations w.r.t. the parent project
+	 * Update the build configurations to point at the passed in project
 	 * @param project that owns the build configurations
 	 */
 	void updateBuildConfigurations(IProject project) {
@@ -841,16 +821,18 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	public void internalSetDynamicBuildConfigReferences(HashMap refs) {
-		dynamicRefs = refs;
+		dynamicConfigRefs = refs;
 		clearCachedReferences(null);
 	}
 
 	public HashMap internalGetDynamicBuildConfigReferences() {
-		return dynamicRefs;
+		return dynamicConfigRefs;
 	}
 
 	public void setActiveBuildConfiguration(String configurationId) {
 		Assert.isNotNull(configurationId);
+		if (!configurationId.equals(activeConfigurationId))
+			clearCachedReferences(null);
 		activeConfigurationId = configurationId;
 	}
 
@@ -883,8 +865,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		if (buildConfigIds.isEmpty())
 			buildConfigIds.add(IBuildConfiguration.DEFAULT_CONFIG_ID);
 		boolean modified = false;
-		modified |= staticRefs.keySet().retainAll(buildConfigIds);
-		modified |= dynamicRefs.keySet().retainAll(buildConfigIds);
+		modified |= dynamicConfigRefs.keySet().retainAll(buildConfigIds);
 		if (modified)
 			clearCachedReferences(null);
 	}
@@ -923,15 +904,11 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Clear cached references for the specified build config Id
 	 * or all if configId is null.
 	 */
-	void clearCachedReferences(String configId)
-	{
+	void clearCachedReferences(String configId)	{
 		if (configId == null)
-			cachedRefs.clear();
+			cachedConfigRefs.clear();
 		else
-			cachedRefs.remove(configId);
-		cachedProjectRefs = null;
-		cachedStaticProjectRefs = null;
-		cachedDynamicProjectRefs = null;
+			cachedConfigRefs.remove(configId);
+		cachedRefs = null;
 	}
-
 }

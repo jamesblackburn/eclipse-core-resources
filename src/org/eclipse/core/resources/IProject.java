@@ -591,7 +591,6 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> This project is not open.</li>
 	 * <li> The build configuration does not exist in this project.</li>
 	 * </ul>
-	 * @see IProjectDescription#getReferencedProjectConfigs(String)
 	 * @see IProjectDescription#getDynamicConfigReferences(String)
 	 * @since 3.7
 	 */
@@ -1088,7 +1087,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * the build conifguration references is used.
 	 * <p>
 	 * Note that this reference does not become part of a project's references until it's
-	 * explicitly set with {@link IProjectDescription#setReferencedProjectConfigs(String, IBuildConfigReference[])}
+	 * explicitly set with {@link IProjectDescription#setDynamicConfigReferences(String, IBuildConfigReference[])}
 	 * and the referencing project's description has been applied.
 	 *
 	 * @param configurationId

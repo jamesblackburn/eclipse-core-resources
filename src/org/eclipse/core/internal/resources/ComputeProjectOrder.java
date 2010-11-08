@@ -17,15 +17,17 @@ import java.util.*;
 /**
  * Implementation of a sort algorithm for computing the order of vertexes that are part
  * of a reference graph. This algorithm handles cycles in the graph in a reasonable way.
+ * In 3.7 this class was enhanced to support computing order of a graph containing an
+ * arbitrary type.
  * 
- * @since 3.7
+ * @since 2.1
  */
-class ComputeVertexOrder {
+class ComputeProjectOrder {
 
 	/*
 	 * Prevent class from being instantiated.
 	 */
-	private ComputeVertexOrder() {
+	private ComputeProjectOrder() {
 		// not allowed
 	}
 

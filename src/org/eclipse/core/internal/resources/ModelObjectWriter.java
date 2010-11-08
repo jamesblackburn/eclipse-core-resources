@@ -166,9 +166,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 				writer.printSimpleTag(BUILD_CONFIG_ID, config.getConfigurationId());
 				if (config.getName() != null)
 					writer.printSimpleTag(BUILD_CONFIG_NAME, config.getName());
-				// Print all the references
-				if (description.staticRefs.containsKey(config.getConfigurationId()))
-					write(description.staticRefs.get(config.getConfigurationId()), writer);
 				writer.endTag(BUILD_CONFIG);
 			}
 			writer.endTag(BUILD_CONFIGS);

@@ -93,16 +93,7 @@ public class Project extends Container implements IProject {
 		// set the references before the natures
 		boolean flushOrder = !current.getActiveBuildConfigurationId().equals(description.getActiveBuildConfigurationId());
 		current.setActiveBuildConfiguration(description.getActiveBuildConfigurationId());
-		if (ProjectDescription.configRefsHaveChanges(current.staticRefs, description.staticRefs)) {
-			current.staticRefs = new HashMap(description.staticRefs);
-			current.clearCachedReferences(null);
-			flushOrder = true;
-		}
-		if (ProjectDescription.configRefsHaveChanges(current.dynamicRefs, description.dynamicRefs)) {
-			current.dynamicRefs = new HashMap(description.dynamicRefs);
-			current.clearCachedReferences(null);
-			flushOrder = true;
-		}
+		flushOrder |= current.updateReferences(description);
 
 		if (flushOrder)
 			workspace.flushBuildOrder();
