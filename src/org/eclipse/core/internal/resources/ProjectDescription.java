@@ -847,6 +847,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
 	 */
 	public void setBuildConfigurations(IBuildConfiguration[] value) {
+		// Remove references for deleted buildConfigs
+		Set buildConfigIds = new HashSet(Arrays.asList(buildConfigs));
+
 		if (value == null || value.length == 0)
 			buildConfigs = EMPTY_BUILD_CONFIGS;
 		else {
@@ -857,9 +860,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 				BuildConfiguration config = (BuildConfiguration)((BuildConfiguration) value[i]).clone();
 				Assert.isLegal(config.getConfigurationId() != null);
 				filtered.add(config);
+				buildConfigIds.add(config.getConfigurationId());
 			}
 
-			if (filtered.isEmpty() || 
+			if (filtered.isEmpty() ||
 					(filtered.size() ==1 && ((BuildConfiguration)(filtered.iterator().next())).isDefault()))
 				buildConfigs = EMPTY_BUILD_CONFIGS;
 			else {
@@ -869,7 +873,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		}
 
 		// Remove references for deleted buildConfigs
-		Set buildConfigIds = new HashSet(Arrays.asList(buildConfigs));
 		if (buildConfigIds.isEmpty())
 			buildConfigIds.add(IBuildConfiguration.DEFAULT_CONFIG_ID);
 		boolean modified = false;
