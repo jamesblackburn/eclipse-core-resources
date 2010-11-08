@@ -167,13 +167,6 @@ public abstract class InternalBuilder {
 	}
 
 	/*
-	 * @see IncrementalProjectBuilder#hasBeenBuilt
-	 */
-	protected boolean hasBeenBuilt(IBuildConfiguration aBuildConfiguration) {
-		return buildManager.hasBeenBuilt(aBuildConfiguration);
-	}
-
-	/*
 	 * @see IncrementalProjectBuilder#isInterrupted
 	 */
 	public boolean isInterrupted() {

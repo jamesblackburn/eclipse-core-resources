@@ -231,7 +231,6 @@ public interface IWorkspace extends IAdaptable {
 	 * 
 	 * @see IWorkspace#build(IBuildConfiguration[], int, boolean, IProgressMonitor)
 	 * @see IProject#build(int, IProgressMonitor)
-	 * @see #computeProjectBuildConfigOrder(IBuildConfiguration[])
 	 * @see IncrementalProjectBuilder#FULL_BUILD
 	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
 	 * @see IncrementalProjectBuilder#CLEAN_BUILD
@@ -240,15 +239,15 @@ public interface IWorkspace extends IAdaptable {
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Build the specified build configuration in the given list.  If buildReferences accessible referenced
-	 * configurations will also be built.
+	 * Build the build configurations specified in the passed in build configuration array.
 	 * <p>
-	 * Build order is determined by the workspace description and the project build configuration graph.
-	 * If no order is specified, the workspace computes an order determined by build configuration
-	 * references.
+	 * Build order is determined by the workspace description and the project build configuration 
+	 * reference graph.
+	 * </p>
 	 * <p>
 	 * If buildReferences is true, build configurations reachable through the build configuration graph are
 	 * built as part of this build invocation.
+	 * </p>
 	 * <p>
 	 * This method may change resources; these changes will be reported in a
 	 * subsequent resource change event.
@@ -275,7 +274,6 @@ public interface IWorkspace extends IAdaptable {
 	 * Cancellation can occur even if no progress monitor is provided.
 	 * 
 	 * @see IProject#build(int, IProgressMonitor)
-	 * @see #computeProjectBuildConfigOrder(IBuildConfiguration[])
 	 * @see IncrementalProjectBuilder#FULL_BUILD
 	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
 	 * @see IncrementalProjectBuilder#CLEAN_BUILD
@@ -314,7 +312,7 @@ public interface IWorkspace extends IAdaptable {
 
 	/**
 	 * Returns the prerequisite ordering of the given projects. The computation
-	 * is done by interpreting their active build configurations' references
+	 * is done by interpreting the projects' active build configuration references
 	 * as dependency relationships.
 	 * For example if A references B and C, and C references B, this method,
 	 * given the list A, B, C will return the order B, C, A. That is, projects
@@ -369,8 +367,9 @@ public interface IWorkspace extends IAdaptable {
 		}
 
 		/**
-		 * A list of projects ordered so as to honor the build configuration reference
-		 * relationships between these projects' buildConfigs wherever possible.
+		 * A list of projects ordered so as to honor the project reference and
+		 * build configuration reference relationships between these projects
+		 * wherever possible.
 		 * The elements are a subset of the ones passed as the <code>projects</code>
 		 * parameter to <code>IWorkspace.computeProjectOrder</code>, where
 		 * inaccessible (closed or non-existent) projects have been omitted.
@@ -393,60 +392,6 @@ public interface IWorkspace extends IAdaptable {
 		 * involved in a cycle of mutually dependent references.
 		 */
 		public IProject[][] knots;
-	}
-
-	/**
-	 * Data structure for holding the multi-part outcome of
-	 * <code>IWorkspace.computeProjectBuildConfigOrder</code>.
-	 * <p>
-	 * This class is not intended to be instantiated by clients.
-	 * </p>
-	 * 
-	 * @see IWorkspace#computeProjectBuildConfigOrder(IBuildConfiguration[])
-	 * @since 3.7
-	 */
-	public final class ProjectBuildConfigOrder {
-		/**
-		 * Creates an instance with the given values.
-		 * <p>
-		 * This class is not intended to be instantiated by clients.
-		 * </p>
-		 * 
-		 * @param buildConfigurations initial value of <code>buildConfigurations</code> field
-		 * @param hasCycles initial value of <code>hasCycles</code> field
-		 * @param knots initial value of <code>knots</code> field
-		 */
-		public ProjectBuildConfigOrder(IBuildConfiguration[] buildConfigurations, boolean hasCycles, IBuildConfiguration[][] knots) {
-			this.buildConfigurations = buildConfigurations;
-			this.hasCycles = hasCycles;
-			this.knots = knots;
-		}
-
-		/**
-		 * A list of project buildConfigs ordered so as to honor the build configuration reference
-		 * relationships between these project buildConfigs wherever possible. The elements
-		 * are a subset of the ones passed as the <code>buildConfigurations</code>
-		 * parameter to <code>IWorkspace.computeProjectOrder</code>, where
-		 * inaccessible (closed or non-existent) projects have been omitted.
-		 */
-		public IBuildConfiguration[] buildConfigurations;
-		/**
-		 * Indicates whether any of the accessible project buildConfigs in
-		 * <code>buildConfigurations</code> are involved in non-trivial cycles.
-		 * <code>true</code> if the reference graph contains at least
-		 * one cycle involving two or more of the project buildConfigs in
-		 * <code>buildConfigurations</code>, and <code>false</code> if none of the
-		 * project buildConfigs in <code>buildConfigurations</code> are involved in cycles.
-		 */
-		public boolean hasCycles;
-		/**
-		 * A list of knots in the reference graph. This list is empty if
-		 * the reference graph does not contain cycles. If the
-		 * reference graph contains cycles, each element is a knot of two or
-		 * more accessible project buildConfigs from <code>buildConfigurations</code> that are
-		 * involved in a cycle of mutually dependent references.
-		 */
-		public IBuildConfiguration[][] knots;
 	}
 
 	/**
@@ -481,46 +426,9 @@ public interface IWorkspace extends IAdaptable {
 	 * 
 	 * @param projects the projects to order
 	 * @return result describing the project order
-	 * @see IWorkspace#computeProjectBuildConfigOrder(IBuildConfiguration[])
 	 * @since 2.1
 	 */
 	public ProjectOrder computeProjectOrder(IProject[] projects);
-
-	/**
-	 * Computes a total ordering of the given projects buildConfigs based on both static and
-	 * dynamic project references. If an existing and open project's build configuratioin P references
-	 * another existing and open project's configuration Q also included in the list, then Q
-	 * should come before P in the resulting ordering. Closed and non-existent
-	 * projects are ignored, and will not appear in the result. References to
-	 * non-existent or closed projects/buildConfigs are also ignored, as are any
-	 * self-references. The total ordering is always consistent with the global
-	 * total ordering of all open projects' buildConfigs in the workspace.
-	 * <p>
-	 * When there are choices, the choice is made in a reasonably stable way.
-	 * For example, given an arbitrary choice between two project buildConfigs, the one with
-	 * the lower collating configuration id then configuration id is usually selected.
-	 * </p>
-	 * <p>
-	 * When the project reference graph contains cyclic references, it is
-	 * impossible to honor all of the relationships. In this case, the result
-	 * ignores as few relationships as possible. For example, if P2 references
-	 * P1, P4 references P3, and P2 and P3 reference each other, then exactly
-	 * one of the relationships between P2 and P3 will have to be ignored. The
-	 * outcome will be either [P1, P2, P3, P4] or [P1, P3, P2, P4]. The result
-	 * also contains complete details of any cycles present.
-	 * </p>
-	 * <p>
-	 * This method is time-consuming and should not be called unnecessarily.
-	 * There are a very limited set of changes to a workspace that could affect
-	 * the outcome: creating, renaming, or deleting a project; opening or
-	 * closing a project; deleting a build configuration; adding or removing a build configuration reference.
-	 * </p>
-	 * 
-	 * @param buildConfigurations the build configurations to order
-	 * @return result describing the build configuration order
-	 * @since 3.7
-	 */
-	public ProjectBuildConfigOrder computeProjectBuildConfigOrder(IBuildConfiguration[] buildConfigurations);
 
 	/**
 	 * Copies the given sibling resources so that they are located as members of
@@ -1051,6 +959,34 @@ public interface IWorkspace extends IAdaptable {
 	 * @since 2.0
 	 */
 	public IStatus move(IResource[] resources, IPath destination, int updateFlags, IProgressMonitor monitor) throws CoreException;
+
+	/**
+	 * Returns a new build configuration for this project, with the given id.  
+	 * The id is an implementation specific unique id for the build configuration in the
+	 * project.
+	 *<p>
+	 * Note that the new build configuration does not become part of a project
+	 * description until it is installed using
+	 * {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}
+	 *</p>
+	 *<p>
+	 * This API can be used to create IBuildConfigurations that will be used as references
+	 * to IBuildConfigurations in other projects.  These references are set using
+	 * {@link IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])}
+	 * and may have a <code>null</code> configuration Id which resolves to the referenced
+	 * project's active configuration when the configuration reference is used.
+	 *</p>
+	 *
+	 * @param projectName the name of the project on which the configuration will exist
+	 * @param configurationId the application specific unique id of the configuration
+	 * @param configurationName an option human-readable name for the configuration
+	 * @return a build configuration
+	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
+	 * @see IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])
+	 * @see IBuildConfiguration
+	 * @since 3.7
+	 */
+	public IBuildConfiguration newBuildConfiguration(String projectName, String configurationId, String configurationName);	
 
 	/**
 	 * Creates and returns a new project description for a project with the

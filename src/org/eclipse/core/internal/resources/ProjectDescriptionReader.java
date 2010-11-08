@@ -76,9 +76,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	protected static final int S_BUILD_CONFIG = 37;
 	protected static final int S_BUILD_CONFIG_ID = 38;	
 	protected static final int S_BUILD_CONFIG_NAME = 39;
-	protected static final int S_BUILD_CONFIG_REF = 40;
-	protected static final int S_BUILD_CONFIG_REF_PROJECT_NAME = 41;
-	protected static final int S_BUILD_CONFIG_REF_CONFIG_ID = 42;
 
 	/**
 	 * Singleton sax parser factory
@@ -104,9 +101,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 
 	protected int state = S_INITIAL;
 
-	// Set to true if build configuration references existed in the description and were loaded.
-	// Used to work out if the old style project references should be loaded.
-	private boolean loadedBuildConfigReferences;
 
 	/**
 	 * Returns the SAXParser to use when parsing project description files.
@@ -294,7 +288,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_PROJECT_DESC;
 				}
 				break;
-			// Backwards compatibility for project references
 			case S_PROJECTS :
 				if (elementName.equals(PROJECTS)) {
 					endProjectsElement(elementName);
@@ -352,7 +345,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_PROJECT_DESC;
 				}
 				break;
-			// Backwards compatibility for project references
 			case S_REFERENCED_PROJECT_NAME :
 				if (elementName.equals(PROJECT)) {
 					//top of stack is list of project references
@@ -450,15 +442,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					String name = charBuffer.toString();
 					((BuildConfig) objectStack.peek()).configName = name;
 				}
-				break;
-			case S_BUILD_CONFIG_REF :
-				endReferenceElement(elementName);
-				break;
-			case S_BUILD_CONFIG_REF_PROJECT_NAME :
-				endReferenceProjectName(elementName);
-				break;
-			case S_BUILD_CONFIG_REF_CONFIG_ID :
-				endReferenceBuildConfigName(elementName);
 				break;
 		}
 		charBuffer.setLength(0);
@@ -850,14 +833,11 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			// project descriptor.
 			return;
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-		IBuildConfigReference[] configs = new IBuildConfigReference[referencedProjects.size()];
-		for (int i = 0; i < configs.length; i++)
-			configs[i] = root.getProject((String) referencedProjects.get(i)).newReference();
-		// If no build configuration references were loaded, they weren't specified in the
-		// config file. For backwards compatibility, use the project references.
-		if (!loadedBuildConfigReferences) {
-			projectDescription.setReferencedProjectConfigs(IBuildConfiguration.DEFAULT_CONFIG_ID, configs);
+		IProject[] projects = new IProject[referencedProjects.size()];
+		for (int i = 0; i < projects.length; i++) {
+			projects[i] = root.getProject((String) referencedProjects.get(i));
 		}
+		projectDescription.setReferencedProjects(projects);
 	}
 
 	private void endSnapshotLocation(String elementName) {
@@ -890,63 +870,9 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			int i = 0;
 			for (Iterator it = bcs.iterator(); it.hasNext(); i++) {
 				BuildConfig config = (BuildConfig) it.next();
-				configs[i] = projectDescription.newBuildConfiguration(config.configId);
-				configs[i].setName(config.configName);
+				configs[i] = new BuildConfiguration(project, config.configId, config.configName);
 			}
 			projectDescription.setBuildConfigurations(configs);
-
-			// Now add the references
-			for (Iterator it = bcs.iterator(); it.hasNext(); i++) {
-				BuildConfig bc =  ((BuildConfig) it.next());
-				String configId = bc.configId;
-				List refs = new ArrayList();
-				IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-				// Convert the List<BuildConfig.Reference> to an IBuildConfigReference[]
-				for (Iterator it2 = bc.refs.iterator(); it2.hasNext();) {
-					BuildConfig.Reference ref = (BuildConfig.Reference)it2.next();
-					refs.add(new BuildConfigReference(root.getProject(ref.projectName), ref.configId));
-				}
-				IBuildConfigReference[] refsArray = new IBuildConfigReference[refs.size()];
-				refs.toArray(refsArray);
-
-				projectDescription.setReferencedProjectConfigs(configId, refsArray);
-				// Mark the project as using build configurations
-				loadedBuildConfigReferences = true;
-			}
-		}
-	}
-
-	/** End a single reference */
-	private void endReferenceElement(String elementName) {
-		if (elementName.equals(BUILD_CONFIG_REF)) {
-			state = S_BUILD_CONFIG;
-			// Pop off the reference
-			BuildConfig.Reference reference = (BuildConfig.Reference) objectStack.pop();
-			// Make sure that you have something reasonable
-			if (reference.projectName == null) {
-				parseProblem(NLS.bind(Messages.projRead_missingReferenceProjectName, project.getName()));
-				return;
-			}
-			// Add the reference to the BuildConfig on the stack
-			((BuildConfig)objectStack.peek()).refs.add(reference);
-		}
-	}
-
-	/** End a references project name */
-	private void endReferenceProjectName(String elementName) {
-		if (elementName.equals(PROJECT)) {
-			String value = charBuffer.toString();
-			((BuildConfig.Reference) objectStack.peek()).projectName = value;
-			state = S_BUILD_CONFIG_REF;
-		}
-	}
-
-	/** End a references configId */
-	private void endReferenceBuildConfigName(String elementName) {
-		if (elementName.equals(BUILD_CONFIG_ID)) {
-			String value = charBuffer.toString();
-			((BuildConfig.Reference) objectStack.peek()).configId = value;
-			state = S_BUILD_CONFIG_REF;
 		}
 	}
 
@@ -989,7 +915,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			state = S_PROJECT_COMMENT;
 			return;
 		}
-		// Backwards compatibility for project references
 		if (elementName.equals(PROJECTS)) {
 			state = S_PROJECTS;
 			// Push an array list on the object stack to hold the name
@@ -1045,7 +970,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	}
 
 	public ProjectDescription read(InputSource input) {
-		loadedBuildConfigReferences = false;
 		problems = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_READ_METADATA, Messages.projRead_failureReadingProjectDesc, null);
 		objectStack = new Stack();
 		state = S_INITIAL;
@@ -1116,7 +1040,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			case S_PROJECT_DESC :
 				parseProjectDescription(elementName);
 				break;
-			// Backwards compatibility for project references
 			case S_PROJECTS :
 				if (elementName.equals(PROJECT)) {
 					state = S_REFERENCED_PROJECT_NAME;
@@ -1241,32 +1164,15 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_BUILD_CONFIG_ID;
 				} else if (elementName.equals(BUILD_CONFIG_NAME)) {
 					state = S_BUILD_CONFIG_NAME;
-				} else if (elementName.equals(BUILD_CONFIG_REF)) {
-					state = S_BUILD_CONFIG_REF;
-					objectStack.push(new BuildConfig.Reference());
-				}
-				break;
-			case S_BUILD_CONFIG_REF:
-				if (elementName.equals(PROJECT)) {
-					state = S_BUILD_CONFIG_REF_PROJECT_NAME;
-				} else if (elementName.equals(BUILD_CONFIG_ID)) {
-					state = S_BUILD_CONFIG_REF_CONFIG_ID;
 				}
 				break;
 		}
 	}
 
-	// Container for a reference name and list of references, for storage on the object stack
+	// Container for BuildConfiguration, storage on the object stack
 	private static class BuildConfig {
-		private static class Reference {
-			public String projectName;
-			public String configId;
-
-			public Reference() {/*empty constructor*/}
-		}
 		String configId;
 		String configName;
-		ArrayList/*<Reference>*/ refs = new ArrayList();
 
 		public BuildConfig() {/*empty constructor*/}
 	}
