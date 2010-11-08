@@ -961,6 +961,34 @@ public interface IWorkspace extends IAdaptable {
 	public IStatus move(IResource[] resources, IPath destination, int updateFlags, IProgressMonitor monitor) throws CoreException;
 
 	/**
+	 * Returns a new build configuration for this project, with the given id.  
+	 * The id is an implementation specific unique id for the build configuration in the
+	 * project.
+	 *<p>
+	 * Note that the new build configuration does not become part of a project
+	 * description until it is installed using
+	 * {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}
+	 *</p>
+	 *<p>
+	 * This API can be used to create IBuildConfigurations that will be used as references
+	 * to IBuildConfigurations in other projects.  These references are set using
+	 * {@link IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])}
+	 * and may have a <code>null</code> configuration Id which resolves to the referenced
+	 * project's active configuration when the configuration reference is used.
+	 *</p>
+	 *
+	 * @param projectName the name of the project on which the configuration will exist
+	 * @param configurationId the application specific unique id of the configuration
+	 * @param configurationName an option human-readable name for the configuration
+	 * @return a build configuration
+	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
+	 * @see IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])
+	 * @see IBuildConfiguration
+	 * @since 3.7
+	 */
+	public IBuildConfiguration newBuildConfiguration(String projectName, String configurationId, String configurationName);	
+
+	/**
 	 * Creates and returns a new project description for a project with the
 	 * given name. This object is useful when creating, moving or copying
 	 * projects.

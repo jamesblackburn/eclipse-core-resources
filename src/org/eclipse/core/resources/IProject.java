@@ -803,43 +803,6 @@ public interface IProject extends IContainer, IAdaptable {
 	public void move(IProjectDescription description, boolean force, IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Returns a new build configuration for this project, with the given id.  
-	 * The id is an implementation specific unique id for the build configuration
-	 * <p>
-	 * Note that the new build configuration does not become part of this project
-	 * description until it is installed using 
-	 * {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}
-	 * </p>
-	 *
-	 * @param configurationId the application specific unique id of the configuration
-	 * @return a build configuration
-	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
-	 * @see IBuildConfiguration
-	 * @since 3.7
-	 */
-	public IBuildConfiguration newBuildConfiguration(String configurationId);
-
-	/**
-	 * Returns a new project build configuration reference that points to a configuration
-	 * in this project.
-	 * <p>
-	 * configurationId specifies the configuration this reference points to.  A configuration
-	 * with the specified Id needn't exist in this project.  A null configurationId 
-	 * is resolved to the current active build configuration in the project whenever
-	 * the build conifguration references is used.
-	 * <p>
-	 * Note that this reference does not become part of a project's references until it's
-	 * explicitly set with {@link IProjectDescription#setDynamicConfigReferences(String, IBuildConfigReference[])}
-	 * and the referencing project's description has been applied.
-	 *
-	 * @param configurationId
-	 * @return a build configuration reference referencing the configuration in this project
-	 * @see IBuildConfigReference
-	 * @since 3.7
-	 */
-	public IBuildConfigReference newBuildConfigurationReference(String configurationId);
-
-	/**
 	 * Opens this project.  No action is taken if the project is already open.
 	 * <p>
 	 * Opening a project constructs an in-memory representation 

@@ -26,7 +26,7 @@ import org.eclipse.core.runtime.*;
 public class ProjectDescription extends ModelObject implements IProjectDescription {
 	// constants
 	private static final BuildConfiguration[] EMPTY_BUILD_CONFIGS = new BuildConfiguration[0];
-	private static final IBuildConfigReference[] EMPTY_BUILD_CONFIG_REFERENCE_ARRAY = new IBuildConfigReference[0];
+	private static final IBuildConfiguration[] EMPTY_BUILD_CONFIG_REFERENCE_ARRAY = new IBuildConfiguration[0];
 	private static final ICommand[] EMPTY_COMMAND_ARRAY = new ICommand[0];
 	private static final IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];
 	private static final String[] EMPTY_STRING_ARRAY = new String[0];
@@ -51,10 +51,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/** Map from config id in this project -> build configurations in other projects */
 	protected IProject[] staticRefs = EMPTY_PROJECT_ARRAY;
 	protected IProject[] dynamicRefs = EMPTY_PROJECT_ARRAY;
-	protected HashMap/*<String, IBuildConfigReference[]>*/ dynamicConfigRefs = new HashMap(1);
+	protected HashMap/*<String, IBuildConfiguration[]>*/ dynamicConfigRefs = new HashMap(1);
 
 	// Cached build configuration references. Not persisted.
-	protected HashMap/*<String, IBuildConfigReference[]>*/ cachedConfigRefs = new HashMap(1);
+	protected HashMap/*<String, IBuildConfiguration[]>*/ cachedConfigRefs = new HashMap(1);
 	// Cached project level references.
 	protected IProject[] cachedRefs = null;
 
@@ -101,10 +101,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/**
 	 * Returns a copy of the given array of build configs with all duplicates removed
 	 */
-	private IBuildConfigReference[] copyAndRemoveDuplicates(IBuildConfigReference[] values) {
+	private IBuildConfiguration[] copyAndRemoveDuplicates(IBuildConfiguration[] values) {
 		Set set = new LinkedHashSet();
 		set.addAll(Arrays.asList(values));
-		return (IBuildConfigReference[]) set.toArray(new IBuildConfigReference[set.size()]);
+		return (IBuildConfiguration[]) set.toArray(new IBuildConfiguration[set.size()]);
 	}
 
 	/**
@@ -132,7 +132,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
     }
 
 	/**
-	 * Helper to turn an array of projects into an array of {@link IBuildConfigReference} to the
+	 * Helper to turn an array of projects into an array of {@link IBuildConfiguration} to the
 	 * projects' active configuration
 	 * Order is preserved - the buildConfigs appear for each project in the order
 	 * that the projects were specified.
@@ -142,7 +142,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	private Collection getBuildConfigReferencesFromProjects(IProject[] projects) {
 		List refs = new ArrayList(projects.length);
 		for (int i = 0; i < projects.length; i++)
-			refs.add(new BuildConfigReference(projects[i]));
+			refs.add(new BuildConfiguration(projects[i], null));
 		return refs;
 	}
 
@@ -151,7 +151,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @param refs
 	 * @return List<IProject>
 	 */
-	private Collection getProjectsFromBuildConfigRefs(IBuildConfigReference[] refs) {
+	private Collection getProjectsFromBuildConfigRefs(IBuildConfiguration[] refs) {
 		LinkedHashSet projects = new LinkedHashSet(refs.length);
 		for (int i = 0; i < refs.length; i++)
 			projects.add(refs[i].getProject());
@@ -166,7 +166,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public IProject[] getAllReferences(boolean makeCopy) {
 		if (cachedRefs == null) {
-			IBuildConfigReference[] refs;
+			IBuildConfiguration[] refs;
 			if (hasBuildConfig(activeConfigurationId))
 				refs = getAllBuildConfigReferences(activeConfigurationId, false);
 			else if (buildConfigs.length > 0)
@@ -184,16 +184,18 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * Returns the union of the description's static and dynamic build config references,
 	 * for the config with the given name, with duplicates omitted. The calculation is
 	 * optimized by caching the result.
+	 * Note that these BuildConfiguration referenes may have <code>null</code> id.  They must
+	 * be resolved using {@link BuildConfiguration#getBuildConfiguration()} before use.
 	 * Returns an empty array if the given configId does not exist in the description.
 	 */
-	public IBuildConfigReference[] getAllBuildConfigReferences(String configId, boolean makeCopy) {
+	public IBuildConfiguration[] getAllBuildConfigReferences(String configId, boolean makeCopy) {
 		if (!hasBuildConfig(configId))
 			return EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
 		if (!cachedConfigRefs.containsKey(configId)) {
 			Set references = new LinkedHashSet();
 			Collection statik = getBuildConfigReferencesFromProjects(staticRefs);
-			IBuildConfigReference[] dynamicBuildConfigs = dynamicConfigRefs.containsKey(configId) ? 
-														(IBuildConfigReference[])dynamicConfigRefs.get(configId) : EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
+			IBuildConfiguration[] dynamicBuildConfigs = dynamicConfigRefs.containsKey(configId) ? 
+														(IBuildConfiguration[])dynamicConfigRefs.get(configId) : EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
 			Collection dynamic = getBuildConfigReferencesFromProjects(dynamicRefs);
 
 			// Combine all references:
@@ -202,11 +204,11 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			references.addAll(Arrays.asList(dynamicBuildConfigs));
 			references.addAll(statik);
 			references.addAll(dynamic);
-			cachedConfigRefs.put(configId, references.toArray(new IBuildConfigReference[references.size()]));
+			cachedConfigRefs.put(configId, references.toArray(new IBuildConfiguration[references.size()]));
 		}
 		//still need to copy the result to prevent tampering with the cache
-		IBuildConfigReference[] result = (IBuildConfigReference[]) cachedConfigRefs.get(configId);
-		return makeCopy ? (IBuildConfigReference[]) result.clone() : result;
+		IBuildConfiguration[] result = (IBuildConfiguration[]) cachedConfigRefs.get(configId);
+		return makeCopy ? (IBuildConfiguration[]) result.clone() : result;
 	}
 
 	/* (non-Javadoc)
@@ -255,7 +257,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 		// Add dynamic references from the active configuration first.
 		if (dynamicConfigRefs.containsKey(activeConfigurationId))
-			projects.addAll(getProjectsFromBuildConfigRefs((IBuildConfigReference[])dynamicConfigRefs.get(activeConfigurationId)));
+			projects.addAll(getProjectsFromBuildConfigRefs((IBuildConfiguration[])dynamicConfigRefs.get(activeConfigurationId)));
 
 		// Add all the other build configuration references
 		int i = 0;
@@ -268,7 +270,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 			if (!dynamicConfigRefs.containsKey(id))
 				continue;
-			projects.addAll(getProjectsFromBuildConfigRefs((IBuildConfigReference[])dynamicConfigRefs.get(id)));
+			projects.addAll(getProjectsFromBuildConfigRefs((IBuildConfiguration[])dynamicConfigRefs.get(id)));
 		} while (++i < buildConfigs.length);
 
 		// Finally add all dynamic project references
@@ -280,11 +282,11 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#getDynamicConfigReferences(String)
 	 */
-	public IBuildConfigReference[] getDynamicConfigReferences(String configId) {
+	public IBuildConfiguration[] getDynamicConfigReferences(String configId) {
 		return getDynamicConfigReferences(configId, true);
 	}
 
-	public IBuildConfigReference[] getDynamicConfigReferences(String configId, boolean makeCopy) {
+	public IBuildConfiguration[] getDynamicConfigReferences(String configId, boolean makeCopy) {
 		if (!hasBuildConfig(configId))
 			return EMPTY_BUILD_CONFIG_REFERENCE_ARRAY;
 		if (!dynamicConfigRefs.containsKey(configId) && dynamicRefs.length == 0)
@@ -292,9 +294,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 
 		LinkedHashSet refs = new LinkedHashSet();
 		if (dynamicConfigRefs.containsKey(configId))
-			refs.addAll(Arrays.asList((IBuildConfigReference[])dynamicConfigRefs.get(configId)));
+			refs.addAll(Arrays.asList((IBuildConfiguration[])dynamicConfigRefs.get(configId)));
 		refs.addAll(getBuildConfigReferencesFromProjects(dynamicRefs));
-		return (IBuildConfigReference[])refs.toArray(new IBuildConfigReference[refs.size()]);
+		return (IBuildConfiguration[])refs.toArray(new IBuildConfiguration[refs.size()]);
 	}
 
 	/**
@@ -429,8 +431,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			Entry e = (Entry)it.next();
 			if (!m2.containsKey(e.getKey()))
 				return true;
-			if (!Arrays.equals((IBuildConfigReference[])e.getValue(), 
-					(IBuildConfigReference[])m2.get(e.getKey())))
+			if (!Arrays.equals((IBuildConfiguration[])e.getValue(), 
+					(IBuildConfiguration[])m2.get(e.getKey())))
 				return true;
 		}
 		return false;
@@ -568,9 +570,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/* (non-Javadoc)
-	 * @see IProjectDescription#setDynamicConfigReferences(String, IBuildConfigReference[])
+	 * @see IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])
 	 */
-	public void setDynamicConfigReferences(String configId, IBuildConfigReference[] references) {
+	public void setDynamicConfigReferences(String configId, IBuildConfiguration[] references) {
+		Assert.isLegal(configId != null);
 		Assert.isLegal(references != null);
 		if (!hasBuildConfig(configId))
 			return;
@@ -847,11 +850,12 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		if (value == null || value.length == 0)
 			buildConfigs = EMPTY_BUILD_CONFIGS;
 		else {
+
 			// Filter out duplicates
 			Set filtered = new LinkedHashSet(value.length);
 			for (int i = 0; i < value.length; i++) {
 				BuildConfiguration config = (BuildConfiguration)((BuildConfiguration) value[i]).clone();
-				config.setReadOnly();
+				Assert.isLegal(config.getConfigurationId() != null);
 				filtered.add(config);
 			}
 

@@ -870,8 +870,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			int i = 0;
 			for (Iterator it = bcs.iterator(); it.hasNext(); i++) {
 				BuildConfig config = (BuildConfig) it.next();
-				configs[i] = new BuildConfiguration(project, config.configId);
-				configs[i].setName(config.configName);
+				configs[i] = new BuildConfiguration(project, config.configId, config.configName);
 			}
 			projectDescription.setBuildConfigurations(configs);
 		}

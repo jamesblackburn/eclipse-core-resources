@@ -14,6 +14,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import org.eclipse.core.resources.IBuildConfiguration;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -2101,6 +2103,14 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		updateModificationStamp(result);
 		result.setType(type);
 		return result;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.eclipse.core.resources.IWorkspace#newBuildConfiguration(java.lang.String, java.lang.String, java.lang.String)
+	 */
+	public IBuildConfiguration newBuildConfiguration(String projectName, String configurationId, String configurationName) {
+		return new BuildConfiguration(getRoot().getProject(projectName), configurationId, configurationName);
 	}
 
 	/* (non-Javadoc)

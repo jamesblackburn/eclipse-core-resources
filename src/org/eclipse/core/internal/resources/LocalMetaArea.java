@@ -8,7 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  * Francis Lynch (Wind River) - [301563] Save and load tree snapshots
- * Broadcom Corp. - build configurations
+ * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -368,13 +368,13 @@ public class LocalMetaArea implements ICoreConstants {
 				for (int i = 0; i < numBuildConifgsWithRefs; i++) {
 					String configId = dataIn.readUTF();
 					numRefs = dataIn.readInt();
-					IBuildConfigReference[] refs = new IBuildConfigReference[numRefs];
+					IBuildConfiguration[] refs = new IBuildConfiguration[numRefs];
 					for (int j = 0; j < numRefs; j++) {
 						int type = dataIn.readInt();
 						if (type == 0)
-							refs[j] = new BuildConfigReference(root.getProject(dataIn.readUTF()), dataIn.readUTF());
+							refs[j] = new BuildConfiguration(root.getProject(dataIn.readUTF()), dataIn.readUTF());
 						else if (type == 1)
-							refs[j] = new BuildConfigReference(root.getProject(dataIn.readUTF()));							
+							refs[j] = new BuildConfiguration(root.getProject(dataIn.readUTF()), null);
 					}
 					m.put(configId, refs);
 				}
@@ -446,7 +446,7 @@ public class LocalMetaArea implements ICoreConstants {
 				dataOut.writeInt(configs.length);
 				for (int i = 0; i < configs.length; i++) {
 					dataOut.writeUTF(configs[i].getConfigurationId());
-					IBuildConfigReference[] refs = desc.getDynamicConfigReferences(configs[i].getConfigurationId(), false);
+					IBuildConfiguration[] refs = desc.getDynamicConfigReferences(configs[i].getConfigurationId(), false);
 					dataOut.writeInt(refs.length);
 					for (int j = 0; j < refs.length; j++) {
 						if (refs[j].getConfigurationId() != null)

@@ -15,8 +15,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IBuildConfiguration;
-
 import java.net.URI;
 import java.util.*;
 import org.eclipse.core.filesystem.*;
@@ -1375,11 +1373,11 @@ public class Project extends Container implements IProject {
 	 */
 	public IBuildConfiguration[] internalGetReferencedBuildConfigurations(IBuildConfiguration config) {
 		ProjectDescription description = internalGetDescription();
-		IBuildConfigReference[] refs = description.getAllBuildConfigReferences(config.getConfigurationId(), true);
+		IBuildConfiguration[] refs = description.getAllBuildConfigReferences(config.getConfigurationId(), true);
 		ArrayList configs = new ArrayList(refs.length);
 		for (int i = 0; i < refs.length; i++) {
 			try {
-				configs.add(((BuildConfigReference)refs[i]).getConfiguration());
+				configs.add(((BuildConfiguration)refs[i]).getBuildConfiguration());
 			} catch (CoreException e) {
 				// Ignore non-existent configuration reference
 			}
@@ -1411,10 +1409,11 @@ public class Project extends Container implements IProject {
 				continue;
 			IBuildConfiguration[] configs = project.internalGetBuildConfigs(false);
 			for (int j = 0; j < configs.length; j++) {
-				IBuildConfigReference[] refs = description.getAllBuildConfigReferences(configs[j].getConfigurationId(), false);
+				IBuildConfiguration[] refs = description.getAllBuildConfigReferences(configs[j].getConfigurationId(), false);
 				for (int k = 0; k < refs.length; k++) {
 					try {
-						IBuildConfiguration refdConfig = ((BuildConfigReference)refs[k]).getConfiguration();
+						// de-reference the build configuration reference
+						IBuildConfiguration refdConfig = ((BuildConfiguration)refs[k]).getBuildConfiguration();
 						if (refdConfig.equals(config)) {
 							result.add(configs[j]);
 							break;
@@ -1458,10 +1457,10 @@ public class Project extends Container implements IProject {
 	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
 		ProjectDescription desc = internalGetDescription();
 		if (desc == null)
-			return new IBuildConfiguration[] {new BuildConfiguration(this)};
+			return new IBuildConfiguration[] {new BuildConfiguration(this, IBuildConfiguration.DEFAULT_CONFIG_ID)};
 		IBuildConfiguration[] configs = desc.internalGetBuildConfigs(makeCopy);
 		if (configs.length == 0)
-			return new IBuildConfiguration[] {new BuildConfiguration(this)};
+			return new IBuildConfiguration[] {new BuildConfiguration(this, IBuildConfiguration.DEFAULT_CONFIG_ID)};
 		return configs;
 	}
 
@@ -1513,19 +1512,4 @@ public class Project extends Container implements IProject {
 		return (BuildConfiguration)((BuildConfiguration) internalGetBuildConfigs(false)[0]).clone();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IProject#newBuildConfiguration(java.lang.String)
-	 */
-	public IBuildConfiguration newBuildConfiguration(String configurationId) {
-		return new BuildConfiguration(this, configurationId);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see IProject#newReference()
-	 */
-	public IBuildConfigReference newBuildConfigurationReference(String configurationId) {
-		return new BuildConfigReference(this, configurationId);
-	}
 }

@@ -10,48 +10,58 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.*;
+import org.eclipse.core.resources.IBuildConfiguration;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.CoreException;
 
 /**
- * Concrete implementation of a build configuration
+ * Concrete implementation of a build configuration.
+ *<p>
+ * This class can both be used as a real build configuration in a project.
+ * As well as the reference to a build configuration in another project.
+ *</p>
+ *<p>
+ * When being used as a reference, core.resources <strong>must</strong> call
+ * {@link #getBuildConfiguration()} to dereference the build configuration to the
+ * the actual build configuration on the referenced project.
+ *</p>
  */
 public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 
 	/** Project on which this build configuration is set */
 	private final IProject project;
-	/** Configuration id is mandatory; never null */
+	/** Configuration id unique in the project */
 	private final String id;
 	/** Human readable name; optional */
-	private String name;
-	
-
-	/** Ensure we don't expose internal BuildConfigurations to clients */
-	boolean readOnly = false;
-
-	public BuildConfiguration() {
-		this(null, DEFAULT_CONFIG_ID);
-	}
+	private final String name;
 
 	public BuildConfiguration(String id) {
-		this(null, id);
-	}
-	
-	public BuildConfiguration(IProject project) {
-		this(project, DEFAULT_CONFIG_ID);
+		this(null, id, null);
 	}
 
 	public BuildConfiguration(IBuildConfiguration config, IProject project) {
-		this(project, config.getConfigurationId());
-		this.name = config.getName();
+		this(project, config.getConfigurationId(), config.getName());
 	}
 
 	public BuildConfiguration(IProject project, String configurationId) {
-		Assert.isNotNull(configurationId);
+		this(project, configurationId, null);
+	}
+
+	public BuildConfiguration(IProject project, String configurationId, String name) {
 		this.project = project;
 		this.id = configurationId;
+		this.name = name;
 	}
-	
+
+	/**
+	 * @return the concrete build configuration referred to by this IBuildConfiguration
+	 *         when it's being used as a reference
+	 */
+	public IBuildConfiguration getBuildConfiguration() throws CoreException {
+		return project.getBuildConfiguration(id);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see IBuildConfiguration#getConfigurationId()
@@ -90,30 +100,13 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 		return true;
 	}
 
-	public void setName(String name) {
-		Assert.isLegal(!readOnly, "BuildConfiguration is read-only."); //$NON-NLS-1$
-		this.name = name;
-	}
-
-	/**
-	 * Helper method which marks the configuration readonly to ensure
-	 * we don't expose internal BuildConfigurations to clients.
-	 *
-	 * Currently only affects the name attribute via {@link #setName(String)}
-	 */
-	void setReadOnly() {
-		readOnly = true;
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * @see Object#clone()
 	 */
 	public Object clone() {
 		try {
-			BuildConfiguration bc = ((BuildConfiguration)super.clone());
-			bc.readOnly = false;
-			return bc;
+			return super.clone();
 		} catch (CloneNotSupportedException e) {
 			// won't happen
 			Assert.isTrue(false);
@@ -171,7 +164,10 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 		result.append(";"); //$NON-NLS-1$
 		if (name != null)
 			result.append(name);
-		result.append(" [").append(id).append(']'); //$NON-NLS-1$
+		if (id != null)
+			result.append(" [").append(id).append(']'); //$NON-NLS-1$
+		else
+			result.append(" [active]"); //$NON-NLS-1$
 		return result.toString();
 	}
 
