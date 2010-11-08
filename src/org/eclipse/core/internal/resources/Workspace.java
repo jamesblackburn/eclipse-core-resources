@@ -419,13 +419,17 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * @param configs collection of configurations to extend
 	 * @param config config to find reachable configurations to.
 	 */
-	private void recursivelyAddBuildConfigs(Collection/*<IBuildConfiguration>*/ configs, IBuildConfiguration config) throws CoreException {
-		IBuildConfiguration[] referenced = config.getProject().getReferencedBuildConfigurations(config);
-		for (int i = 0; i < referenced.length; i++) {
-			if (configs.contains(referenced[i]))
-				continue;
-			configs.add(referenced[i]);
-			recursivelyAddBuildConfigs(configs, referenced[i]);
+	private void recursivelyAddBuildConfigs(Collection/*<IBuildConfiguration>*/ configs, IBuildConfiguration config) {
+		try {
+			IBuildConfiguration[] referenced = config.getProject().getReferencedBuildConfigurations(config);
+			for (int i = 0; i < referenced.length; i++) {
+				if (configs.contains(referenced[i]))
+					continue;
+				configs.add(referenced[i]);
+				recursivelyAddBuildConfigs(configs, referenced[i]);
+			}
+		} catch (CoreException e) {
+			// Project isn't accessible, or it doesn't exist in the workspace.
 		}
 	}
 
