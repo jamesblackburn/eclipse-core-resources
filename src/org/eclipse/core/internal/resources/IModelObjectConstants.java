@@ -49,7 +49,6 @@ public interface IModelObjectConstants {
 	public static final String BUILD_CONFIG = "build_config"; //$NON-NLS-1$
 	public static final String BUILD_CONFIG_ID = "config_id"; //$NON-NLS-1$
 	public static final String BUILD_CONFIG_NAME = "config_name"; //$NON-NLS-1$
-	public static final String BUILD_CONFIG_REF = "config_ref"; //$NON-NLS-1$
 	public static final String TYPE = "type"; //$NON-NLS-1$
 	public static final String VALUE = "value"; //$NON-NLS-1$
 	public static final String WORKSPACE_DESCRIPTION = "workspaceDescription"; //$NON-NLS-1$

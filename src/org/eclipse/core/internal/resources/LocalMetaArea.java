@@ -8,8 +8,11 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  * Francis Lynch (Wind River) - [301563] Save and load tree snapshots
+ * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
+
+import java.util.HashMap;
 
 import java.io.*;
 import java.net.URI;
@@ -310,8 +313,18 @@ public class LocalMetaArea implements ICoreConstants {
 	 *    int - number of dynamic project references
 	 *    UTF - project reference 1
 	 *    ... repeat for remaining references
+	 * since 3.7:
+	 *    UTF - active build configuration name
+	 *    int - number of build configurations with refs
+	 *      UTF - build configuration id
+	 *      int - number of referenced configuration
+	 *        int type - 0: project + config ; 1: project
+	 *        UTF - project name
+	 *       (UTF - configuration id if type == 1)
+	 *        ... repeat for number of referenced configurations
+	 *      ... repeat for number of build configurations with references
 	 */
-	public void readPrivateDescription(IProject target, IProjectDescription description) {
+	public void readPrivateDescription(IProject target, ProjectDescription description) {
 		IPath locationFile = locationFor(target).append(F_PROJECT_LOCATION);
 		java.io.File file = locationFile.toFile();
 		if (!file.exists()) {
@@ -346,6 +359,26 @@ public class LocalMetaArea implements ICoreConstants {
 				for (int i = 0; i < numRefs; i++)
 					references[i] = root.getProject(dataIn.readUTF());
 				description.setDynamicReferences(references);
+				// Since 3.7: 
+				// Active configuration Id
+				description.setActiveBuildConfiguration(dataIn.readUTF());
+				// Build configuration references?
+				int numBuildConifgsWithRefs = dataIn.readInt();
+				HashMap m = new HashMap(1);
+				for (int i = 0; i < numBuildConifgsWithRefs; i++) {
+					String configId = dataIn.readUTF();
+					numRefs = dataIn.readInt();
+					IBuildConfiguration[] refs = new IBuildConfiguration[numRefs];
+					for (int j = 0; j < numRefs; j++) {
+						int type = dataIn.readInt();
+						if (type == 0)
+							refs[j] = new BuildConfiguration(root.getProject(dataIn.readUTF()), dataIn.readUTF());
+						else if (type == 1)
+							refs[j] = new BuildConfiguration(root.getProject(dataIn.readUTF()), null);
+					}
+					m.put(configId, refs);
+				}
+				description.internalSetDynamicBuildConfigReferences(m);
 			} finally {
 				dataIn.close();
 			}
@@ -389,7 +422,7 @@ public class LocalMetaArea implements ICoreConstants {
 		if (desc == null)
 			return;
 		final URI projectLocation = desc.getLocationURI();
-		final IProject[] references = desc.getDynamicReferences(false);
+		final IProject[] references = desc.internalGetDynamicReferences();
 		final int numRefs = references.length;
 		if (projectLocation == null && numRefs == 0)
 			return;
@@ -405,6 +438,26 @@ public class LocalMetaArea implements ICoreConstants {
 				dataOut.writeInt(numRefs);
 				for (int i = 0; i < numRefs; i++)
 					dataOut.writeUTF(references[i].getName());
+				// Since 3.7
+				// Write active configuration id
+				dataOut.writeUTF(desc.getActiveBuildConfigurationId());
+				// Write out the configuration level references
+				IBuildConfiguration[] configs = desc.internalGetBuildConfigs(false);
+				dataOut.writeInt(configs.length);
+				for (int i = 0; i < configs.length; i++) {
+					dataOut.writeUTF(configs[i].getConfigurationId());
+					IBuildConfiguration[] refs = desc.getDynamicConfigReferences(configs[i].getConfigurationId(), false);
+					dataOut.writeInt(refs.length);
+					for (int j = 0; j < refs.length; j++) {
+						if (refs[j].getConfigurationId() != null)
+							dataOut.writeInt(0);
+						else
+							dataOut.writeInt(1);
+						dataOut.writeUTF(refs[j].getProject().getName());
+						if (refs[j].getConfigurationId() != null)
+							dataOut.writeUTF(refs[j].getConfigurationId());
+					}
+				}
 				output.succeed();
 			} finally {
 				dataOut.close();
