@@ -8,6 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  * Francis Lynch (Wind River) - [301563] Save and load tree snapshots
+ * Broadcom Corp. - build configurations
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -421,7 +422,7 @@ public class LocalMetaArea implements ICoreConstants {
 		if (desc == null)
 			return;
 		final URI projectLocation = desc.getLocationURI();
-		final IProject[] references = desc.getDynamicReferences(false);
+		final IProject[] references = desc.internalGetDynamicReferences();
 		final int numRefs = references.length;
 		if (projectLocation == null && numRefs == 0)
 			return;

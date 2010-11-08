@@ -825,6 +825,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		clearCachedReferences(null);
 	}
 
+	public IProject[] internalGetDynamicReferences() {
+		return dynamicRefs;
+	}
+
 	public HashMap internalGetDynamicBuildConfigReferences() {
 		return dynamicConfigRefs;
 	}
