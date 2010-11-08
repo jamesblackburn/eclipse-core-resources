@@ -72,7 +72,7 @@ public interface IProjectDescription {
 	public IProject[] getDynamicReferences();
 
 	/**
-	 * Returns the build configurations referenced dynamically by the specified configuration Id for the
+	 * Returns the dynamic build configuration references set on the specified configuration Id for the
 	 * described project. Dynamic references can be used instead of simple references
 	 * in cases where the reference information is computed dynamically by a third party.
 	 * These references are persisted by the workspace in a private location outside the
@@ -85,7 +85,7 @@ public interface IProjectDescription {
 	 * from the call to {@link #setDynamicConfigReferences(String, IBuildConfigReference[])}.
 	 * Returns an empty array if the provided config doesn't dynamically reference 
 	 * any other build configurations, or the given config does not exist in this description.
-	 * 
+	 * </p>
 	 * @param configId the configuration Id in the described project to get the references for
 	 * @return a list of dynamic build configurations
 	 * @see #setDynamicConfigReferences(String, IBuildConfigReference[])

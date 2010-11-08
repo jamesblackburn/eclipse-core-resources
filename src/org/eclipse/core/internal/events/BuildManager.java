@@ -97,7 +97,6 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	final AutoBuildJob autoBuildJob;
 	private boolean building = false;
 	private final Set builtProjects = new HashSet();
-	private final Set builtProjectConfigs = new HashSet();
 
 	//the following four fields only apply for the lifetime of a single builder invocation.
 	protected InternalBuilder currentBuilder;
@@ -329,12 +328,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		for (int iter = 0; rebuildRequested && iter < maxIterations; iter++) {
 			rebuildRequested = false;
 			builtProjects.clear();
-			builtProjectConfigs.clear();
 			for (int i = 0; i < configs.length; i++) {
 				if (configs[i].getProject().isAccessible()) {
 					basicBuild(configs[i], trigger, status, Policy.subMonitorFor(monitor, projectWork));
 					builtProjects.add(configs[i].getProject());
-					builtProjectConfigs.add(configs[i]);
 				}
 			}
 			//subsequent builds should always be incremental
@@ -732,14 +729,6 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Returns true if the given project config has been built during this build cycle, and
-	 * false otherwise.
-	 */
-	boolean hasBeenBuilt(IBuildConfiguration buildConfiguration) {
-		return builtProjectConfigs.contains(buildConfiguration);
-	}
-
-	/**
 	 * Hook for adding trace options and debug information at the end of a build.
 	 * This hook is called after each builder instance is called.
 	 */
@@ -760,7 +749,6 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	private void hookEndBuild(int trigger) {
 		building = false;
 		builtProjects.clear();
-		builtProjectConfigs.clear();
 		deltaCache.flush();
 		deltaTreeCache.flush();
 		//ensure autobuild runs after a clean

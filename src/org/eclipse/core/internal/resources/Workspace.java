@@ -176,7 +176,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * The currently installed file modification validator.
 	 */
 	protected IFileModificationValidator validator = null;
-	
+
 	/**
 	 * Data structure for holding the multi-part outcome of
 	 * <code>IWorkspace.computeProjectBuildConfigOrder</code>.

@@ -239,15 +239,15 @@ public interface IWorkspace extends IAdaptable {
 	public void build(int kind, IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Build the specified build configuration in the given list.  If buildReferences accessible referenced
-	 * configurations will also be built.
+	 * Build the build configurations specified in the passed in build configuration array.
 	 * <p>
-	 * Build order is determined by the workspace description and the project build configuration graph.
-	 * If no order is specified, the workspace computes an order determined by build configuration
-	 * references.
+	 * Build order is determined by the workspace description and the project build configuration 
+	 * reference graph.
+	 * </p>
 	 * <p>
 	 * If buildReferences is true, build configurations reachable through the build configuration graph are
 	 * built as part of this build invocation.
+	 * </p>
 	 * <p>
 	 * This method may change resources; these changes will be reported in a
 	 * subsequent resource change event.
@@ -312,7 +312,7 @@ public interface IWorkspace extends IAdaptable {
 
 	/**
 	 * Returns the prerequisite ordering of the given projects. The computation
-	 * is done by interpreting their active build configurations' references
+	 * is done by interpreting the projects' active build configuration references
 	 * as dependency relationships.
 	 * For example if A references B and C, and C references B, this method,
 	 * given the list A, B, C will return the order B, C, A. That is, projects
@@ -367,8 +367,9 @@ public interface IWorkspace extends IAdaptable {
 		}
 
 		/**
-		 * A list of projects ordered so as to honor the build configuration reference
-		 * relationships between these projects' buildConfigs wherever possible.
+		 * A list of projects ordered so as to honor the project reference and
+		 * build configuration reference relationships between these projects
+		 * wherever possible.
 		 * The elements are a subset of the ones passed as the <code>projects</code>
 		 * parameter to <code>IWorkspace.computeProjectOrder</code>, where
 		 * inaccessible (closed or non-existent) projects have been omitted.

@@ -109,7 +109,7 @@ public abstract class InternalBuilder {
 	protected IResourceDelta getDelta(IProject aProject) {
 		return buildManager.getDelta(aProject);
 	}
-	
+
 	final IProject[] getInterestingProjects() {
 		return interestingProjects;
 	}
@@ -153,13 +153,6 @@ public abstract class InternalBuilder {
 	 */
 	protected boolean hasBeenBuilt(IProject aProject) {
 		return buildManager.hasBeenBuilt(aProject);
-	}
-
-	/*
-	 * @see IncrementalProjectBuilder#hasBeenBuilt
-	 */
-	protected boolean hasBeenBuilt(IBuildConfiguration aBuildConfiguration) {
-		return buildManager.hasBeenBuilt(aBuildConfiguration);
 	}
 
 	/*

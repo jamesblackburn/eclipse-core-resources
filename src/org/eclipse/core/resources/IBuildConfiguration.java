@@ -34,9 +34,9 @@ package org.eclipse.core.resources;
  * and work as before.
  *</p>
  *<p>
- *  Build configuration can reference other builds configurations using {@link IBuildConfigReference}. 
- *  Workspace build will ensure that the projects are built in an appropriate order as defined
- *  by the reference graph.
+ * Build configuration can reference other builds configurations using {@link IBuildConfigReference}s. 
+ * Workspace build will ensure that the projects are built in an appropriate order as defined
+ * by the reference graph.
  *</p>
  *
  * @see IBuildConfigReference
@@ -50,7 +50,7 @@ package org.eclipse.core.resources;
 public interface IBuildConfiguration {
 
 	/**
-	 * The name of the default config
+	 * The Id of the default build configuration
 	 */
 	public static final String DEFAULT_CONFIG_ID = ""; //$NON-NLS-1$
 

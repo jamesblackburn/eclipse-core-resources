@@ -190,14 +190,14 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	}
 
 	/**
-	 * Requests that this builder remember any state it may be retaining regarding
-	 * previously built states. This means that the next time the builder runs,
-	 * it will receive a delta which includes changes reported in the current 
-	 * {@link #getDelta(IProject)}.
+	 * Requests that this builder remember any build invocation specific state.
+	 * This means that the next time the builder runs, it will receive a delta 
+	 * which includes changes reported in the current {@link #getDelta(IProject)}.
 	 *<p>
 	 * This can be used to indicate that a builder didn't run, even though there
 	 * are changes, and the builder wishes that the delta be preserved until its
 	 * next invocation.
+	 * </p>
 	 * This is superseded by a call to {@link #forgetLastBuiltState()}.
 	 * @since 3.7
 	 */
@@ -277,7 +277,6 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 
 	/**
 	 * Returns the build configuration for which this build was invoked.
-	 * 
 	 * @return the build configuration
 	 * @since 3.7
 	 */
@@ -304,27 +303,6 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 */
 	public final boolean hasBeenBuilt(IProject project) {
 		return super.hasBeenBuilt(project);
-	}
-
-	/**
-	 * Returns whether the given project configuration has already been built during this
-	 * build iteration.
-	 * <p>
-	 * When the entire workspace, or a set of build configurations are being built, the project 
-	 * build configurations are built in linear sequence. This method can be used to determine 
-	 * if another project configuration precedes this builder's project in that build sequence. 
-	 * If only a single configuration is being built, then there is no build order and this 
-	 * method will always return <code>false</code>.
-	 * </p>
-	 * 
-	 * @param buildConfiguration the project to check against in the current build order
-	 * @return <code>true</code> if the given project configuration has been built in this
-	 * iteration, and <code>false</code> otherwise.
-	 * @see #needRebuild()
-	 * @since 3.7
-	 */
-	public final boolean hasBeenBuilt(IBuildConfiguration buildConfiguration) {
-		return super.hasBeenBuilt(buildConfiguration);
 	}
 
 	/**
@@ -356,7 +334,6 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * </p>
 	 * 
 	 * @see #hasBeenBuilt(IProject)
-	 * @see #hasBeenBuilt(IBuildConfiguration)
 	 * @since 2.1
 	 */
 	public final void needRebuild() {

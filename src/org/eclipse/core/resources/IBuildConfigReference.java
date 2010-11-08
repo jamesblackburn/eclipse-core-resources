@@ -13,21 +13,21 @@ package org.eclipse.core.resources;
 /**
  * Represents a reference to an {@link IBuildConfiguration}. {@link IBuildConfigReference}s
  * are pointers to build configurations.  Neither the
- * referenced project nor configuration in the referenced project need exist.
+ * referenced project, nor configuration in the referenced project, need exist.
  *<p>
- * {@link IBuildConfigReference}s are created with {@link IProject#newBuildConfigurationReference(String configId)}
- * on the project to be referenced. It is then added to the referencing project
+ * IBuildConfigReferences are created with {@link IProject#newBuildConfigurationReference(String configId)}
+ * on the project to be referenced. They are then added to the referencing project
  * with {@link IProjectDescription#setDynamicConfigReferences(String, IBuildConfigReference[])}
  *</p>
  * <p>
- * At build time, the Platform de-references the {@link IBuildConfigReference}. If the
+ * At build time, the Platform dereferences the {@link IBuildConfigReference}. If the
  * referenced project is accessible, and the build configuration exists on that project,
  * the referenced build configuration is built before the referencing build configuration.
  *</p>
  * <p>
  * A <code>null</code> configuration Id can be specified when creating the {@link IBuildConfigReference}.
- * This resolves to the current active configuration in the referenced project, as seen when
- * the {@link IBuildConfigReference} is dereferenced.
+ * This resolves to the currently active configuration in the referenced project, as seen when
+ * dereferencing the {@link IBuildConfigReference}.
  *</p>
  *
  * @see IBuildConfiguration

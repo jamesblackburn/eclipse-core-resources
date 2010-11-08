@@ -88,16 +88,6 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 		if (name != null)
 			return false;
 		return true;
-//		// If any of the build configuration references don't track the active configuration,
-//		// then this build configuration isn't default
-//		IProjectDescription desc = ((Project)project).internalGetDescription();
-//		if (desc == null)
-//			return true;
-//		IBuildConfigReference[] refs = desc.getReferencedProjectConfigs(id);
-//		for (int i = 0; i < refs.length; i++)
-//			if (refs[i].getConfigurationId() != null)
-//				return false;
-//		return true;
 	}
 
 	public void setName(String name) {

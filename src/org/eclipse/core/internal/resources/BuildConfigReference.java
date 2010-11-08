@@ -113,8 +113,7 @@ public class BuildConfigReference implements IBuildConfigReference {
 	 * (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
-	public String toString()
-	{
+	public String toString() {
 		StringBuffer result = new StringBuffer();
 		result.append(project.getName());
 		result.append(";"); //$NON-NLS-1$

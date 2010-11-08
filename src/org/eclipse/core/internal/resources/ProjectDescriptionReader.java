@@ -101,6 +101,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 
 	protected int state = S_INITIAL;
 
+
 	/**
 	 * Returns the SAXParser to use when parsing project description files.
 	 * @throws ParserConfigurationException 

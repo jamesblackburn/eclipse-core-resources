@@ -131,16 +131,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		writer.endTag(VARIABLE);
 	}
 
-	protected void write(IBuildConfigReference ref, XMLWriter writer) {
-		writer.startTag(BUILD_CONFIG_REF, null);
-		if (ref != null) {
-			writer.printSimpleTag(PROJECT, ref.getProject().getName());
-			if (ref.getConfigurationId() != null)
-				writer.printSimpleTag(BUILD_CONFIG_ID, ref.getConfigurationId());
-		}
-		writer.endTag(BUILD_CONFIG_REF);
-	}
-
 	/**
 	 * Writes the contents of the build configurations if there's at least
 	 * one non-default configuration defined.
@@ -240,16 +230,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		}
 		if (obj instanceof VariableDescription) {
 			write((VariableDescription) obj, writer);
-			return;
-		}
-		if (obj instanceof IBuildConfigReference[]) {
-			IBuildConfigReference[] array = (IBuildConfigReference[]) obj;
-			for (int i = 0; i < array.length; i++)
-				write(array[i], writer);
-			return;
-		}
-		if (obj instanceof IBuildConfigReference) {
-			write((IBuildConfigReference) obj, writer);
 			return;
 		}
 		writer.printTabulation();

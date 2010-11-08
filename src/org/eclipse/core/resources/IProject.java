@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.core.resources;
 
+import org.eclipse.core.runtime.CoreException;
+
 import java.net.URI;
 
 import java.util.Map;
@@ -420,6 +422,55 @@ public interface IProject extends IContainer, IAdaptable {
 	public void delete(boolean deleteContent, boolean force, IProgressMonitor monitor) throws CoreException;
 	
 	/**
+	 * Returns the active build configuration for the project.
+	 * <p>
+	 * If at any point the active configuration is removed from the project, for example
+	 * when updating the list of build configurations, the active build configuration will be set to
+	 * the first build configuration specified by {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}.
+	 * <p>
+	 * If all of the build configurations are removed, the active build configuration will be set to the
+	 * default configuration.
+	 * </p>
+	 * @return the active build configuration
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * </ul>
+	 * @since 3.7
+	 */
+	public IBuildConfiguration getActiveBuildConfiguration() throws CoreException;
+
+	/**
+	 * Returns the project build configuration with the given id for this project.
+	 * @param configurationId the id of the configuration to get
+	 * @return a project configuration
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * <li> The configuration does not exist in this project.</li>
+	 * </ul>
+	 * @see #getBuildConfigurations()
+	 * @since 3.7
+	 */
+	public IBuildConfiguration getBuildConfiguration(String configurationId) throws CoreException;
+
+	/**
+	 * Returns the build configurations for this project. A project always has at
+	 * least one build configuration, so this will never return an empty list or null.
+	 * The result will not contain duplicates.
+	 * @return a list of project build configurations
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * </ul>
+	 * @since 3.7
+	 */
+	public IBuildConfiguration[] getBuildConfigurations() throws CoreException;
+
+	/**
 	 * Returns this project's content type matcher. This content type matcher takes 
 	 * project specific preferences and nature-content type associations into 
 	 * account.
@@ -612,6 +663,20 @@ public interface IProject extends IContainer, IAdaptable {
 	 */
 	public IBuildConfiguration[] getReferencingBuildConfigurations(IBuildConfiguration config);
 
+	/**
+	 * Checks whether the project has the specified build configuration.
+	 *
+	 * @param configurationId the configuration
+	 * @return <code>true</code> if the project has the specified configuration, false otherwise
+	 * @exception CoreException if this method fails. Reasons include:
+	 * <ul>
+	 * <li> This project does not exist.</li>
+	 * <li> This project is not open.</li>
+	 * </ul>
+	 * @since 3.7
+	 */
+	public boolean hasBuildConfiguration(IBuildConfiguration configurationId) throws CoreException;
+
 	/** 
 	 * Returns whether the project nature specified by the given
 	 * nature extension id has been added to this project. 
@@ -736,6 +801,43 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @see IResourceRuleFactory#moveRule(IResource, IResource)
 	 */
 	public void move(IProjectDescription description, boolean force, IProgressMonitor monitor) throws CoreException;
+
+	/**
+	 * Returns a new build configuration for this project, with the given id.  
+	 * The id is an implementation specific unique id for the build configuration
+	 * <p>
+	 * Note that the new build configuration does not become part of this project
+	 * description until it is installed using 
+	 * {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}
+	 * </p>
+	 *
+	 * @param configurationId the application specific unique id of the configuration
+	 * @return a build configuration
+	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
+	 * @see IBuildConfiguration
+	 * @since 3.7
+	 */
+	public IBuildConfiguration newBuildConfiguration(String configurationId);
+
+	/**
+	 * Returns a new project build configuration reference that points to a configuration
+	 * in this project.
+	 * <p>
+	 * configurationId specifies the configuration this reference points to.  A configuration
+	 * with the specified Id needn't exist in this project.  A null configurationId 
+	 * is resolved to the current active build configuration in the project whenever
+	 * the build conifguration references is used.
+	 * <p>
+	 * Note that this reference does not become part of a project's references until it's
+	 * explicitly set with {@link IProjectDescription#setDynamicConfigReferences(String, IBuildConfigReference[])}
+	 * and the referencing project's description has been applied.
+	 *
+	 * @param configurationId
+	 * @return a build configuration reference referencing the configuration in this project
+	 * @see IBuildConfigReference
+	 * @since 3.7
+	 */
+	public IBuildConfigReference newBuildConfigurationReference(String configurationId);
 
 	/**
 	 * Opens this project.  No action is taken if the project is already open.
@@ -996,104 +1098,4 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @since 2.0
 	 */
 	public void setDescription(IProjectDescription description, int updateFlags, IProgressMonitor monitor) throws CoreException;
-
-	/**
-	 * Returns the build configurations for this project. A project always has at
-	 * least one build configuration, so this will never return an empty list or null.
-	 * The result will not contain duplicates.
-	 * @return a list of project build configurations
-	 * @exception CoreException if this method fails. Reasons include:
-	 * <ul>
-	 * <li> This project does not exist.</li>
-	 * <li> This project is not open.</li>
-	 * </ul>
-	 * @since 3.7
-	 */
-	public IBuildConfiguration[] getBuildConfigurations() throws CoreException;
-
-	/**
-	 * Returns the project build configuration with the given id for this project.
-	 * @param configurationId the id of the configuration to get
-	 * @return a project configuration
-	 * @exception CoreException if this method fails. Reasons include:
-	 * <ul>
-	 * <li> This project does not exist.</li>
-	 * <li> This project is not open.</li>
-	 * <li> The configuration does not exist in this project.</li>
-	 * </ul>
-	 * @see #getBuildConfigurations()
-	 * @since 3.7
-	 */
-	public IBuildConfiguration getBuildConfiguration(String configurationId) throws CoreException;
-
-	/**
-	 * Checks whether the project has the specified build configuration.
-	 *
-	 * @param configurationId the configuration
-	 * @return <code>true</code> if the project has the specified configuration, false otherwise
-	 * @exception CoreException if this method fails. Reasons include:
-	 * <ul>
-	 * <li> This project does not exist.</li>
-	 * <li> This project is not open.</li>
-	 * </ul>
-	 * @since 3.7
-	 */
-	public boolean hasBuildConfiguration(IBuildConfiguration configurationId) throws CoreException;
-
-	/**
-	 * Returns the active build configuration for the project.
-	 * <p>
-	 * If at any point the active configuration is removed from the project, for example
-	 * when updating the list of build configurations, the active build configuration will be set to
-	 * the first build configuration specified by {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}.
-	 * <p>
-	 * If all of the build configurations are removed, the active build configuration will be set to the
-	 * default configuration.
-	 * </p>
-	 * @return the active build configuration
-	 * @exception CoreException if this method fails. Reasons include:
-	 * <ul>
-	 * <li> This project does not exist.</li>
-	 * <li> This project is not open.</li>
-	 * </ul>
-	 * @since 3.7
-	 */
-	public IBuildConfiguration getActiveBuildConfiguration() throws CoreException;
-
-	/**
-	 * Returns a new build configuration for this project, with the given id.  
-	 * The id is an implementation specific unique id for the build configuration
-	 * <p>
-	 * Note that the new build configuration does not become part of this project
-	 * description until it is installed using 
-	 * {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}
-	 * </p>
-	 *
-	 * @param configurationId the application specific unique id of the configuration
-	 * @return a build configuration
-	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
-	 * @see IBuildConfiguration
-	 * @since 3.7
-	 */
-	public IBuildConfiguration newBuildConfiguration(String configurationId);
-
-	/**
-	 * Returns a new project build configuration reference that points to a configuration
-	 * in this project.
-	 * <p>
-	 * configurationId specifies the configuration this reference points to.  A configuration
-	 * with the specified Id needn't exist in this project.  A null configurationId 
-	 * is resolved to the current active build configuration in the project whenever
-	 * the build conifguration references is used.
-	 * <p>
-	 * Note that this reference does not become part of a project's references until it's
-	 * explicitly set with {@link IProjectDescription#setDynamicConfigReferences(String, IBuildConfigReference[])}
-	 * and the referencing project's description has been applied.
-	 *
-	 * @param configurationId
-	 * @return a build configuration reference referencing the configuration in this project
-	 * @see IBuildConfigReference
-	 * @since 3.7
-	 */
-	public IBuildConfigReference newBuildConfigurationReference(String configurationId);
 }
