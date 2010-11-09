@@ -425,11 +425,14 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			for (int i = 0; i < referenced.length; i++) {
 				if (configs.contains(referenced[i]))
 					continue;
+				if (!referenced[i].getProject().isAccessible() || !referenced[i].getProject().hasBuildConfiguration(referenced[i]))
+					continue;
 				configs.add(referenced[i]);
 				recursivelyAddBuildConfigs(configs, referenced[i]);
 			}
 		} catch (CoreException e) {
-			// Project isn't accessible, or it doesn't exist in the workspace.
+			// Not possible, we've checked that the project + configuration are accessible.
+			Assert.isTrue(false);
 		}
 	}
 
@@ -441,18 +444,14 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		if (configs.length == 0)
 			return;
 
-		LinkedHashSet refsList = new LinkedHashSet(Arrays.asList(configs));
-		// Find transitive closure of referenced project buildConfigs
-		if (buildReferences) {
-			for (int i = 0 ; i < configs.length ; i++)
+		Set refsList = new HashSet();
+		for (int i = 0 ; i < configs.length ; i++) {
+			// Check project + build configuration are accessible.
+			if (!configs[i].getProject().isAccessible() || !configs[i].getProject().hasBuildConfiguration(configs[i]))
+				continue;
+			// Find transitive closure of referenced project buildConfigs
+			if (buildReferences)
 				recursivelyAddBuildConfigs(refsList, configs[i]);
-		}
-
-		// Filter out inaccessible projects, or buildConfigs that do not exist
-		for (Iterator it = refsList.iterator(); it.hasNext();) {
-			IBuildConfiguration config = (IBuildConfiguration) it.next();
-			if (!config.getProject().isAccessible() || !config.getProject().hasBuildConfiguration(config))
-				it.remove();
 		}
 
 		// Order the referenced project buildConfigs
@@ -776,7 +775,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			if (!project.isAccessible())
 				continue;
 
-			IBuildConfiguration[] configs = project.internalGetBuildConfigs(true);
+			IBuildConfiguration[] configs = project.internalGetBuildConfigs(false);
 			for (int j = 0; j < configs.length; j++) {
 				IBuildConfiguration config = configs[j];
 				allAccessibleBuildConfigurations.add(config);

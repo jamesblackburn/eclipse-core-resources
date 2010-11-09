@@ -1445,7 +1445,7 @@ public class Project extends Container implements IProject {
 		IBuildConfiguration[] configs = internalGetBuildConfigs(false);
 		for (int i = 0; i < configs.length; i++) {
 			if (configs[i].getConfigurationId().equals(id)) {
-				return (BuildConfiguration)((BuildConfiguration) configs[i]).clone();
+				return configs[i];
 			}
 		}
 		throw new ResourceException(IResourceStatus.BUILD_CONFIGURATION_NOT_FOUND, getFullPath(), null, null);
@@ -1466,7 +1466,7 @@ public class Project extends Container implements IProject {
 
 	/*
 	 * (non-Javadoc)
-	 * @see IProject#hasBuildConfiguration(IBuildConfiguration)
+	 * @see org.eclipse.core.resources.IProject#hasBuildConfiguration(org.eclipse.core.resources.IBuildConfiguration)
 	 */
 	public boolean hasBuildConfiguration(IBuildConfiguration config) throws CoreException {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
@@ -1474,14 +1474,8 @@ public class Project extends Container implements IProject {
 		return internalHasBuildConfig(config);
 	}
 
-	public boolean internalHasBuildConfig(IBuildConfiguration config) {
-		if (config == null)
-			return false;
-		IBuildConfiguration[] configs = internalGetBuildConfigs(false);
-		for (int i = 0; i < configs.length; i++)
-			if (configs[i].equals(config))
-				return true;
-		return false;
+	boolean internalHasBuildConfig(IBuildConfiguration config) {
+		return internalGetDescription().hasBuildConfig(config.getConfigurationId());
 	}
 
 	/*
@@ -1492,7 +1486,6 @@ public class Project extends Container implements IProject {
 		ResourceInfo info = getResourceInfo(false, false);
 		int flags = getFlags(info);
 		checkAccessible(flags);
-
 		return internalGetActiveBuildConfig();
 	}
 
@@ -1509,7 +1502,7 @@ public class Project extends Container implements IProject {
 		} catch (CoreException e) {
 			// Build configuration doesn't exist; treat the first as active.
 		}
-		return (BuildConfiguration)((BuildConfiguration) internalGetBuildConfigs(false)[0]).clone();
+		return internalGetBuildConfigs(false)[0];
 	}
 
 }
