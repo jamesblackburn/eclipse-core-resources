@@ -666,7 +666,7 @@ public interface IProject extends IContainer, IAdaptable {
 	/**
 	 * Checks whether the project has the specified build configuration.
 	 *
-	 * @param configurationId the configuration
+	 * @param configuration the configuration
 	 * @return <code>true</code> if the project has the specified configuration, false otherwise
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
@@ -675,7 +675,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @since 3.7
 	 */
-	public boolean hasBuildConfiguration(IBuildConfiguration configurationId) throws CoreException;
+	public boolean hasBuildConfiguration(IBuildConfiguration configuration) throws CoreException;
 
 	/** 
 	 * Returns whether the project nature specified by the given
