@@ -12,7 +12,6 @@ package org.eclipse.core.internal.resources;
 
 import org.eclipse.core.resources.IBuildConfiguration;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.CoreException;
 
 /**
@@ -27,7 +26,7 @@ import org.eclipse.core.runtime.CoreException;
  * the actual build configuration on the referenced project.
  *</p>
  */
-public class BuildConfiguration implements IBuildConfiguration, Cloneable {
+public class BuildConfiguration implements IBuildConfiguration {
 
 	/** Project on which this build configuration is set */
 	private final IProject project;
@@ -98,20 +97,6 @@ public class BuildConfiguration implements IBuildConfiguration, Cloneable {
 		if (name != null)
 			return false;
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see Object#clone()
-	 */
-	public Object clone() {
-		try {
-			return super.clone();
-		} catch (CloneNotSupportedException e) {
-			// won't happen
-			Assert.isTrue(false);
-			return null;
-		}
 	}
 
 	/*

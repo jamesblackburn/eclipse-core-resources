@@ -853,11 +853,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		if (value == null || value.length == 0)
 			buildConfigs = EMPTY_BUILD_CONFIGS;
 		else {
-
 			// Filter out duplicates
 			Set filtered = new LinkedHashSet(value.length);
 			for (int i = 0; i < value.length; i++) {
-				BuildConfiguration config = (BuildConfiguration)((BuildConfiguration) value[i]).clone();
+				IBuildConfiguration config = value[i];
 				Assert.isLegal(config.getConfigurationId() != null);
 				filtered.add(config);
 				buildConfigIds.add(config.getConfigurationId());
@@ -888,20 +887,13 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	public IBuildConfiguration[] internalGetBuildConfigs(boolean makeCopy) {
 		if (buildConfigs.length == 0)
 			return EMPTY_BUILD_CONFIGS;
-		return makeCopy ? copyBuildConfigs(buildConfigs) : buildConfigs;
-	}
-    // Deep clone() the build configurations array
-	private IBuildConfiguration[] copyBuildConfigs(BuildConfiguration[] pvars) {
-		IBuildConfiguration[] result = new BuildConfiguration[buildConfigs.length];
-		for (int i = 0; i < buildConfigs.length; i++)
-			result[i] = (BuildConfiguration) buildConfigs[i].clone();
-		return result;
+		return makeCopy ? (IBuildConfiguration[])buildConfigs.clone() : buildConfigs;
 	}
 
 	/**
 	 * Internal method to check if the description has a given build configuration.
 	 */
-	private boolean hasBuildConfig(String buildConfigId) {
+	boolean hasBuildConfig(String buildConfigId) {
 		Assert.isNotNull(buildConfigId);
 		if (buildConfigs.length == 0)
 			return IBuildConfiguration.DEFAULT_CONFIG_ID.equals(buildConfigId);
