@@ -25,7 +25,7 @@ import org.eclipse.core.runtime.*;
 
 public class ProjectDescription extends ModelObject implements IProjectDescription {
 	// constants
-	private static final BuildConfiguration[] EMPTY_BUILD_CONFIGS = new BuildConfiguration[0];
+	private static final IBuildConfiguration[] EMPTY_BUILD_CONFIGS = new BuildConfiguration[0];
 	private static final IBuildConfiguration[] EMPTY_BUILD_CONFIG_REFERENCE_ARRAY = new IBuildConfiguration[0];
 	private static final ICommand[] EMPTY_COMMAND_ARRAY = new ICommand[0];
 	private static final IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];
@@ -46,8 +46,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected String activeConfigurationId = IBuildConfiguration.DEFAULT_CONFIG_ID;
 	/** The 'real' build configurations set on this project. 
 	 *  This doesn't contain the generated 'default' build configuration added by IProject
-	 *  no build configurations have been defined. */
-	protected BuildConfiguration[] buildConfigs = EMPTY_BUILD_CONFIGS;
+	 *  when no build configurations have been defined. */
+	protected IBuildConfiguration[] buildConfigs = EMPTY_BUILD_CONFIGS;
 	/** Map from config id in this project -> build configurations in other projects */
 	protected IProject[] staticRefs = EMPTY_PROJECT_ARRAY;
 	protected IProject[] dynamicRefs = EMPTY_PROJECT_ARRAY;
@@ -170,7 +170,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			if (hasBuildConfig(activeConfigurationId))
 				refs = getAllBuildConfigReferences(activeConfigurationId, false);
 			else if (buildConfigs.length > 0)
-				refs = getAllBuildConfigReferences(buildConfigs[0].getConfigurationId(), false);
+				refs = getAllBuildConfigReferences(buildConfigs[0].getId(), false);
 			else // No build configuration => fall-back to default
 				refs = getAllBuildConfigReferences(IBuildConfiguration.DEFAULT_CONFIG_ID, false);
 			Collection l = getProjectsFromBuildConfigRefs(refs);
@@ -266,7 +266,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			if (buildConfigs.length == 0)
 				id = IBuildConfiguration.DEFAULT_CONFIG_ID;
 			else
-				id = buildConfigs[i].getConfigurationId();
+				id = buildConfigs[i].getId();
 
 			if (!dynamicConfigRefs.containsKey(id))
 				continue;
@@ -282,7 +282,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#getDynamicConfigReferences(String)
 	 */
-	public IBuildConfiguration[] getDynamicConfigReferences(String configId) {
+	public IBuildConfiguration[] getBuildConfigReferences(String configId) {
 		return getDynamicConfigReferences(configId, true);
 	}
 
@@ -572,7 +572,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])
 	 */
-	public void setDynamicConfigReferences(String configId, IBuildConfiguration[] references) {
+	public void setBuildConfigReferences(String configId, IBuildConfiguration[] references) {
 		Assert.isLegal(configId != null);
 		Assert.isLegal(references != null);
 		if (!hasBuildConfig(configId))
@@ -848,34 +848,28 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 */
 	public void setBuildConfigurations(IBuildConfiguration[] value) {
 		// Remove references for deleted buildConfigs
-		Set buildConfigIds = new HashSet(Arrays.asList(buildConfigs));
+		LinkedHashMap/*<String, IBuildConfiguration>*/ buildConfigIds = new LinkedHashMap();
 
-		if (value == null || value.length == 0)
+		if (value == null || value.length == 0) {
 			buildConfigs = EMPTY_BUILD_CONFIGS;
-		else {
+			buildConfigIds.put(IBuildConfiguration.DEFAULT_CONFIG_ID, null);
+		} else {
 			// Filter out duplicates
-			Set filtered = new LinkedHashSet(value.length);
 			for (int i = 0; i < value.length; i++) {
 				IBuildConfiguration config = value[i];
-				Assert.isLegal(config.getConfigurationId() != null);
-				filtered.add(config);
-				buildConfigIds.add(config.getConfigurationId());
+				Assert.isLegal(config.getId() != null);
+				buildConfigIds.put(config.getId(), config);
 			}
 
-			if (filtered.isEmpty() ||
-					(filtered.size() ==1 && ((BuildConfiguration)(filtered.iterator().next())).isDefault()))
+			if (buildConfigIds.isEmpty() ||
+					(buildConfigIds.size() == 1 && ((BuildConfiguration)(buildConfigIds.values().iterator().next())).isDefault()))
 				buildConfigs = EMPTY_BUILD_CONFIGS;
-			else {
-				buildConfigs = new BuildConfiguration[filtered.size()];
-				filtered.toArray(buildConfigs);
-			}
+			else
+				buildConfigs = (IBuildConfiguration[])buildConfigIds.values().toArray(new IBuildConfiguration[buildConfigIds.size()]);
 		}
 
 		// Remove references for deleted buildConfigs
-		if (buildConfigIds.isEmpty())
-			buildConfigIds.add(IBuildConfiguration.DEFAULT_CONFIG_ID);
-		boolean modified = false;
-		modified |= dynamicConfigRefs.keySet().retainAll(buildConfigIds);
+		boolean modified = dynamicConfigRefs.keySet().retainAll(buildConfigIds.keySet());
 		if (modified)
 			clearCachedReferences(null);
 	}
@@ -898,7 +892,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		if (buildConfigs.length == 0)
 			return IBuildConfiguration.DEFAULT_CONFIG_ID.equals(buildConfigId);
 		for (int i = 0; i < buildConfigs.length; i++)
-			if (buildConfigs[i].getConfigurationId().equals(buildConfigId))
+			if (buildConfigs[i].getId().equals(buildConfigId))
 				return true;
 		return false;
 	}

@@ -445,17 +445,17 @@ public class LocalMetaArea implements ICoreConstants {
 				IBuildConfiguration[] configs = desc.internalGetBuildConfigs(false);
 				dataOut.writeInt(configs.length);
 				for (int i = 0; i < configs.length; i++) {
-					dataOut.writeUTF(configs[i].getConfigurationId());
-					IBuildConfiguration[] refs = desc.getDynamicConfigReferences(configs[i].getConfigurationId(), false);
+					dataOut.writeUTF(configs[i].getId());
+					IBuildConfiguration[] refs = desc.getDynamicConfigReferences(configs[i].getId(), false);
 					dataOut.writeInt(refs.length);
 					for (int j = 0; j < refs.length; j++) {
-						if (refs[j].getConfigurationId() != null)
+						if (refs[j].getId() != null)
 							dataOut.writeInt(0);
 						else
 							dataOut.writeInt(1);
 						dataOut.writeUTF(refs[j].getProject().getName());
-						if (refs[j].getConfigurationId() != null)
-							dataOut.writeUTF(refs[j].getConfigurationId());
+						if (refs[j].getId() != null)
+							dataOut.writeUTF(refs[j].getId());
 					}
 				}
 				output.succeed();

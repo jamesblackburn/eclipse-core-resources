@@ -40,7 +40,7 @@ public class BuildConfiguration implements IBuildConfiguration {
 	}
 
 	public BuildConfiguration(IBuildConfiguration config, IProject project) {
-		this(project, config.getConfigurationId(), config.getName());
+		this(project, config.getId(), config.getName());
 	}
 
 	public BuildConfiguration(IProject project, String configurationId) {
@@ -65,7 +65,7 @@ public class BuildConfiguration implements IBuildConfiguration {
 	 * (non-Javadoc)
 	 * @see IBuildConfiguration#getConfigurationId()
 	 */
-	public String getConfigurationId() {
+	public String getId() {
 		return id;
 	}
 

@@ -1798,7 +1798,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 */
 	private void getTreesToSave(IProject project, List trees, List builderInfosVersion2, List configIdsVersion2, List builderInfosVersion3, List configIdsVersion3) throws CoreException {
 		if (project.isOpen()) {
-			String activeConfigId = project.getActiveBuildConfiguration().getConfigurationId();
+			String activeConfigId = project.getActiveBuildConfiguration().getId();
 			List infos = workspace.getBuildManager().createBuildersPersistentInfo(project);
 			if (infos != null) {
 				for (Iterator it = infos.iterator(); it.hasNext();) {

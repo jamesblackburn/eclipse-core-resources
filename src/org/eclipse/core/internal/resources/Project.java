@@ -1373,7 +1373,7 @@ public class Project extends Container implements IProject {
 	 */
 	public IBuildConfiguration[] internalGetReferencedBuildConfigurations(IBuildConfiguration config) {
 		ProjectDescription description = internalGetDescription();
-		IBuildConfiguration[] refs = description.getAllBuildConfigReferences(config.getConfigurationId(), true);
+		IBuildConfiguration[] refs = description.getAllBuildConfigReferences(config.getId(), true);
 		ArrayList configs = new ArrayList(refs.length);
 		for (int i = 0; i < refs.length; i++) {
 			try {
@@ -1383,48 +1383,6 @@ public class Project extends Container implements IProject {
 			}
 		}
 		return (IBuildConfiguration[]) configs.toArray(new IBuildConfiguration[configs.size()]);
-	}
-
-	/**
-	 * Returns the list of all open projects' existing build configurations which reference
-	 * this project and the specified configuration. This project and configuration may
-	 * or may not exist. Returns an empty array if there are no
-	 * referencing build configurations.
-	 * <p>
-	 * If this configuration is the project's active build config, then the result will include
-	 * build configs that reference the active configuration of this project.
-	 * </p>
-	 *
-	 * @param config the configuration to find references to
-	 * @return an array of build configurations referencing this project
-	 * @since 3.7
-	 */
-	public IBuildConfiguration[] getReferencingBuildConfigurations(IBuildConfiguration config) {
-		IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
-		List result = new ArrayList(projects.length);
-		for (int i = 0; i < projects.length; i++) {
-			Project project = (Project) projects[i];
-			ProjectDescription description = project.internalGetDescription();
-			if (description == null)
-				continue;
-			IBuildConfiguration[] configs = project.internalGetBuildConfigs(false);
-			for (int j = 0; j < configs.length; j++) {
-				IBuildConfiguration[] refs = description.getAllBuildConfigReferences(configs[j].getConfigurationId(), false);
-				for (int k = 0; k < refs.length; k++) {
-					try {
-						// de-reference the build configuration reference
-						IBuildConfiguration refdConfig = ((BuildConfiguration)refs[k]).getBuildConfiguration();
-						if (refdConfig.equals(config)) {
-							result.add(configs[j]);
-							break;
-						}
-					} catch (CoreException e) {
-						// Ignore active buildConfigs to projects that aren't accessible
-					}
-				}
-			}
-		}
-		return (IBuildConfiguration[]) result.toArray(new IBuildConfiguration[result.size()]);
 	}
 
 	/* (non-Javadoc)
@@ -1442,9 +1400,11 @@ public class Project extends Container implements IProject {
 	public IBuildConfiguration getBuildConfiguration(String id) throws CoreException {
 		if (id == null)
 			return getActiveBuildConfiguration();
+		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
+		checkAccessible(getFlags(info));
 		IBuildConfiguration[] configs = internalGetBuildConfigs(false);
 		for (int i = 0; i < configs.length; i++) {
-			if (configs[i].getConfigurationId().equals(id)) {
+			if (configs[i].getId().equals(id)) {
 				return configs[i];
 			}
 		}
@@ -1475,7 +1435,7 @@ public class Project extends Container implements IProject {
 	}
 
 	boolean internalHasBuildConfig(IBuildConfiguration config) {
-		return internalGetDescription().hasBuildConfig(config.getConfigurationId());
+		return internalGetDescription().hasBuildConfig(config.getId());
 	}
 
 	/*

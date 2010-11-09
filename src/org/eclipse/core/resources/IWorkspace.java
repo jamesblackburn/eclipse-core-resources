@@ -972,7 +972,7 @@ public interface IWorkspace extends IAdaptable {
 	 *<p>
 	 * This API can be used to create IBuildConfigurations that will be used as references
 	 * to IBuildConfigurations in other projects.  These references are set using
-	 * {@link IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])}
+	 * {@link IProjectDescription#setBuildConfigReferences(String, IBuildConfiguration[])}
 	 * and may have a <code>null</code> configuration Id which resolves to the referenced
 	 * project's active configuration when the configuration reference is used.
 	 *</p>
@@ -982,7 +982,7 @@ public interface IWorkspace extends IAdaptable {
 	 * @param configurationName an option human-readable name for the configuration
 	 * @return a build configuration
 	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
-	 * @see IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])
+	 * @see IProjectDescription#setBuildConfigReferences(String, IBuildConfiguration[])
 	 * @see IBuildConfiguration
 	 * @since 3.7
 	 */

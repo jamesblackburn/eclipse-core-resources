@@ -618,20 +618,21 @@ public interface IProject extends IContainer, IAdaptable {
 	 * an empty array if there are no referencing projects.
 	 *
 	 * @return a list of open projects referencing this project
-	 * @see #getReferencingBuildConfigurations(IBuildConfiguration)
 	 */
 	public IProject[] getReferencingProjects();
 
 	/**
 	 * Returns the build configurations referenced by the passed in build configuration.
-	 * This includes both the static and dynamic references of this project.
-	 * The returned projects and configurations need not exist in the workspace.
-	 * The result will not contain duplicates. Returns an empty
-	 * array if there are no referenced build configurations.
+	 * This also includes both the static and dynamic project level references.
+	 * The result will not contain duplicates.
 	 * <p>
 	 * References to active configurations will be translated to references to actual
 	 * build configurations, if the project is accessible. If the referenced project
-	 * is not accessible the reference will be omitted from the result.
+	 * is not accessible, or it doesn't contain the referenced configuration, the
+	 * configuration will be omitted from the result.
+	 * </p>
+	 * <p>
+	 * Returns an empty array if there are no accessible referenced build configurations.
 	 * </p>
 	 *
 	 * @param config the configuration to get the references for
@@ -642,26 +643,10 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> This project is not open.</li>
 	 * <li> The build configuration does not exist in this project.</li>
 	 * </ul>
-	 * @see IProjectDescription#getDynamicConfigReferences(String)
+	 * @see IProjectDescription#getBuildConfigReferences(String)
 	 * @since 3.7
 	 */
 	public IBuildConfiguration[] getReferencedBuildConfigurations(IBuildConfiguration config) throws CoreException;
-
-	/**
-	 * Returns the list of all open projects' existing build configurations which reference
-	 * this project and the specified configuration. This project and configuration may
-	 * or may not exist. Returns an empty array if there are no
-	 * referencing build configurations.
-	 * <p>
-	 * If this configuration is the project's active build config, then the result will include
-	 * build configs that reference the active configuration of this project.
-	 * </p>
-	 *
-	 * @param config the configuration to find references to
-	 * @return an array of build configurations referencing this project
-	 * @since 3.7
-	 */
-	public IBuildConfiguration[] getReferencingBuildConfigurations(IBuildConfiguration config);
 
 	/**
 	 * Checks whether the project has the specified build configuration.

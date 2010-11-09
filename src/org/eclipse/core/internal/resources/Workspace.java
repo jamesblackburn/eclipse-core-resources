@@ -241,7 +241,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			IBuildConfiguration py = (IBuildConfiguration) y;
 			int cmp = py.getProject().getName().compareTo(px.getProject().getName());
 			if (cmp == 0)
-				cmp = py.getConfigurationId().compareTo(px.getConfigurationId());
+				cmp = py.getId().compareTo(px.getId());
 			return cmp;
 		}
 	}
@@ -449,6 +449,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			// Check project + build configuration are accessible.
 			if (!configs[i].getProject().isAccessible() || !configs[i].getProject().hasBuildConfiguration(configs[i]))
 				continue;
+			refsList.add(configs[i]);
 			// Find transitive closure of referenced project buildConfigs
 			if (buildReferences)
 				recursivelyAddBuildConfigs(refsList, configs[i]);
