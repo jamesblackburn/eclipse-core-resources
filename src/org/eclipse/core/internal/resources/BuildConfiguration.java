@@ -124,6 +124,20 @@ public class BuildConfiguration implements IBuildConfiguration {
 		return true;
 	}
 
+	/**
+	 * Method to test full equality of all fields, including
+	 * metadata such as {@link #name}.
+	 * @param other
+	 * @return boolean indicating other is identical to this
+	 */
+	boolean fullEquals(BuildConfiguration other) {
+		if (!equals(other))
+			return false;
+		if (name == null)
+			return other.name == null;
+		return name.equals(other.name);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see java.lang.Object#hashCode()

@@ -202,7 +202,6 @@ public abstract class InternalBuilder {
 	 * @see #getBuildConfiguration()
 	 */
 	final void setBuildConfiguration(IBuildConfiguration value) {
-		Assert.isTrue(buildConfiguration == null);
 		Assert.isNotNull(value);
 		buildConfiguration = value;
 	}

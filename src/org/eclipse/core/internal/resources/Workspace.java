@@ -408,7 +408,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			ArrayList configs = new ArrayList();
 			IProject[] prjs = getRoot().getProjects();
 			for (int i = 0; i < prjs.length; i++)
-				configs.addAll(Arrays.asList(prjs[i].getBuildConfigurations()));
+				if (prjs[i].isAccessible())
+					configs.addAll(Arrays.asList(prjs[i].getBuildConfigurations()));
 			buildInternal((IBuildConfiguration[])configs.toArray(new IBuildConfiguration[configs.size()]), trigger, monitor);			
 		} else
 			buildInternal(getBuildOrder(), trigger, monitor);
@@ -1550,7 +1551,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * workspace.
 	 * <p>
 	 * The build configuration order is based on information specified in the workspace
-	 * description. The project buildConfigs are built in the order specified by
+	 * description. The project build configs are built in the order specified by
 	 * <code>IWorkspaceDescription.getBuildOrder</code>; closed or non-existent
 	 * projects are ignored and not included in the result. If any open projects are
 	 * not specified in this order, they are appended to the end of the build order
@@ -2470,15 +2471,14 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			markerManager.startup(null);
 			synchronizer = new Synchronizer(this);
 			refreshManager = new RefreshManager(this);
-			// Startup property manager before save manager as it's needed for active build configuration
-			propertyManager = ResourcesCompatibilityHelper.createPropertyManager();
-			propertyManager.startup(monitor);
 			saveManager = new SaveManager(this);
 			saveManager.startup(null);
 			//must start after save manager, because (read) access to tree is needed
 			refreshManager.startup(null);
 			aliasManager = new AliasManager(this);
 			aliasManager.startup(null);
+			propertyManager = ResourcesCompatibilityHelper.createPropertyManager();
+			propertyManager.startup(monitor);
 			charsetManager = new CharsetManager(this);
 			charsetManager.startup(null);
 			contentDescriptionManager = new ContentDescriptionManager();

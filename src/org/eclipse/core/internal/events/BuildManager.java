@@ -518,9 +518,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			result = initializeBuilder(command.getBuilderName(), buildConfiguration, buildSpecIndex, status);
 			((BuildCommand) command).addBuilder(buildConfiguration, (IncrementalProjectBuilder) result);
 			result.setCommand(command);
-			result.setBuildConfiguration(buildConfiguration);
 			result.startupOnInitialize();
 		}
+		// Ensure the build configuration stays fresh for non-config aware builders
+		result.setBuildConfiguration(buildConfiguration);
 		if (!validateNature(result, command.getBuilderName())) {
 			//skip this builder and null its last built tree because it is invalid
 			//if the nature gets added or re-enabled a full build will be triggered
@@ -896,8 +897,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * Returns true if the given builder needs to be invoked, and false
 	 * otherwise.
 	 * 
-	 * The algorithm is to compute the intersection of the set of projects configs that
-	 * have changed since the last build, and the set of projects configs this builder
+	 * The algorithm is to compute the intersection of the set of build configs that
+	 * have changed since the last build, and the set of build configs this builder
 	 * cares about.  This is an optimization, under the assumption that computing
 	 * the forward delta once (not the resource delta) is more efficient than
 	 * computing project deltas and invoking builders for projects that haven't
@@ -989,7 +990,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Sets the builder infos for the given project config.  The builder infos are
+	 * Sets the builder infos for the given build config.  The builder infos are
 	 * an ArrayList of BuilderPersistentInfo.
 	 * The list includes entries for all builders that are
 	 * in the builder spec, and that have a last built state, even if they 

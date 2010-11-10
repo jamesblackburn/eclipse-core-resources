@@ -9,7 +9,6 @@
  *     IBM Corporation - initial API and implementation
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
- * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -71,12 +70,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 	protected static final int S_VARIABLE_VALUE = 34;
 
 	protected static final int S_SNAPSHOT_LOCATION = 35;
-
-	protected static final int S_BUILD_CONFIGS = 36;
-	protected static final int S_BUILD_CONFIG = 37;
-	protected static final int S_BUILD_CONFIG_ID = 38;	
-	protected static final int S_BUILD_CONFIG_NAME = 39;
-
+	
 	/**
 	 * Singleton sax parser factory
 	 */
@@ -417,31 +411,6 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 				break;
 			case S_SNAPSHOT_LOCATION :
 				endSnapshotLocation(elementName);
-				break;
-			case S_BUILD_CONFIGS :
-				endBuildConfigsElement(elementName);
-				break;
-			case S_BUILD_CONFIG :
-				if (elementName.equals(BUILD_CONFIG)) {
-					state = S_BUILD_CONFIGS;
-					BuildConfig bc = (BuildConfig)objectStack.pop();
-					// Add the build config to the array list of configs we're processing
-					((ArrayList) objectStack.peek()).add(bc);					
-				}
-				break;
-			case S_BUILD_CONFIG_ID :
-				if (elementName.equals(BUILD_CONFIG_ID)) {
-					state = S_BUILD_CONFIG;
-					String configurationId = charBuffer.toString();
-					((BuildConfig) objectStack.peek()).configId  = configurationId;
-				}
-				break;
-			case S_BUILD_CONFIG_NAME :
-				if (elementName.equals(BUILD_CONFIG_NAME)) {
-					state = S_BUILD_CONFIG;
-					String name = charBuffer.toString();
-					((BuildConfig) objectStack.peek()).configName = name;
-				}
 				break;
 		}
 		charBuffer.setLength(0);
@@ -853,29 +822,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		}
 	}
 
-	/** End of a buildConfigs list */
-	private void endBuildConfigsElement(String elementName) {
-		if (elementName.equals(BUILD_CONFIGS)) {
-			// Pop the array list of configuration ids off the stack
-			List bcs = (List) objectStack.pop();
-			state = S_PROJECT_DESC;
-			if (bcs.size() == 0)
-				// All projects have one ore more configurations,
-				// so leave the project with the default config if none
-				// are specified in the project description file
-				return;
-
-			// Add the configurations
-			IBuildConfiguration[] configs = new IBuildConfiguration[bcs.size()];
-			int i = 0;
-			for (Iterator it = bcs.iterator(); it.hasNext(); i++) {
-				BuildConfig config = (BuildConfig) it.next();
-				configs[i] = new BuildConfiguration(project, config.configId, config.configName);
-			}
-			projectDescription.setBuildConfigurations(configs);
-		}
-	}
-
+	
 	/**
 	 * @see ErrorHandler#error(SAXParseException)
 	 */
@@ -961,12 +908,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 		if (elementName.equals(SNAPSHOT_LOCATION)) {
 			state = S_SNAPSHOT_LOCATION;
 			return;
-		}
-		if (elementName.equals(BUILD_CONFIGS)) {
-			state = S_BUILD_CONFIGS;
-			objectStack.push(new ArrayList/*<BuildConfiguration>*/());
-			return;
-		}
+		}	
 	}
 
 	public ProjectDescription read(InputSource input) {
@@ -1153,28 +1095,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 					state = S_VARIABLE_VALUE;
 				}
 				break;
-			case S_BUILD_CONFIGS:
-				if (elementName.equals(BUILD_CONFIG)) {
-					state = S_BUILD_CONFIG;
-					objectStack.push(new BuildConfig());
-				}
-				break;
-			case S_BUILD_CONFIG:
-				if (elementName.equals(BUILD_CONFIG_ID)) {
-					state = S_BUILD_CONFIG_ID;
-				} else if (elementName.equals(BUILD_CONFIG_NAME)) {
-					state = S_BUILD_CONFIG_NAME;
-				}
-				break;
 		}
-	}
-
-	// Container for BuildConfiguration, storage on the object stack
-	private static class BuildConfig {
-		String configId;
-		String configName;
-
-		public BuildConfig() {/*empty constructor*/}
 	}
 
 	/**

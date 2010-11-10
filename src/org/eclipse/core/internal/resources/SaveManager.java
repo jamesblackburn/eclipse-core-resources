@@ -1855,23 +1855,23 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			monitor.beginTask("", Policy.totalWork); //$NON-NLS-1$
 			boolean wasImmutable = false;
 			try {
-				// Create an array of trees to save and ensure that the current one is immutable before we add other trees
+				// Create an array of trees to save. Ensure that the current one is in the list
 				ElementTree current = workspace.getElementTree();
 				wasImmutable = current.isImmutable();
 				current.immutable();
-				List trees = new ArrayList(statesToSave.size() * 2);
+				ArrayList trees = new ArrayList(statesToSave.size() * 2); // pick a number
 				monitor.worked(Policy.totalWork * 10 / 100);
 
-				// Save the workspace fields
+				// write out the workspace fields
 				writeWorkspaceFields(output, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
 
-				// Save plugin info
-				output.writeInt(statesToSave.size());
+				// save plugin info
+				output.writeInt(statesToSave.size()); // write the number of plugins we are saving
 				for (Iterator i = statesToSave.entrySet().iterator(); i.hasNext();) {
 					Map.Entry entry = (Map.Entry) i.next();
 					String pluginId = (String) entry.getKey();
 					output.writeUTF(pluginId);
-					trees.add(entry.getValue());
+					trees.add(entry.getValue()); // tree
 					updateDeltaExpiration(pluginId);
 				}
 				monitor.worked(Policy.totalWork * 10 / 100);
@@ -1888,10 +1888,10 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				// Save the version 2 builders info
 				writeBuilderPersistentInfo(output, builderInfosVersion2, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
 
-				// Add the current tree in the list as the last tree in the chain
+				// add the current tree in the list as the last tree in the chain
 				trees.add(current);
 
-				// Save the trees
+				/* save the forest! */
 				ElementTreeWriter writer = new ElementTreeWriter(this);
 				ElementTree[] treesToSave = (ElementTree[]) trees.toArray(new ElementTree[trees.size()]);
 				writer.writeDeltaChain(treesToSave, Path.ROOT, ElementTreeWriter.D_INFINITE, output, ResourceComparator.getSaveComparator());

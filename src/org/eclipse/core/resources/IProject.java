@@ -161,7 +161,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * This method is long-running; progress and cancellation are provided
 	 * by the given progress monitor.
 	 * </p>
-	 *
+	 * @param config build configuration to build
 	 * @param kind the kind of build being requested. Valid values are:
 	 *		<ul>
 	 *		<li> <code>IncrementalProjectBuilder.FULL_BUILD</code> - indicates a full build.</li>
@@ -606,9 +606,9 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
 	 * </ul>
+	 * @see #getReferencedBuildConfigurations(IBuildConfiguration)
 	 * @see IProjectDescription#getReferencedProjects()
 	 * @see IProjectDescription#getDynamicReferences()
-	 * @see #getReferencedBuildConfigurations(IBuildConfiguration)
 	 */
 	public IProject[] getReferencedProjects() throws CoreException;
 

@@ -86,11 +86,11 @@ public interface IProjectDescription {
 	 * contain duplicates. Returns an empty array if there are no dynamic project 
 	 * references on this description.
 	 *
+	 * @see #getBuildConfigReferences(String)
 	 * @see #getReferencedProjects()
 	 * @see #setDynamicReferences(IProject[])
 	 * @return a list of projects
 	 * @since 3.0
-	 * @see #getBuildConfigReferences(String)
 	 */
 	public IProject[] getDynamicReferences();
 
@@ -272,10 +272,10 @@ public interface IProjectDescription {
 	 * before changes made to this description take effect.
 	 * </p>
 	 * @see #getDynamicReferences()
+	 * @see #setBuildConfigReferences(String, IBuildConfiguration[])
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
 	 * @param projects list of projects
 	 * @since 3.0
-	 * @see #setBuildConfigReferences(String, IBuildConfiguration[])
 	 */
 	public void setDynamicReferences(IProject[] projects);
 
@@ -374,8 +374,8 @@ public interface IProjectDescription {
 	 *
 	 * @param projects a list of projects
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @see IProjectDescription#setBuildConfigReferences(String, IBuildConfiguration[])
+	 * @see #setBuildConfigReferences(String, IBuildConfiguration[])
+	 * @see #getReferencedProjects()
 	 */
 	public void setReferencedProjects(IProject[] projects);
-
 }
