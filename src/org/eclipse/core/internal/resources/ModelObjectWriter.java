@@ -10,7 +10,6 @@
  *     Serge Beauchamp (Freescale Semiconductor) - [252996] add resource filtering
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group and Project Path Variable Support
  * Markus Schorn (Wind River) - [306575] Save snapshot location with project
- * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
@@ -132,37 +131,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 	}
 
 	/**
-	 * Writes the contents of the build configurations if there's at least
-	 * one non-default configuration defined.
-	 * <ul>
-	 * <li>Build Configurations</li>
-	 * <li>Build Configuration references</li>
-	 * </ul>
-	 * @param description
-	 * @param writer
-	 */
-	protected void writeBuildConfigurations(ProjectDescription description, XMLWriter writer) throws IOException {
-		// Print the configurations
-		IBuildConfiguration[] configs = description.internalGetBuildConfigs(false);
-		if (configs.length == 0)
-			return;
-		// Only if there's at least one non-default configuration to serialize
-		if (configs.length > 1 ||
-				!((BuildConfiguration)configs[0]).isDefault()) {
-			writer.startTag(BUILD_CONFIGS, null);
-			for (int i = 0; i < configs.length; i++) {
-				IBuildConfiguration config = configs[i];
-				writer.startTag(BUILD_CONFIG, null);
-				writer.printSimpleTag(BUILD_CONFIG_ID, config.getConfigurationId());
-				if (config.getName() != null)
-					writer.printSimpleTag(BUILD_CONFIG_NAME, config.getName());
-				writer.endTag(BUILD_CONFIG);
-			}
-			writer.endTag(BUILD_CONFIGS);
-		}
-	}
-
-	/**
 	 * Writes a location to the XML writer.  For backwards compatibility,
 	 * local file system locations are written and read using a different tag
 	 * from non-local file systems.
@@ -246,9 +214,6 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			if (snapshotLocation != null) {
 				writer.printSimpleTag(SNAPSHOT_LOCATION, snapshotLocation.toString());
 			}
-			// Write out the build configurations before project references
-			writeBuildConfigurations(description, writer);
-			// Project level references written for backwards compatibility
 			write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
 			write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 			write(NATURES, NATURE, description.getNatureIds(false), writer);

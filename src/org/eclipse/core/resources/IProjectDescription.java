@@ -35,6 +35,29 @@ public interface IProjectDescription {
 	public static final String DESCRIPTION_FILE_NAME = ".project"; //$NON-NLS-1$
 
 	/**
+	 * Returns the build configurations referenced by the specified configuration Id for the
+	 * described project. 
+	 * <p>
+	 * These references are persisted by the workspace in a private location outside the
+	 * project description file, and as such will not be shared when a project is exported
+	 * or persisted in a repository.  As such clients are always
+	 * responsible for setting these references when a project is created or recreated.
+	 * </p>
+	 * <p>
+	 * The referenced build configurations need not exist in the workspace.
+	 * The result will not contain duplicates. The order of the references is preserved
+	 * from the call to {@link #setBuildConfigReferences(String, IBuildConfiguration[])}.
+	 * Returns an empty array if the provided config doesn't dynamically reference 
+	 * any other build configurations, or the given config does not exist in this description.
+	 * </p>
+	 * @param configId the configuration Id in the described project to get the references for
+	 * @return a list of dynamic build configurations
+	 * @see #setBuildConfigReferences(String, IBuildConfiguration[])
+	 * @since 3.7
+	 */
+	public IBuildConfiguration[] getBuildConfigReferences(String configId);
+
+	/**
 	 * Returns the list of build commands to run when building the described project.
 	 * The commands are listed in the order in which they are to be run.
 	 *
@@ -63,35 +86,13 @@ public interface IProjectDescription {
 	 * contain duplicates. Returns an empty array if there are no dynamic project 
 	 * references on this description.
 	 *
+	 * @see #getBuildConfigReferences(String)
 	 * @see #getReferencedProjects()
 	 * @see #setDynamicReferences(IProject[])
 	 * @return a list of projects
 	 * @since 3.0
-	 * @see #getDynamicConfigReferences(String)
 	 */
 	public IProject[] getDynamicReferences();
-
-	/**
-	 * Returns the dynamic build configuration references set on the specified configuration Id for the
-	 * described project. Dynamic references can be used instead of simple references
-	 * in cases where the reference information is computed dynamically by a third party.
-	 * These references are persisted by the workspace in a private location outside the
-	 * project description file, and as such will not be shared when a project is exported
-	 * or persisted in a repository.  A client using dynamic references is always
-	 * responsible for setting these references when a project is created or recreated.
-	 * <p>
-	 * The referenced build configurations need not exist in the workspace.
-	 * The result will not contain duplicates. The order of the references is preserved
-	 * from the call to {@link #setDynamicConfigReferences(String, IBuildConfiguration[])}.
-	 * Returns an empty array if the provided config doesn't dynamically reference 
-	 * any other build configurations, or the given config does not exist in this description.
-	 * </p>
-	 * @param configId the configuration Id in the described project to get the references for
-	 * @return a list of dynamic build configurations
-	 * @see #setDynamicConfigReferences(String, IBuildConfiguration[])
-	 * @since 3.7
-	 */
-	public IBuildConfiguration[] getDynamicConfigReferences(String configId);
 
 	/**
 	 * Returns the  local file system location for the described project.  The path
@@ -144,7 +145,7 @@ public interface IProjectDescription {
 	 * array if there are no referenced projects on this description.
 	 *
 	 * @see #getDynamicReferences()
-	 * @see #getDynamicConfigReferences(String)
+	 * @see #getBuildConfigReferences(String)
 	 * @return a list of projects
 	 */
 	public IProject[] getReferencedProjects();
@@ -198,12 +199,42 @@ public interface IProjectDescription {
 	 * before changes made to this description take effect.
 	 * 
 	 * @param configs the configurations to set for the described project
-	 * @see IProject#getBuildConfigurations()
 	 * @see IProject#getActiveBuildConfiguration()
-	 * @see #setActiveBuildConfiguration(String)
+	 * @see IProject#getBuildConfigurations()
+	 * @see IProjectDescription#setActiveBuildConfiguration(String)
 	 * @since 3.7
 	 */
 	public void setBuildConfigurations(IBuildConfiguration[] configs);
+
+	/**
+	 * Sets the build configurations referenced by the specified configuration Id.
+	 * <p>
+	 * The configuration to which references are being added needs to exist in this
+	 * description, but the referenced projects and build configurations need not exist.
+	 * A reference with <code>null</code> configuration Id is resolved to the active build configuration
+	 * on use.
+	 * Duplicates will be removed. The order of the referenced build configurations is preserved.
+	 * If the given configuration does not exist in this description then this has no effect.
+	 * </p>
+	 * <p>
+	 * References at the build configuration level take precedence over references at the project level.
+	 * </p>
+	 * <p>
+	 * Like dynamic references, these build configuration references are persisted as part of workspace
+	 * metadata.
+	 * </p>
+	 * <p>
+	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
+	 * before changes made to this description take effect.
+	 * </p>
+	 * 
+	 * @see #getBuildConfigReferences(String)
+	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
+	 * @param configId the configuration in the described project to set the references for
+	 * @param references list of build configuration references
+	 * @since 3.7
+	 */
+	public void setBuildConfigReferences(String configId, IBuildConfiguration[] references);
 
 	/**
 	 * Sets the list of build command to run when building the described project.
@@ -241,38 +272,12 @@ public interface IProjectDescription {
 	 * before changes made to this description take effect.
 	 * </p>
 	 * @see #getDynamicReferences()
+	 * @see #setBuildConfigReferences(String, IBuildConfiguration[])
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
 	 * @param projects list of projects
 	 * @since 3.0
-	 * @see #setDynamicConfigReferences(String, IBuildConfiguration[])
 	 */
 	public void setDynamicReferences(IProject[] projects);
-
-	/**
-	 * Sets the dynamically referenced build configurations for the specified configuration.
-	 * <p>
-	 * The configuration to which references are being added needs to exist in this
-	 * description, but the referenced projects and build configurations need not exist.
-	 * A reference with <code>null</code> configuration Id is resolved to the active build configuration
-	 * on use.
-	 * Duplicates will be removed. The order of the referenced build configurations is preserved.
-	 * If the given configuration does not exist in this description then this has no effect.
-	 * </p>
-	 * <p>
-	 * References at the build configuration level take precedence over references at the project level.
-	 * </p>
-	 * <p>
-	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
-	 * before changes made to this description take effect.
-	 * </p>
-	 * 
-	 * @see #getDynamicConfigReferences(String)
-	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @param configId the configuration in the described project to set the references for
-	 * @param references list of build configuration references
-	 * @since 3.7
-	 */
-	public void setDynamicConfigReferences(String configId, IBuildConfiguration[] references);
 
 	/**
 	 * Sets the local file system location for the described project.  The path must
@@ -369,8 +374,8 @@ public interface IProjectDescription {
 	 *
 	 * @param projects a list of projects
 	 * @see IProject#setDescription(IProjectDescription, int, IProgressMonitor)
-	 * @see IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])
+	 * @see #setBuildConfigReferences(String, IBuildConfiguration[])
+	 * @see #getReferencedProjects()
 	 */
 	public void setReferencedProjects(IProject[] projects);
-
 }

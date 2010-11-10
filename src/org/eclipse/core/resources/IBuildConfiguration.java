@@ -36,8 +36,8 @@ package org.eclipse.core.resources;
  *</p>
  *<p>
  * Build configuration can reference other builds configurations.  These references are 
- * set using {@link IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])}.
- * The reference may have a <code>null</code> configuration Id which is resolved to the 
+ * set using {@link IProjectDescription#setBuildConfigReferences(String, IBuildConfiguration[])}.
+ * A referenced build configuration may have a <code>null</code> configuration Id which is resolved to the 
  * referenced project's current active build configuration at build time.
  *</p>
  *<p> 
@@ -48,7 +48,7 @@ package org.eclipse.core.resources;
  * @see IWorkspace#newBuildConfiguration(String, String, String)
  * @see IProjectDescription#setActiveBuildConfiguration(String)
  * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
- * @see IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])
+ * @see IProjectDescription#setBuildConfigReferences(String, IBuildConfiguration[])
  * @noimplement This interface is not intended to be implemented by clients.
  * @noextend This interface is not intended to be extended by clients.
  * @since 3.7
@@ -76,7 +76,7 @@ public interface IBuildConfiguration {
 	 * @return the id of the configuration; or null if this is a reference to the active
 	 * configuration
 	 */
-	public String getConfigurationId();
+	public String getId();
 
 	/**
 	 * @return the human readable name of this configuration; may be null

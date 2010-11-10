@@ -161,7 +161,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * This method is long-running; progress and cancellation are provided
 	 * by the given progress monitor.
 	 * </p>
-	 *
+	 * @param config build configuration to build
 	 * @param kind the kind of build being requested. Valid values are:
 	 *		<ul>
 	 *		<li> <code>IncrementalProjectBuilder.FULL_BUILD</code> - indicates a full build.</li>
@@ -606,9 +606,9 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
 	 * </ul>
+	 * @see #getReferencedBuildConfigurations(IBuildConfiguration, boolean)
 	 * @see IProjectDescription#getReferencedProjects()
 	 * @see IProjectDescription#getDynamicReferences()
-	 * @see #getReferencedBuildConfigurations(IBuildConfiguration)
 	 */
 	public IProject[] getReferencedProjects() throws CoreException;
 
@@ -618,23 +618,32 @@ public interface IProject extends IContainer, IAdaptable {
 	 * an empty array if there are no referencing projects.
 	 *
 	 * @return a list of open projects referencing this project
-	 * @see #getReferencingBuildConfigurations(IBuildConfiguration)
 	 */
 	public IProject[] getReferencingProjects();
 
 	/**
-	 * Returns the build configurations referenced by the passed in build configuration.
-	 * This includes both the static and dynamic references of this project.
-	 * The returned projects and configurations need not exist in the workspace.
-	 * The result will not contain duplicates. Returns an empty
-	 * array if there are no referenced build configurations.
+	 * Returns the build configurations referenced by the passed in build configuration
+	 * on this project.
+	 * <p>
+	 * This includes both the static and dynamic project level references.  These are 
+	 * converted to build configurations pointing at the currently active referenced 
+	 * project configuration.
+	 * The result will not contain duplicates.
+	 * </p>
 	 * <p>
 	 * References to active configurations will be translated to references to actual
-	 * build configurations, if the project is accessible. If the referenced project
-	 * is not accessible the reference will be omitted from the result.
+	 * build configurations, if the project is accessible.  Note that if includeMissing
+	 * is true BuildConfigurations which can't be resolved (i.e. exist on missing projects,
+	 * or aren't listed on the referenced project) are still included in the  returned 
+	 * IBuildConfiguration array.
+	 * </p>
+	 * <p>
+	 * Returns an empty array if there are no references.
 	 * </p>
 	 *
 	 * @param config the configuration to get the references for
+	 * @param includeMissing boolean controls whether unresolved buildConfiguration should 
+	 *        be included in the result
 	 * @return an array of project build configurations
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
@@ -642,31 +651,15 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> This project is not open.</li>
 	 * <li> The build configuration does not exist in this project.</li>
 	 * </ul>
-	 * @see IProjectDescription#getDynamicConfigReferences(String)
+	 * @see IProjectDescription#getBuildConfigReferences(String)
 	 * @since 3.7
 	 */
-	public IBuildConfiguration[] getReferencedBuildConfigurations(IBuildConfiguration config) throws CoreException;
-
-	/**
-	 * Returns the list of all open projects' existing build configurations which reference
-	 * this project and the specified configuration. This project and configuration may
-	 * or may not exist. Returns an empty array if there are no
-	 * referencing build configurations.
-	 * <p>
-	 * If this configuration is the project's active build config, then the result will include
-	 * build configs that reference the active configuration of this project.
-	 * </p>
-	 *
-	 * @param config the configuration to find references to
-	 * @return an array of build configurations referencing this project
-	 * @since 3.7
-	 */
-	public IBuildConfiguration[] getReferencingBuildConfigurations(IBuildConfiguration config);
+	public IBuildConfiguration[] getReferencedBuildConfigurations(IBuildConfiguration config, boolean includeMissing) throws CoreException;
 
 	/**
 	 * Checks whether the project has the specified build configuration.
 	 *
-	 * @param configuration the configuration
+	 * @param config the configuration
 	 * @return <code>true</code> if the project has the specified configuration, false otherwise
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
@@ -675,7 +668,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @since 3.7
 	 */
-	public boolean hasBuildConfiguration(IBuildConfiguration configuration) throws CoreException;
+	public boolean hasBuildConfiguration(IBuildConfiguration config) throws CoreException;
 
 	/** 
 	 * Returns whether the project nature specified by the given
