@@ -451,13 +451,13 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				if (builder == null) {
 					// if the builder was not instantiated, use the old info if any.
 					if (oldInfos != null)
-						info = getBuilderInfo(oldInfos, builderName, supportsConfigs ? config.getConfigurationId() : null, i);
+						info = getBuilderInfo(oldInfos, builderName, supportsConfigs ? config.getId() : null, i);
 				} else if (!(builder instanceof MissingBuilder)) {
 					ElementTree oldTree = ((InternalBuilder) builder).getLastBuiltTree();
 					//don't persist build state for builders that have no last built state
 					if (oldTree != null) {
 						// if the builder was instantiated, construct a memento with the important info
-						info = new BuilderPersistentInfo(project.getName(), supportsConfigs ? config.getConfigurationId() : null, builderName, i);
+						info = new BuilderPersistentInfo(project.getName(), supportsConfigs ? config.getId() : null, builderName, i);
 						info.setLastBuildTree(oldTree);
 						info.setInterestingProjects(((InternalBuilder) builder).getInterestingProjects());
 					}
@@ -531,6 +531,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			result.setBuildConfiguration(buildConfiguration);
 			result.startupOnInitialize();
 		}
+		// Ensure the build configuration stays fresh for non-config aware builders
+		result.setBuildConfiguration(buildConfiguration);
 		if (!validateNature(result, command.getBuilderName())) {
 			//skip this builder and null its last built tree because it is invalid
 			//if the nature gets added or re-enabled a full build will be triggered
@@ -845,7 +847,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		// get the map of builders to get the last built tree
 		ArrayList infos = getBuildersPersistentInfo(project);
 		if (infos != null) {
-			BuilderPersistentInfo info = getBuilderInfo(infos, builderName, buildConfiguration.getConfigurationId(), buildSpecIndex);
+			BuilderPersistentInfo info = getBuilderInfo(infos, builderName, buildConfiguration.getId(), buildSpecIndex);
 			if (info != null) {
 				infos.remove(info);
 				ElementTree tree = info.getLastBuiltTree();
@@ -924,8 +926,8 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * Returns true if the given builder needs to be invoked, and false
 	 * otherwise.
 	 * 
-	 * The algorithm is to compute the intersection of the set of projects configs that
-	 * have changed since the last build, and the set of projects configs this builder
+	 * The algorithm is to compute the intersection of the set of build configs that
+	 * have changed since the last build, and the set of build configs this builder
 	 * cares about.  This is an optimization, under the assumption that computing
 	 * the forward delta once (not the resource delta) is more efficient than
 	 * computing project deltas and invoking builders for projects that haven't
@@ -1017,7 +1019,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Sets the builder infos for the given project config.  The builder infos are
+	 * Sets the builder infos for the given build config.  The builder infos are
 	 * an ArrayList of BuilderPersistentInfo.
 	 * The list includes entries for all builders that are
 	 * in the builder spec, and that have a last built state, even if they 

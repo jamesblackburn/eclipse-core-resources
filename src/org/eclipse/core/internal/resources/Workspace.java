@@ -241,7 +241,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			IBuildConfiguration py = (IBuildConfiguration) y;
 			int cmp = py.getProject().getName().compareTo(px.getProject().getName());
 			if (cmp == 0)
-				cmp = py.getConfigurationId().compareTo(px.getConfigurationId());
+				cmp = py.getId().compareTo(px.getId());
 			return cmp;
 		}
 	}
@@ -408,7 +408,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			ArrayList configs = new ArrayList();
 			IProject[] prjs = getRoot().getProjects();
 			for (int i = 0; i < prjs.length; i++)
-				configs.addAll(Arrays.asList(prjs[i].getBuildConfigurations()));
+				if (prjs[i].isAccessible())
+					configs.addAll(Arrays.asList(prjs[i].getBuildConfigurations()));
 			buildInternal((IBuildConfiguration[])configs.toArray(new IBuildConfiguration[configs.size()]), new IBuildConfiguration[0], trigger, monitor);			
 		} else
 			buildInternal(getBuildOrder(), new IBuildConfiguration[0], trigger, monitor);
@@ -421,11 +422,9 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 */
 	private void recursivelyAddBuildConfigs(Collection/*<IBuildConfiguration>*/ configs, IBuildConfiguration config) {
 		try {
-			IBuildConfiguration[] referenced = config.getProject().getReferencedBuildConfigurations(config);
+			IBuildConfiguration[] referenced = config.getProject().getReferencedBuildConfigurations(config, false);
 			for (int i = 0; i < referenced.length; i++) {
 				if (configs.contains(referenced[i]))
-					continue;
-				if (!referenced[i].getProject().isAccessible() || !referenced[i].getProject().hasBuildConfiguration(referenced[i]))
 					continue;
 				configs.add(referenced[i]);
 				recursivelyAddBuildConfigs(configs, referenced[i]);
@@ -449,6 +448,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			// Check project + build configuration are accessible.
 			if (!configs[i].getProject().isAccessible() || !configs[i].getProject().hasBuildConfiguration(configs[i]))
 				continue;
+			refsList.add(configs[i]);
 			// Find transitive closure of referenced project buildConfigs
 			if (buildReferences)
 				recursivelyAddBuildConfigs(refsList, configs[i]);
@@ -708,16 +708,12 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					// Add all referenced buildConfigs from the current configuration
 					// (it is guaranteed to be accessible as it was pushed onto the stack)
 					Project subProject = (Project) buildConfiguration.getProject();
-					IBuildConfiguration[] refs = subProject.internalGetReferencedBuildConfigurations(buildConfiguration);
+					IBuildConfiguration[] refs = subProject.internalGetReferencedBuildConfigurations(buildConfiguration, false);
 					for (int j = 0; j < refs.length; j++) {
 						IBuildConfiguration ref = refs[j];
 
 						// Ignore self references and references to projects that are not accessible
-						if (!ref.getProject().isAccessible() || ref.equals(buildConfiguration))
-							continue;
-
-						// Ignore buildConfigs that do not exist
-						if (!((Project) ref.getProject()).internalHasBuildConfig(ref))
+						if (ref.equals(buildConfiguration))
 							continue;
 
 						// Add the referenced accessible configuration
@@ -779,16 +775,12 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			for (int j = 0; j < configs.length; j++) {
 				IBuildConfiguration config = configs[j];
 				allAccessibleBuildConfigurations.add(config);
-				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigurations(config);
+				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigurations(config, false);
 				for (int k = 0; k < refs.length; k++) {
 					IBuildConfiguration ref = refs[k];
 
-					// Ignore self references and references to projects that are not accessible
-					if (!ref.getProject().isAccessible() || ref.equals(config))
-						continue;
-
-					// Ignore buildConfigs that do not exist
-					if (!((Project) ref.getProject()).internalHasBuildConfig(ref))
+					// Ignore self references
+					if (ref.equals(config))
 						continue;
 
 					// Add the reference to the set of reachable configs + add an edge
@@ -1549,7 +1541,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * workspace.
 	 * <p>
 	 * The build configuration order is based on information specified in the workspace
-	 * description. The project buildConfigs are built in the order specified by
+	 * description. The project build configs are built in the order specified by
 	 * <code>IWorkspaceDescription.getBuildOrder</code>; closed or non-existent
 	 * projects are ignored and not included in the result. If any open projects are
 	 * not specified in this order, they are appended to the end of the build order
@@ -2469,15 +2461,14 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			markerManager.startup(null);
 			synchronizer = new Synchronizer(this);
 			refreshManager = new RefreshManager(this);
-			// Startup property manager before save manager as it's needed for active build configuration
-			propertyManager = ResourcesCompatibilityHelper.createPropertyManager();
-			propertyManager.startup(monitor);
 			saveManager = new SaveManager(this);
 			saveManager.startup(null);
 			//must start after save manager, because (read) access to tree is needed
 			refreshManager.startup(null);
 			aliasManager = new AliasManager(this);
 			aliasManager.startup(null);
+			propertyManager = ResourcesCompatibilityHelper.createPropertyManager();
+			propertyManager.startup(monitor);
 			charsetManager = new CharsetManager(this);
 			charsetManager.startup(null);
 			contentDescriptionManager = new ContentDescriptionManager();

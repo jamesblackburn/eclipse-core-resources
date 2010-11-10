@@ -40,7 +40,7 @@ public class BuildConfiguration implements IBuildConfiguration {
 	}
 
 	public BuildConfiguration(IBuildConfiguration config, IProject project) {
-		this(project, config.getConfigurationId(), config.getName());
+		this(project, config.getId(), config.getName());
 	}
 
 	public BuildConfiguration(IProject project, String configurationId) {
@@ -65,7 +65,7 @@ public class BuildConfiguration implements IBuildConfiguration {
 	 * (non-Javadoc)
 	 * @see IBuildConfiguration#getConfigurationId()
 	 */
-	public String getConfigurationId() {
+	public String getId() {
 		return id;
 	}
 
@@ -122,6 +122,20 @@ public class BuildConfiguration implements IBuildConfiguration {
 		} else if (!project.equals(other.project))
 			return false;
 		return true;
+	}
+
+	/**
+	 * Method to test full equality of all fields, including
+	 * metadata such as {@link #name}.
+	 * @param other
+	 * @return boolean indicating other is identical to this
+	 */
+	boolean fullEquals(BuildConfiguration other) {
+		if (!equals(other))
+			return false;
+		if (name == null)
+			return other.name == null;
+		return name.equals(other.name);
 	}
 
 	/*

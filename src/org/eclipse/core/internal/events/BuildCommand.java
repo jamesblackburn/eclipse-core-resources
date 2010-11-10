@@ -23,7 +23,7 @@ import org.eclipse.core.runtime.*;
 /**
  * The concrete implementation of <tt>ICommand</tt>.  This object
  * stores information about a particular type of builder.
- * 
+ *
  *  If the builder has been instantiated, a reference to the builder is held.
  *  If the builder supports multiple build configurations, a reference to the
  *  builder for each configuration is held.
@@ -51,7 +51,6 @@ public class BuildCommand extends ModelObject implements ICommand {
 	private static final int ALL_TRIGGERS = MASK_AUTO | MASK_CLEAN | MASK_FULL | MASK_INCREMENTAL;
 
 	protected HashMap arguments = new HashMap(0);
-
 
 	/** Have we checked the supports configurations flag */
 	private boolean supportsConfigurationsCalculated;

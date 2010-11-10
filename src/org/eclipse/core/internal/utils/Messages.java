@@ -11,7 +11,6 @@
  *     Serge Beauchamp (Freescale Semiconductor) - [229633] Group and Project Path Variable Support
  * Francis Lynch (Wind River) - [301563] Save and load tree snapshots
  * Martin Oberhuber (Wind River) - [306575] Save snapshot location with project
- * Broadcom Corporation - build configurations and references
  *******************************************************************************/
 package org.eclipse.core.internal.utils;
 
@@ -141,8 +140,6 @@ public class Messages extends NLS {
 	public static String projRead_notProjectDescription;
 	public static String projRead_whichKey;
 	public static String projRead_whichValue;
-	public static String projRead_missingReferenceProjectName;
-	public static String projRead_missingReferenceBuildConfigId;
 	
 	public static String properties_couldNotClose;
 	public static String properties_qualifierIsNull;

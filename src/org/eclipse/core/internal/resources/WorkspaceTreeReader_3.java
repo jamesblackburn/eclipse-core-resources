@@ -76,7 +76,6 @@ public class WorkspaceTreeReader_3 extends WorkspaceTreeReader_2 {
 
 			// Read the version 3 information: per-configuration trees if available
 			if (input.available() > 0 && input.readInt() == ICoreConstants.WORKSPACE_TREE_VERSION_3) {
-
 				buildersToBeLinked.clear();
 				readBuildersPersistentInfo(null, input, buildersToBeLinked, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 				linkBuildersToTrees(buildersToBeLinked, trees, 0, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));

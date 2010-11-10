@@ -231,6 +231,7 @@ public interface IWorkspace extends IAdaptable {
 	 * 
 	 * @see IWorkspace#build(IBuildConfiguration[], int, boolean, IProgressMonitor)
 	 * @see IProject#build(int, IProgressMonitor)
+	 * @see #computeProjectOrder(IProject[])
 	 * @see IncrementalProjectBuilder#FULL_BUILD
 	 * @see IncrementalProjectBuilder#INCREMENTAL_BUILD
 	 * @see IncrementalProjectBuilder#CLEAN_BUILD
@@ -256,6 +257,7 @@ public interface IWorkspace extends IAdaptable {
 	 * This method is long-running; progress and cancellation are provided by
 	 * the given progress monitor.
 	 * </p>
+	 * @param buildConfigs array of configurations to build
 	 * @param kind the kind of build being requested. Valid values are
 	 *	<ul>
 	 * <li>{@link IncrementalProjectBuilder#FULL_BUILD}- indicates a full build.</li>
@@ -280,7 +282,7 @@ public interface IWorkspace extends IAdaptable {
 	 * @see IResourceRuleFactory#buildRule()
 	 * @since 3.7
 	 */
-	public void build(IBuildConfiguration buildConfigs[], int kind, boolean buildReferences, IProgressMonitor monitor) throws CoreException;
+	public void build(IBuildConfiguration[] buildConfigs, int kind, boolean buildReferences, IProgressMonitor monitor) throws CoreException;
 
 	/**
 	 * Checkpoints the operation currently in progress. This method is used in
@@ -367,8 +369,8 @@ public interface IWorkspace extends IAdaptable {
 		}
 
 		/**
-		 * A list of projects ordered so as to honor the project reference and
-		 * build configuration reference relationships between these projects
+		 * A list of projects ordered so as to honor the project reference, and
+		 * build configuration reference, relationships between these projects
 		 * wherever possible.
 		 * The elements are a subset of the ones passed as the <code>projects</code>
 		 * parameter to <code>IWorkspace.computeProjectOrder</code>, where
@@ -961,19 +963,19 @@ public interface IWorkspace extends IAdaptable {
 	public IStatus move(IResource[] resources, IPath destination, int updateFlags, IProgressMonitor monitor) throws CoreException;
 
 	/**
-	 * Returns a new build configuration for this project, with the given id.  
+	 * Returns a new build configuration for the project, with the given id.  
 	 * The id is an implementation specific unique id for the build configuration in the
-	 * project.
+	 * project.  The project need not exist.
 	 *<p>
-	 * Note that the new build configuration does not become part of a project
+	 * The new build configuration does not become part of a project
 	 * description until it is installed using
-	 * {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}
+	 * {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}.
 	 *</p>
 	 *<p>
 	 * This API can be used to create IBuildConfigurations that will be used as references
 	 * to IBuildConfigurations in other projects.  These references are set using
-	 * {@link IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])}
-	 * and may have a <code>null</code> configuration Id which resolves to the referenced
+	 * {@link IProjectDescription#setBuildConfigReferences(String, IBuildConfiguration[])}
+	 * and may have a <code>null</code> configuration Id which will resolve to the referenced
 	 * project's active configuration when the configuration reference is used.
 	 *</p>
 	 *
@@ -982,7 +984,7 @@ public interface IWorkspace extends IAdaptable {
 	 * @param configurationName an option human-readable name for the configuration
 	 * @return a build configuration
 	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
-	 * @see IProjectDescription#setDynamicConfigReferences(String, IBuildConfiguration[])
+	 * @see IProjectDescription#setBuildConfigReferences(String, IBuildConfiguration[])
 	 * @see IBuildConfiguration
 	 * @since 3.7
 	 */
