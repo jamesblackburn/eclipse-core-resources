@@ -518,6 +518,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 			result = initializeBuilder(command.getBuilderName(), buildConfiguration, buildSpecIndex, status);
 			((BuildCommand) command).addBuilder(buildConfiguration, (IncrementalProjectBuilder) result);
 			result.setCommand(command);
+			result.setBuildConfiguration(buildConfiguration);
 			result.startupOnInitialize();
 		}
 		// Ensure the build configuration stays fresh for non-config aware builders

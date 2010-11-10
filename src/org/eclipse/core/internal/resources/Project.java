@@ -15,12 +15,7 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import java.util.ArrayList;
-
-import org.eclipse.core.resources.IResourceStatus;
-
-import org.eclipse.core.resources.IBuildConfiguration;
-import org.eclipse.core.runtime.CoreException;
+import java.util.LinkedHashSet;
 
 import java.net.URI;
 import java.util.*;
@@ -509,7 +504,7 @@ public class Project extends Container implements IProject {
 	/* (non-Javadoc)
 	 * @see IProject#getReferencedBuildConfigurations(IBuildConfiguration)
 	 */
-	public IBuildConfiguration[] getReferencedBuildConfigurations(IBuildConfiguration config) throws CoreException {
+	public IBuildConfiguration[] getReferencedBuildConfigurations(IBuildConfiguration config, boolean includeMissing) throws CoreException {
 		ResourceInfo info = getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		ProjectDescription description = ((ProjectInfo) info).getDescription();
@@ -518,7 +513,7 @@ public class Project extends Container implements IProject {
 			checkAccessible(NULL_FLAG);
 		if (!hasBuildConfiguration(config))
 			throw new ResourceException(IResourceStatus.BUILD_CONFIGURATION_NOT_FOUND, getFullPath(), null, null);
-		return internalGetReferencedBuildConfigurations(config);
+		return internalGetReferencedBuildConfigurations(config, includeMissing);
 	}
 
 	/* (non-Javadoc)
@@ -842,18 +837,22 @@ public class Project extends Container implements IProject {
 	 * @param config to find references for
 	 * @return IBuildConfiguration[] of referenced configurations; never null.
 	 */
-	public IBuildConfiguration[] internalGetReferencedBuildConfigurations(IBuildConfiguration config) {
+	public IBuildConfiguration[] internalGetReferencedBuildConfigurations(IBuildConfiguration config, boolean includeMissing) {
 		ProjectDescription description = internalGetDescription();
 		IBuildConfiguration[] refs = description.getAllBuildConfigReferences(config.getId(), false);
-		ArrayList configs = new ArrayList(refs.length);
+		Collection configs = new LinkedHashSet(refs.length);
 		for (int i = 0; i < refs.length; i++) {
 			try {
-				configs.add(((BuildConfiguration)refs[i]).getBuildConfiguration());
+				configs.add((((BuildConfiguration)refs[i]).getBuildConfiguration()));
 			} catch (CoreException e) {
-				// Ignore non-existent configuration reference
+				// The project isn't accessible, or the build configuration doesn't exist
+				// on the project.  If requested return the full set of build references which may
+				// be useful to API consumers
+				if (includeMissing)
+					configs.add(refs[i]);
 			}
 		}
-		return (IBuildConfiguration[]) configs.toArray(new IBuildConfiguration[configs.size()]);
+		return (IBuildConfiguration[])configs.toArray(new IBuildConfiguration[configs.size()]);
 	}
 
 	boolean internalHasBuildConfig(IBuildConfiguration config) {

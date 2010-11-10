@@ -422,11 +422,9 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 */
 	private void recursivelyAddBuildConfigs(Collection/*<IBuildConfiguration>*/ configs, IBuildConfiguration config) {
 		try {
-			IBuildConfiguration[] referenced = config.getProject().getReferencedBuildConfigurations(config);
+			IBuildConfiguration[] referenced = config.getProject().getReferencedBuildConfigurations(config, false);
 			for (int i = 0; i < referenced.length; i++) {
 				if (configs.contains(referenced[i]))
-					continue;
-				if (!referenced[i].getProject().isAccessible() || !referenced[i].getProject().hasBuildConfiguration(referenced[i]))
 					continue;
 				configs.add(referenced[i]);
 				recursivelyAddBuildConfigs(configs, referenced[i]);
@@ -710,16 +708,12 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					// Add all referenced buildConfigs from the current configuration
 					// (it is guaranteed to be accessible as it was pushed onto the stack)
 					Project subProject = (Project) buildConfiguration.getProject();
-					IBuildConfiguration[] refs = subProject.internalGetReferencedBuildConfigurations(buildConfiguration);
+					IBuildConfiguration[] refs = subProject.internalGetReferencedBuildConfigurations(buildConfiguration, false);
 					for (int j = 0; j < refs.length; j++) {
 						IBuildConfiguration ref = refs[j];
 
 						// Ignore self references and references to projects that are not accessible
-						if (!ref.getProject().isAccessible() || ref.equals(buildConfiguration))
-							continue;
-
-						// Ignore buildConfigs that do not exist
-						if (!((Project) ref.getProject()).internalHasBuildConfig(ref))
+						if (ref.equals(buildConfiguration))
 							continue;
 
 						// Add the referenced accessible configuration
@@ -781,16 +775,12 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			for (int j = 0; j < configs.length; j++) {
 				IBuildConfiguration config = configs[j];
 				allAccessibleBuildConfigurations.add(config);
-				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigurations(config);
+				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigurations(config, false);
 				for (int k = 0; k < refs.length; k++) {
 					IBuildConfiguration ref = refs[k];
 
-					// Ignore self references and references to projects that are not accessible
-					if (!ref.getProject().isAccessible() || ref.equals(config))
-						continue;
-
-					// Ignore buildConfigs that do not exist
-					if (!((Project) ref.getProject()).internalHasBuildConfig(ref))
+					// Ignore self references
+					if (ref.equals(config))
 						continue;
 
 					// Add the reference to the set of reachable configs + add an edge
