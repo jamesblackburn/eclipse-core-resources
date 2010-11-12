@@ -321,8 +321,6 @@ public class LocalMetaArea implements ICoreConstants {
 	 * since 3.7:
 	 *    int - number of build configurations
 	 *      UTF - configuration id in order
-	 *      bool - hasName
-	 *      UTF - configuration name
 	 *      ... repeated for N configurations
 	 *    UTF - active build configuration name
 	 *    int - number of build configurations with refs
@@ -374,10 +372,7 @@ public class LocalMetaArea implements ICoreConstants {
 				IBuildConfiguration[] configs = new IBuildConfiguration[dataIn.readInt()];
 				for (int i = 0; i < configs.length; i++) {
 					String configId = dataIn.readUTF();
-					if (dataIn.readBoolean())
-						configs[i] = new BuildConfiguration(target, configId, dataIn.readUTF());
-					else
-						configs[i] = new BuildConfiguration(target, configId);
+					configs[i] = new BuildConfiguration(target, configId);
 				}
 				if (configs.length > 0)
 					// In the future we may decide this is better stored in the 
@@ -469,12 +464,6 @@ public class LocalMetaArea implements ICoreConstants {
 				dataOut.writeInt(buildConfigs.length);
 				for (int i = 0; i < buildConfigs.length; i++) {
 					dataOut.writeUTF(buildConfigs[i].getId());
-					if (buildConfigs[i].getName() == null) {
-						dataOut.writeBoolean(false);
-					} else {
-						dataOut.writeBoolean(true);
-						dataOut.writeUTF(buildConfigs[i].getName());
-					}
 				}
 				// Write active configuration id
 				dataOut.writeUTF(desc.getActiveBuildConfigurationId());
