@@ -1783,20 +1783,20 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 
 	/**
 	 * Discovers the trees which need to be saved for the passed in project's builders.
-	 * In a version2 workspace, only one tree is saved per builder.  With version3, one tree may 
-	 * be persisted per build configuration per multi-config builder.
+	 * In a pre-3.7 workspace, only one tree is saved per builder.  
+	 * Since 3.7 one tree may be persisted per build configuration per multi-config builder.
 	 * 
 	 * We still provide one tree per builder first so the workspace can be opened in an older Eclipse.
 	 * Newer eclipses will be able to load the additional per-configuration trees.
 	 * @param project project to fetch builder trees for
 	 * @param trees list of trees to be persisted
-	 * @param builderInfosVersion2 list of builder infos; one per builder 
-	 * @param configIdsVersion2 configuration id persisted in builderInfosVersion2
-	 * @param builderInfosVersion3 remaining trees to be persisted for other configurations
-	 * @param configIdsVersion3 configuration ids of the remaining per-configuration trees
+	 * @param builderInfos list of builder infos; one per builder 
+	 * @param configIds configuration id persisted for builder infos above
+	 * @param additionalBuilderInfos remaining trees to be persisted for other configurations
+	 * @param additionalConfigIds configuration ids of the remaining per-configuration trees
 	 * @throws CoreException
 	 */
-	private void getTreesToSave(IProject project, List trees, List builderInfosVersion2, List configIdsVersion2, List builderInfosVersion3, List configIdsVersion3) throws CoreException {
+	private void getTreesToSave(IProject project, List trees, List builderInfos, List configIds, List additionalBuilderInfos, List additionalConfigIds) throws CoreException {
 		if (project.isOpen()) {
 			String activeConfigId = project.getActiveBuildConfiguration().getId();
 			List infos = workspace.getBuildManager().createBuildersPersistentInfo(project);
@@ -1814,11 +1814,11 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 					if (configId.equals(activeConfigId)) {
 						// Serializes the active configurations's build tree 
 						// TODO could probably do better by serializing the 'oldest' tree
-						builderInfosVersion2.add(info);
-						configIdsVersion2.add(configId);
+						builderInfos.add(info);
+						configIds.add(configId);
 					} else {
-						builderInfosVersion3.add(info);
-						configIdsVersion3.add(configId);
+						additionalBuilderInfos.add(info);
+						additionalConfigIds.add(configId);
 					}
 					// Add the builder's tree
 					ElementTree tree = info.getLastBuiltTree();
@@ -1838,13 +1838,11 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 * <li> A list of plugin info </li>
 	 * <li> Builder info for all the builders for each project's active build config </li>
 	 * <li> Workspace trees for all plugins and builders </li>
-	 * <li> A version 3 marker </li>
+	 * <li> And since 3.7: </li>
 	 * <li> Builder info for all the builders of all the other project's buildConfigs </li>
 	 * <li> The names of the buildConfigs for each of the builders </li>
 	 * </ul>
-	 * This format is designed to work with WorkspaceTreeReader versions 2 and 3.
-	 * The first two items constitute a version 2 file, and the additional information
-	 * is read as part of version 3.
+	 * This format is designed to work with WorkspaceTreeReader versions 2.
 	 * 
 	 * @see WorkspaceTreeReader_2
 	 */
@@ -1877,15 +1875,15 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 
 				// Get the the builder info and configuration ids, and add all the associated workspace trees in the correct order
 				IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
-				List builderInfosVersion2 = new ArrayList(projects.length * 2);
-				List configIdsVersion2 = new ArrayList(projects.length);
-				List builderInfosVersion3 = new ArrayList(projects.length * 2);
-				List configIdsVersion3 = new ArrayList(projects.length);
+				List builderInfos = new ArrayList(projects.length * 2);
+				List configIds = new ArrayList(projects.length);
+				List additionalBuilderInfos = new ArrayList(projects.length * 2);
+				List additionalConfigIds = new ArrayList(projects.length);
 				for (int i = 0; i < projects.length; i++)
-					getTreesToSave(projects[i], trees, builderInfosVersion2, configIdsVersion2, builderInfosVersion3, configIdsVersion3);
+					getTreesToSave(projects[i], trees, builderInfos, configIds, additionalBuilderInfos, additionalConfigIds);
 
 				// Save the version 2 builders info
-				writeBuilderPersistentInfo(output, builderInfosVersion2, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
+				writeBuilderPersistentInfo(output, builderInfos, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
 
 				// add the current tree in the list as the last tree in the chain
 				trees.add(current);
@@ -1896,13 +1894,13 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				writer.writeDeltaChain(treesToSave, Path.ROOT, ElementTreeWriter.D_INFINITE, output, ResourceComparator.getSaveComparator());
 				monitor.worked(Policy.totalWork * 40 / 100);
 
-				// Save the version 3 builders info
-				writeBuilderPersistentInfo(output, builderInfosVersion3, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
+				// Since 3.7: Save the additional builders info
+				writeBuilderPersistentInfo(output, additionalBuilderInfos, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
 
 				// Save the configuration ids for the builders in the order they were saved
-				for (Iterator it = configIdsVersion2.iterator(); it.hasNext();)
+				for (Iterator it = configIds.iterator(); it.hasNext();)
 					output.writeUTF((String) it.next());
-				for (Iterator it = configIdsVersion3.iterator(); it.hasNext();)
+				for (Iterator it = additionalConfigIds.iterator(); it.hasNext();)
 					output.writeUTF((String) it.next());
 			} finally {
 				if (!wasImmutable)
@@ -1921,14 +1919,12 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 * <ul>
 	 * <li> Builder info for all the builders for the project's active build configuration </li>
 	 * <li> Workspace trees for all the project's builders </li>
-	 * <li> A version 3 marker </li>
+	 * <li> Since 3.7: </li>
 	 * <li> Builder info for all the builders of all the other project's buildConfigs </li>
 	 * <li> Name of the project's buildConfigs </li>
 	 * </ul>
-	 * This format is designed to work with WorkspaceTreeReader versions 2 and 3.
-	 * The first two items constitute a version 2 file, and the additional information
-	 * is read as part of version 3.
-	 * 
+	 * This format is designed to work with WorkspaceTreeReader versions 2.
+	 *
 	 * @throws IOException if anything went wrong during save. Attempts to close
 	 * the provided stream at all costs.
 	 * @see WorkspaceTreeReader_2
@@ -1947,14 +1943,14 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				monitor.worked(Policy.totalWork * 10 / 100);
 
 				// Get the the builder info and configuration ids, and add all the associated workspace trees in the correct order
-				List configIdsVersion2 = new ArrayList(5);
-				List builderInfosVersion2 = new ArrayList(5);
-				List configIdsVersion3 = new ArrayList(5);
-				List builderInfosVersion3 = new ArrayList(5);
-				getTreesToSave(project, trees, builderInfosVersion2, configIdsVersion2, builderInfosVersion3, configIdsVersion3);
+				List configIds = new ArrayList(5);
+				List builderInfos = new ArrayList(5);
+				List additionalConfigIds = new ArrayList(5);
+				List additionalBuilderInfos = new ArrayList(5);
+				getTreesToSave(project, trees, builderInfos, configIds, additionalBuilderInfos, additionalConfigIds);
 
 				// Save the version 2 builders info
-				writeBuilderPersistentInfo(output, builderInfosVersion2, Policy.subMonitorFor(monitor, Policy.totalWork * 20 / 100));
+				writeBuilderPersistentInfo(output, builderInfos, Policy.subMonitorFor(monitor, Policy.totalWork * 20 / 100));
 
 				// Add the current tree in the list as the last tree in the chain
 				trees.add(current);
@@ -1965,13 +1961,13 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				writer.writeDeltaChain(treesToSave, project.getFullPath(), ElementTreeWriter.D_INFINITE, output, ResourceComparator.getSaveComparator());
 				monitor.worked(Policy.totalWork * 50 / 100);
 
-				// Save the version 3 builders info and get the workspace trees associated with those builders
-				writeBuilderPersistentInfo(output, builderInfosVersion3, Policy.subMonitorFor(monitor, Policy.totalWork * 20 / 100));
+				// Since 3.7: Save the builders info and get the workspace trees associated with those builders
+				writeBuilderPersistentInfo(output, additionalBuilderInfos, Policy.subMonitorFor(monitor, Policy.totalWork * 20 / 100));
 
 				// Save configuration ids for the builders in the order they were saved
-				for (Iterator it = configIdsVersion2.iterator(); it.hasNext();)
+				for (Iterator it = configIds.iterator(); it.hasNext();)
 					output.writeUTF((String) it.next());
-				for (Iterator it = configIdsVersion3.iterator(); it.hasNext();)
+				for (Iterator it = additionalConfigIds.iterator(); it.hasNext();)
 					output.writeUTF((String) it.next());
 			} finally {
 				if (output != null)

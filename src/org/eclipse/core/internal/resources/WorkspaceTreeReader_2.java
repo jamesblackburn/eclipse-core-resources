@@ -108,7 +108,7 @@ public class WorkspaceTreeReader_2 extends WorkspaceTreeReader_1 {
 			linkPluginsSavedStateToTrees(pluginsToBeLinked, trees, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 			linkBuildersToTrees(buildersToBeLinked, trees, pluginsToBeLinked.size(), Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 
-			// Read the version 3 information: per-configuration trees if available
+			// Since 3.7: Read the per-configuration trees if available
 			if (input.available() > 0) {
 				buildersToBeLinked.clear();
 				readBuildersPersistentInfo(null, input, buildersToBeLinked, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
@@ -151,7 +151,7 @@ public class WorkspaceTreeReader_2 extends WorkspaceTreeReader_1 {
 			ElementTree[] trees = readTrees(project.getFullPath(), input, Policy.subMonitorFor(monitor, 8));
 			linkBuildersToTrees(buildersToBeLinked, trees, 0, Policy.subMonitorFor(monitor, 1));
 
-			// Read the version 3 information if available
+			// Since 3.7: Read the additional builder information
 			if (input.available() > 0) {
 
 				List infos = new ArrayList(5);
@@ -174,7 +174,7 @@ public class WorkspaceTreeReader_2 extends WorkspaceTreeReader_1 {
 	}
 
 	/**
-	 * This implementation allows version 2 and version 3 information to be loaded in separate passes.
+	 * This implementation allows pre-3.7 version 2 and post-3.7 version 2 information to be loaded in separate passes.
 	 * Links trees with the given builders, but does not add them to the projects.
 	 * Overrides {@link WorkspaceTreeReader_1#linkBuildersToTrees(List, ElementTree[], int, IProgressMonitor)}
 	 */
