@@ -1847,7 +1847,6 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 * is read as part of version 3.
 	 * 
 	 * @see WorkspaceTreeReader_2
-	 * @see WorkspaceTreeReader_3
 	 */
 	protected void writeTree(Map statesToSave, DataOutputStream output, IProgressMonitor monitor) throws IOException, CoreException {
 		monitor = Policy.monitorFor(monitor);
@@ -1897,9 +1896,6 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				writer.writeDeltaChain(treesToSave, Path.ROOT, ElementTreeWriter.D_INFINITE, output, ResourceComparator.getSaveComparator());
 				monitor.worked(Policy.totalWork * 40 / 100);
 
-				// Start of version 3 information
-				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
-
 				// Save the version 3 builders info
 				writeBuilderPersistentInfo(output, builderInfosVersion3, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
 
@@ -1936,7 +1932,6 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	 * @throws IOException if anything went wrong during save. Attempts to close
 	 * the provided stream at all costs.
 	 * @see WorkspaceTreeReader_2
-	 * @see WorkspaceTreeReader_3
 	 */
 	protected void writeTree(Project project, DataOutputStream output, IProgressMonitor monitor) throws IOException, CoreException {
 		monitor = Policy.monitorFor(monitor);
@@ -1969,9 +1964,6 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				ElementTree[] treesToSave = (ElementTree[]) trees.toArray(new ElementTree[trees.size()]);
 				writer.writeDeltaChain(treesToSave, project.getFullPath(), ElementTreeWriter.D_INFINITE, output, ResourceComparator.getSaveComparator());
 				monitor.worked(Policy.totalWork * 50 / 100);
-
-				// Start of version 3 information
-				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
 
 				// Save the version 3 builders info and get the workspace trees associated with those builders
 				writeBuilderPersistentInfo(output, builderInfosVersion3, Policy.subMonitorFor(monitor, Policy.totalWork * 20 / 100));
