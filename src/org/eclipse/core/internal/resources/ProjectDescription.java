@@ -436,21 +436,6 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	}
 
 	/**
-	 * Helper method to discover whether the two arrays of build configurations have changes.
-	 * Considers the build configuration metadata not usually considered under equals 
-	 * @return boolean indicating if the two arrays are different.
-	 */
-	private static boolean buildConfigsHaveChanges(IBuildConfiguration[] bc1, IBuildConfiguration[] bc2) {
-		if (bc1.length != bc2.length)
-			return true;
-		// Build configuration changes ; consider name metadata changes
-		for (int i = 0; i < bc1.length; i++)
-			if (!((BuildConfiguration)bc1[i]).fullEquals(((BuildConfiguration)bc2[i])))
-				return true;
-		return false;
-	}
-
-	/**
 	 * Helper method to compare two maps of Configuration ID -> IBuildConfigurationReference[]
 	 * @return boolean indicating if there are differences between the two maps
 	 */
@@ -499,7 +484,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		// Build Configuration state
 		if (!activeConfigurationId.equals(description.activeConfigurationId))
 			return true;
-		if (buildConfigsHaveChanges(buildConfigs, description.buildConfigs))
+		if (!Arrays.equals(buildConfigs, description.buildConfigs))
 			return true;
 		// Configuration level references
 		if (configRefsHaveChanges(dynamicConfigRefs, description.dynamicConfigRefs))
@@ -638,8 +623,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 				buildConfigIds.put(config.getId(), config);
 			}
 
-			if (buildConfigIds.isEmpty() ||
-					(buildConfigIds.size() == 1 && ((BuildConfiguration)(buildConfigIds.values().iterator().next())).isDefault()))
+			if (buildConfigIds.size() == 1 && ((BuildConfiguration)(buildConfigIds.values().iterator().next())).isDefault())
 				buildConfigs = EMPTY_BUILD_CONFIGS;
 			else
 				buildConfigs = (IBuildConfiguration[])buildConfigIds.values().toArray(new IBuildConfiguration[buildConfigIds.size()]);
@@ -912,7 +896,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 			changed = true;
 			setDynamicReferences(description.dynamicRefs);
 		}
-		if (buildConfigsHaveChanges(buildConfigs, description.buildConfigs)) {
+		if (!Arrays.equals(buildConfigs, description.buildConfigs)) {
 			changed = true;
 			setBuildConfigurations(description.buildConfigs);
 		}

@@ -188,16 +188,16 @@ public interface IProjectDescription {
 	 * Sets the build configurations for the described project.
 	 * <p>
 	 * The passed in {@link IBuildConfiguration}s must all have a non-null configuration Id.
-	 * Before they are set, duplicates are removed from the input.
+	 * Before they are set, duplicates are removed.
 	 * <p>
 	 * All projects have one default build configuration, and it is impossible to configure
-	 * the project with no build configurations.
+	 * the project to have no build configurations.
 	 * If the input is null or an empty list, the current configurations are removed,
 	 * and a default build configuration is (re-)added.
 	 * <p>
 	 * Users must call {@link IProject#setDescription(IProjectDescription, int, IProgressMonitor)}
 	 * before changes made to this description take effect.
-	 * 
+	 *
 	 * @param configs the configurations to set for the described project
 	 * @see IProject#getActiveBuildConfiguration()
 	 * @see IProject#getBuildConfigurations()

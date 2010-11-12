@@ -24,7 +24,7 @@ package org.eclipse.core.resources;
  *</p>
  *<p>
  * Build configurations are created with:
- * {@link IWorkspace#newBuildConfiguration(String, String, String)}, and
+ * {@link IWorkspace#newBuildConfiguration(String, String)}, and
  * set on a project using {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}.
  * Build configurations set on Projects must have unique non-null configuration Ids.
  *</p>
@@ -45,7 +45,7 @@ package org.eclipse.core.resources;
  * by the reference graph.
  *</p>
  *
- * @see IWorkspace#newBuildConfiguration(String, String, String)
+ * @see IWorkspace#newBuildConfiguration(String, String)
  * @see IProjectDescription#setActiveBuildConfiguration(String)
  * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
  * @see IProjectDescription#setBuildConfigReferences(String, IBuildConfiguration[])
@@ -77,10 +77,5 @@ public interface IBuildConfiguration {
 	 * configuration
 	 */
 	public String getId();
-
-	/**
-	 * @return the human readable name of this configuration; may be null
-	 */
-	public String getName();
 
 }

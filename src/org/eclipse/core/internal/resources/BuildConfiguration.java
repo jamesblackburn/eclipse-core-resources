@@ -32,15 +32,13 @@ public class BuildConfiguration implements IBuildConfiguration {
 	private final IProject project;
 	/** Configuration id unique in the project */
 	private final String id;
-	/** Human readable name; optional */
-	private final String name;
 
 	public BuildConfiguration(String id) {
 		this(null, id, null);
 	}
 
 	public BuildConfiguration(IBuildConfiguration config, IProject project) {
-		this(project, config.getId(), config.getName());
+		this(project, config.getId());
 	}
 
 	public BuildConfiguration(IProject project, String configurationId) {
@@ -50,7 +48,6 @@ public class BuildConfiguration implements IBuildConfiguration {
 	public BuildConfiguration(IProject project, String configurationId, String name) {
 		this.project = project;
 		this.id = configurationId;
-		this.name = name;
 	}
 
 	/**
@@ -71,14 +68,6 @@ public class BuildConfiguration implements IBuildConfiguration {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildConfiguration#getName()
-	 */
-	public String getName() {
-		return name;
-	}
-
-	/*
-	 * (non-Javadoc)
 	 * @see IBuildConfiguration#getProject()
 	 */
 	public IProject getProject() {
@@ -93,8 +82,6 @@ public class BuildConfiguration implements IBuildConfiguration {
 	 */
 	public boolean isDefault() {
 		if (!DEFAULT_CONFIG_ID.equals(id))
-			return false;
-		if (name != null)
 			return false;
 		return true;
 	}
@@ -124,20 +111,6 @@ public class BuildConfiguration implements IBuildConfiguration {
 		return true;
 	}
 
-	/**
-	 * Method to test full equality of all fields, including
-	 * metadata such as {@link #name}.
-	 * @param other
-	 * @return boolean indicating other is identical to this
-	 */
-	boolean fullEquals(BuildConfiguration other) {
-		if (!equals(other))
-			return false;
-		if (name == null)
-			return other.name == null;
-		return name.equals(other.name);
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * @see java.lang.Object#hashCode()
@@ -161,8 +134,6 @@ public class BuildConfiguration implements IBuildConfiguration {
 		else
 			result.append("?"); //$NON-NLS-1$
 		result.append(";"); //$NON-NLS-1$
-		if (name != null)
-			result.append(name);
 		if (id != null)
 			result.append(" [").append(id).append(']'); //$NON-NLS-1$
 		else
