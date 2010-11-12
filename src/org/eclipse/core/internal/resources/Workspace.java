@@ -2102,10 +2102,10 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IWorkspace#newBuildConfiguration(java.lang.String, java.lang.String, java.lang.String)
+	 * @see org.eclipse.core.resources.IWorkspace#newBuildConfiguration(java.lang.String, java.lang.String)
 	 */
-	public IBuildConfiguration newBuildConfiguration(String projectName, String configurationId, String configurationName) {
-		return new BuildConfiguration(getRoot().getProject(projectName), configurationId, configurationName);
+	public IBuildConfiguration newBuildConfiguration(String projectName, String configurationId) {
+		return new BuildConfiguration(getRoot().getProject(projectName), configurationId);
 	}
 
 	/* (non-Javadoc)

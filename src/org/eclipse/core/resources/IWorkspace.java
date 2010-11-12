@@ -981,14 +981,13 @@ public interface IWorkspace extends IAdaptable {
 	 *
 	 * @param projectName the name of the project on which the configuration will exist
 	 * @param configurationId the application specific unique id of the configuration
-	 * @param configurationName an option human-readable name for the configuration
 	 * @return a build configuration
 	 * @see IProjectDescription#setBuildConfigurations(IBuildConfiguration[])
 	 * @see IProjectDescription#setBuildConfigReferences(String, IBuildConfiguration[])
 	 * @see IBuildConfiguration
 	 * @since 3.7
 	 */
-	public IBuildConfiguration newBuildConfiguration(String projectName, String configurationId, String configurationName);	
+	public IBuildConfiguration newBuildConfiguration(String projectName, String configurationId);
 
 	/**
 	 * Creates and returns a new project description for a project with the
