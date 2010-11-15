@@ -110,6 +110,15 @@ public class WorkspaceTreeReader_2 extends WorkspaceTreeReader_1 {
 
 			// Since 3.7: Read the per-configuration trees if available
 			if (input.available() > 0) {
+				
+				// HACK: Broadcom Fix for TLFP-2150.  Can be removed after 3.6-5 is released.
+				// We inserted a constant into the metadata stream which isn't present in the platform
+				input.mark(4);
+				if (input.readInt() != 67305987) {
+					input.reset();
+				}
+				// End HACK
+
 				buildersToBeLinked.clear();
 				readBuildersPersistentInfo(null, input, buildersToBeLinked, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 				linkBuildersToTrees(buildersToBeLinked, trees, 0, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
@@ -153,6 +162,14 @@ public class WorkspaceTreeReader_2 extends WorkspaceTreeReader_1 {
 
 			// Since 3.7: Read the additional builder information
 			if (input.available() > 0) {
+
+				// HACK: Broadcom Fix for TLFP-2150.  Can be removed after 3.6-5 is released.
+				// We inserted a constant into the metadata stream which isn't present in the platform
+				input.mark(4);
+				if (input.readInt() != 67305987) {
+					input.reset();
+				}
+				// End HACK
 
 				List infos = new ArrayList(5);
 				readBuildersPersistentInfo(project, input, infos, Policy.subMonitorFor(monitor, 1));
