@@ -50,8 +50,7 @@ public abstract class WorkspaceTreeReader {
 				w.renameProjectNode = renameProjectNode;
 				return w;
 			case ICoreConstants.WORKSPACE_TREE_VERSION_2 :
-			case ICoreConstants.WORKSPACE_TREE_VERSION_3 :
-				w = new WorkspaceTreeReader_3(workspace);
+				w = new WorkspaceTreeReader_2(workspace);
 				w.renameProjectNode = renameProjectNode;
 				return w;
 			default :
