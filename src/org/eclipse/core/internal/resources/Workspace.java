@@ -14,8 +14,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IBuildConfiguration;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -399,22 +397,6 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		notificationManager.broadcastChanges(tree, event, true);
 	}
 
-	/* (non-Javadoc)
-	 * @see IWorkspace#build(int, IProgressMonitor)
-	 */
-	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
-		// If this is a workspace level clean, clean everything...
-		if (trigger == IncrementalProjectBuilder.CLEAN_BUILD) {
-			ArrayList configs = new ArrayList();
-			IProject[] prjs = getRoot().getProjects();
-			for (int i = 0; i < prjs.length; i++)
-				if (prjs[i].isAccessible())
-					configs.addAll(Arrays.asList(prjs[i].getBuildConfigurations()));
-			buildInternal((IBuildConfiguration[])configs.toArray(new IBuildConfiguration[configs.size()]), new IBuildConfiguration[0], trigger, monitor);			
-		} else
-			buildInternal(getBuildOrder(), new IBuildConfiguration[0], trigger, monitor);
-	}
-
 	/**
 	 * Add all IBuildConfigurations reachable from config to the configs collection.
 	 * @param configs collection of configurations to extend
@@ -435,38 +417,30 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see IWorkspace#build(int, IProgressMonitor)
+	 */
+	public void build(int trigger, IProgressMonitor monitor) throws CoreException {
+		buildInternal(null, trigger, true, monitor);
+	}
+
 	/*
 	 * (non-Javadoc)
-	 * @see IWorkspace#build(IBuildConfiguration[], int, IProgressMonitor)
+	 * @see IWorkspace#build(IBuildConfiguration[], int, boolean, IProgressMonitor)
 	 */
 	public void build(IBuildConfiguration[] configs, int trigger, boolean buildReferences, IProgressMonitor monitor) throws CoreException {
 		if (configs.length == 0)
 			return;
-
-		Set refsList = new HashSet();
-		for (int i = 0 ; i < configs.length ; i++) {
-			// Check project + build configuration are accessible.
-			if (!configs[i].getProject().isAccessible() || !configs[i].getProject().hasBuildConfiguration(configs[i]))
-				continue;
-			refsList.add(configs[i]);
-			// Find transitive closure of referenced project buildConfigs
-			if (buildReferences)
-				recursivelyAddBuildConfigs(refsList, configs[i]);
-		}
-
-		// Order the referenced project buildConfigs
-		ProjectBuildConfigOrder order = computeProjectBuildConfigOrder((IBuildConfiguration[]) refsList.toArray(new IBuildConfiguration[refsList.size()]));
-
-		// Run the build
-		IBuildConfiguration[] finalOrder = new IBuildConfiguration[order.buildConfigurations.length];
-		System.arraycopy(order.buildConfigurations, 0, finalOrder, 0, order.buildConfigurations.length);
-		buildInternal(finalOrder, configs, trigger, monitor);
+		buildInternal(configs, trigger, buildReferences, monitor);
 	}
 
 	/**
-	 * Builds the given project buildConfigs in the order supplied.
+	 * Build the passed in configurations or the whole workspace.
+	 * @param configs to build or null for the whole workspace
+	 * @param trigger build trigger
+	 * @param buildReferences transitively build referenced build configurations
 	 */
-	private void buildInternal(IBuildConfiguration[] configs, IBuildConfiguration[] requestedConfigs, int trigger, IProgressMonitor monitor) throws CoreException {
+	private void buildInternal(IBuildConfiguration[] configs, int trigger, boolean buildReferences, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		final ISchedulingRule rule = getRuleFactory().buildRule();
 		try {
@@ -477,6 +451,39 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 				aboutToBuild(this, trigger);
 				IStatus result;
 				try {
+					// Calculate the build-order having called the pre-build notification (which may change build order)
+					// If configs == null => This is a full workspace build.
+					IBuildConfiguration[] requestedConfigs = configs == null ? new IBuildConfiguration[0] : configs;
+					if (configs == null) {
+						if (trigger != IncrementalProjectBuilder.CLEAN_BUILD)
+							configs = getBuildOrder();
+						else {
+							// clean all accessible configurations
+							List configArr = new ArrayList();
+							IProject[] prjs = getRoot().getProjects();
+							for (int i = 0; i < prjs.length; i++)
+								if (prjs[i].isAccessible())
+									configArr.addAll(Arrays.asList(prjs[i].getBuildConfigurations()));
+							configs = (IBuildConfiguration[])configArr.toArray(new IBuildConfiguration[configArr.size()]);										
+						}
+					} else {
+						// Order the passed in build configurations + resolve references if requested
+						Set refsList = new HashSet();
+						for (int i = 0 ; i < configs.length ; i++) {
+							// Check project + build configuration are accessible.
+							if (!configs[i].getProject().isAccessible() || !configs[i].getProject().hasBuildConfiguration(configs[i]))
+								continue;
+							refsList.add(configs[i]);
+							// Find transitive closure of referenced project buildConfigs
+							if (buildReferences)
+								recursivelyAddBuildConfigs(refsList, configs[i]);
+						}
+
+						// Order the referenced project buildConfigs
+						ProjectBuildConfigOrder order = computeProjectBuildConfigOrder((IBuildConfiguration[]) refsList.toArray(new IBuildConfiguration[refsList.size()]));
+						configs = order.buildConfigurations;
+					}
+
 					result = getBuildManager().build(configs, requestedConfigs, trigger, Policy.subMonitorFor(monitor, Policy.opWork));
 				} finally {
 					//must fire POST_BUILD if PRE_BUILD has occurred
