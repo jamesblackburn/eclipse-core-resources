@@ -11,6 +11,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.events;
 
+import org.eclipse.core.internal.resources.ICoreConstants;
+
 import org.eclipse.core.internal.resources.ResourceException;
 import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.internal.utils.Messages;
@@ -141,7 +143,7 @@ class AutoBuildJob extends Job implements Preferences.IPropertyChangeListener {
 				IStatus result = Status.OK_STATUS;
 				try {
 					if (shouldBuild())
-						result = workspace.getBuildManager().build(workspace.getBuildOrder(), new IBuildConfiguration[0], trigger, Policy.subMonitorFor(monitor, Policy.opWork));
+						result = workspace.getBuildManager().build(workspace.getBuildOrder(), ICoreConstants.EMPTY_BUILD_CONFIG_ARRAY, trigger, Policy.subMonitorFor(monitor, Policy.opWork));
 				} finally {
 					//always send POST_BUILD if there has been a PRE_BUILD
 					workspace.broadcastBuildEvent(workspace, IResourceChangeEvent.POST_BUILD, trigger);

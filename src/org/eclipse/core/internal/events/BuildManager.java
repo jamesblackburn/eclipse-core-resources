@@ -101,7 +101,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	private final Set builtProjects = new HashSet();
 
 	//the build order for a subsequent call to #build(). Allows context information to be available
-	//before build is run.
+	//before build is run during #getRule
 	private IBuildConfiguration[] buildOrder = new IBuildConfiguration[0];
 
 	//the following four fields only apply for the lifetime of a single builder invocation.
@@ -1087,7 +1087,6 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	 * retrieved when overloading {@link #getRule(IBuildConfiguration, int, String, Map)}
 	 * is available.
 	 * @param buildOrder
-	 * @nooverride This method is not intended to be re-implemented or extended by clients.
 	 */
 	public void setBuildOrder(IBuildConfiguration[] buildOrder) {
 		this.buildOrder = buildOrder;
@@ -1107,10 +1106,10 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				Set rules = new HashSet();
 				commands = ((Project) project).internalGetDescription().getBuildSpec(false);
 				boolean hasNullBuildRule = false;
+				BuildContext context = new BuildContext(buildConfiguration, buildOrder, buildOrder);
 				for (int i = 0; i < commands.length; i++) {
 					BuildCommand command = (BuildCommand) commands[i];
 					try {
-						BuildContext context = new BuildContext(buildConfiguration, buildOrder, buildOrder);
 						IncrementalProjectBuilder builder = getBuilder(buildConfiguration, command, i, status, context);
 						if (builder != null) {
 							ISchedulingRule builderRule = builder.getRule(trigger, args);
