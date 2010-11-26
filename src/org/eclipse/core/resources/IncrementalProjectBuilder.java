@@ -455,10 +455,13 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	}
 
 	/**
-	 * Get the context for the most recent invocation of the builder.
-	 * This is only valid in the context of a call to
+	 * Get the context for this invocation of the builder. This is only valid
+	 * in the context of a call to
 	 * {@link #build(int, Map, IProgressMonitor)}
-	 * 
+	 *
+	 *  This can be used to discover which build configurations are being built before
+	 *  and after this build configuration.
+	 *
 	 * @return the context for the most recent invocation of the builder
 	 * @since 3.7
 	 */

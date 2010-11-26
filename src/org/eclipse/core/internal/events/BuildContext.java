@@ -11,7 +11,6 @@
 package org.eclipse.core.internal.events;
 
 import java.util.*;
-import org.eclipse.core.internal.resources.BuildConfiguration;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.Assert;
 
@@ -20,14 +19,12 @@ import org.eclipse.core.runtime.Assert;
  */
 public class BuildContext implements IBuildContext {
 
-	private static final IBuildConfiguration[] EMPTY_BUILD_CONFIGURATION_ARRAY = new IBuildConfiguration[0];
-
-	/** Configurations requested to be built */
+	/** The Build Configuration currently being built */
+	private final IBuildConfiguration buildConfiguration;
+	/** Configurations user requested to be built */
 	private final IBuildConfiguration[] requestedBuilt;
-	/** The configurations built before this {@link BuildConfiguration} */
-	private final IBuildConfiguration[] builtBefore;
-	/** The configurations to be build after this {@link BuildConfiguration} */
-	private final IBuildConfiguration[] builtAfter;
+	/** The configurations built as part of this build invocations*/
+	private final IBuildConfiguration[] buildOrder;
 
 	/** Cached lists of referenced and referencing projects and project configurations */
 	private IProject[] cachedReferencedProjects;
@@ -38,17 +35,23 @@ public class BuildContext implements IBuildContext {
 	 * @param buildConfiguration the project configuration being built, that we need the context for
 	 */
 	public BuildContext(IBuildConfiguration buildConfiguration) {
-		builtBefore = builtAfter = EMPTY_BUILD_CONFIGURATION_ARRAY;
-		requestedBuilt = new IBuildConfiguration[] {buildConfiguration};
+		this.buildConfiguration = buildConfiguration;
+		requestedBuilt = buildOrder = new IBuildConfiguration[] {buildConfiguration};
 	}
 
 	/**
 	 * Create a build context for the given project configuration.
 	 * @param buildConfiguration the project configuration being built, that we need the context for
+	 * @param requestedBuilt an array of configurations the user actually requested to be built
 	 * @param buildOrder the build order for the entire build, indicating how cycles etc. have been resolved
 	 */
 	public BuildContext(IBuildConfiguration buildConfiguration, IBuildConfiguration[] requestedBuilt, IBuildConfiguration[] buildOrder) {
+		this.buildConfiguration = buildConfiguration;
 		this.requestedBuilt = requestedBuilt;
+		this.buildOrder = buildOrder;
+	}
+
+	private int findBuildConfigurationIndex() {
 		int position = -1;
 		for (int i = 0; i < buildOrder.length; i++) {
 			if (buildOrder[i].equals(buildConfiguration))
@@ -58,14 +61,11 @@ public class BuildContext implements IBuildContext {
 			}
 		}
 		Assert.isTrue(0 <= position && position < buildOrder.length);
-		builtBefore = new IBuildConfiguration[position];
-		builtAfter = new IBuildConfiguration[buildOrder.length - position - 1];
-		System.arraycopy(buildOrder, 0, builtBefore, 0, builtBefore.length);
-		System.arraycopy(buildOrder, position + 1, builtAfter, 0, builtAfter.length);
+		return position;
 	}
 
 	public IBuildConfiguration[] getRequestedConfigs() {
-		return requestedBuilt;
+		return (IBuildConfiguration[])requestedBuilt.clone();
 	}
 
 	/*
@@ -74,7 +74,7 @@ public class BuildContext implements IBuildContext {
 	 */
 	public IProject[] getAllReferencedProjects() {
 		if (cachedReferencedProjects == null)
-			cachedReferencedProjects = projectConfigurationsToProjects(builtBefore);
+			cachedReferencedProjects = projectConfigurationsToProjects(getAllReferencedBuildConfigurations());
 		return (IProject[]) cachedReferencedProjects.clone();
 	}
 
@@ -83,7 +83,10 @@ public class BuildContext implements IBuildContext {
 	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedBuildConfigurations()
 	 */
 	public IBuildConfiguration[] getAllReferencedBuildConfigurations() {
-		return (IBuildConfiguration[]) builtBefore.clone();
+		int position = findBuildConfigurationIndex();
+		IBuildConfiguration[] builtBefore = new IBuildConfiguration[position];
+		System.arraycopy(buildOrder, 0, builtBefore, 0, builtBefore.length);
+		return builtBefore;
 	}
 
 	/*
@@ -92,7 +95,7 @@ public class BuildContext implements IBuildContext {
 	 */
 	public IProject[] getAllReferencingProjects() {
 		if (cachedReferencingProjects == null)
-			cachedReferencingProjects = projectConfigurationsToProjects(builtAfter);
+			cachedReferencingProjects = projectConfigurationsToProjects(getAllReferencingBuildConfigurations());
 		return (IProject[]) cachedReferencingProjects.clone();
 	}
 
@@ -101,7 +104,10 @@ public class BuildContext implements IBuildContext {
 	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencingBuildConfigurations()
 	 */
 	public IBuildConfiguration[] getAllReferencingBuildConfigurations() {
-		return (IBuildConfiguration[]) builtAfter.clone();
+		int position = findBuildConfigurationIndex();
+		IBuildConfiguration[] builtAfter = new IBuildConfiguration[buildOrder.length - position - 1];
+		System.arraycopy(buildOrder, position + 1, builtAfter, 0, builtAfter.length);
+		return builtAfter;
 	}
 
 	/**
@@ -125,9 +131,9 @@ public class BuildContext implements IBuildContext {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + buildConfiguration.hashCode();
 		result = prime * result + hashCode(requestedBuilt);
-		result = prime * result + hashCode(builtAfter);
-		result = prime * result + hashCode(builtBefore);
+		result = prime * result + hashCode(buildOrder);
 		return result;
 	}
 
@@ -139,11 +145,11 @@ public class BuildContext implements IBuildContext {
 		if (getClass() != obj.getClass())
 			return false;
 		BuildContext other = (BuildContext) obj;
+		if (!buildConfiguration.equals(other.buildConfiguration))
+			return false;
 		if (!Arrays.equals(requestedBuilt, other.requestedBuilt))
 			return false;
-		if (!Arrays.equals(builtAfter, other.builtAfter))
-			return false;
-		if (!Arrays.equals(builtBefore, other.builtBefore))
+		if (!Arrays.equals(buildOrder, other.buildOrder))
 			return false;
 		return true;
 	}
