@@ -13,7 +13,7 @@ package org.eclipse.core.resources;
 
 /**
  * Stores information about the context in which a builder was called.
- *<p>
+ * <p>
  * This can be interrogated by a builder to determine what's been built
  * before, and what's being built after it, for this particular build
  * invocation.
