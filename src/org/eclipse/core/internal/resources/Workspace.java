@@ -239,7 +239,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			IBuildConfiguration py = (IBuildConfiguration) y;
 			int cmp = py.getProject().getName().compareTo(px.getProject().getName());
 			if (cmp == 0)
-				cmp = py.getId().compareTo(px.getId());
+				cmp = py.getName().compareTo(px.getName());
 			return cmp;
 		}
 	}
@@ -404,7 +404,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 */
 	private void recursivelyAddBuildConfigs(Collection/*<IBuildConfiguration>*/ configs, IBuildConfiguration config) {
 		try {
-			IBuildConfiguration[] referenced = config.getProject().getReferencedBuildConfigurations(config, false);
+			IBuildConfiguration[] referenced = config.getProject().getReferencedBuildConfigs(config.getName(), false);
 			for (int i = 0; i < referenced.length; i++) {
 				if (configs.contains(referenced[i]))
 					continue;
@@ -471,7 +471,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 						Set refsList = new HashSet();
 						for (int i = 0 ; i < configs.length ; i++) {
 							// Check project + build configuration are accessible.
-							if (!configs[i].getProject().isAccessible() || !configs[i].getProject().hasBuildConfiguration(configs[i]))
+							if (!configs[i].getProject().isAccessible() || !configs[i].getProject().hasBuildConfig(configs[i].getName()))
 								continue;
 							refsList.add(configs[i]);
 							// Find transitive closure of referenced project buildConfigs
@@ -715,7 +715,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					// Add all referenced buildConfigs from the current configuration
 					// (it is guaranteed to be accessible as it was pushed onto the stack)
 					Project subProject = (Project) buildConfiguration.getProject();
-					IBuildConfiguration[] refs = subProject.internalGetReferencedBuildConfigurations(buildConfiguration, false);
+					IBuildConfiguration[] refs = subProject.internalGetReferencedBuildConfigurations(buildConfiguration.getName(), false);
 					for (int j = 0; j < refs.length; j++) {
 						IBuildConfiguration ref = refs[j];
 
@@ -782,7 +782,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			for (int j = 0; j < configs.length; j++) {
 				IBuildConfiguration config = configs[j];
 				allAccessibleBuildConfigurations.add(config);
-				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigurations(config, false);
+				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigurations(config.getName(), false);
 				for (int k = 0; k < refs.length; k++) {
 					IBuildConfiguration ref = refs[k];
 
@@ -2111,7 +2111,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	 * (non-Javadoc)
 	 * @see org.eclipse.core.resources.IWorkspace#newBuildConfiguration(java.lang.String, java.lang.String)
 	 */
-	public IBuildConfiguration newBuildConfiguration(String projectName, String configurationId) {
+	public IBuildConfiguration newBuildConfig(String projectName, String configurationId) {
 		return new BuildConfiguration(getRoot().getProject(projectName), configurationId);
 	}
 
