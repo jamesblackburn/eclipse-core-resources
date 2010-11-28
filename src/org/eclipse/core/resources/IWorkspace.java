@@ -967,16 +967,15 @@ public interface IWorkspace extends IAdaptable {
 	 * The name is an human readable unique name for the build configuration in the
 	 * project.  The project need not exist.
 	 *<p>
-	 * The new build configuration does not become part of a project
-	 * description until it is installed using
-	 * {@link IProjectDescription#setBuildConfigs(String[])}.
-	 *</p>
-	 *<p>
 	 * This API can be used to create {@link IBuildConfiguration}s that will be used as references
 	 * to {@link IBuildConfiguration}s in other projects.  These references are set using
 	 * {@link IProjectDescription#setBuildConfigReferences(String, IBuildConfiguration[])}
 	 * and may have a <code>null</code> configuration name which will resolve to the referenced
-	 * project's active configuration when the configuration reference is used.
+	 * project's active configuration when the reference is used.
+	 *</p>
+	 *<p>
+	 * Build configuration do not become part of a project
+	 * description until set using {@link IProjectDescription#setBuildConfigs(String[])}.
 	 *</p>
 	 *
 	 * @param projectName the name of the project on which the configuration will exist
