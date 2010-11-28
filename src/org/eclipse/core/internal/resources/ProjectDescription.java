@@ -25,7 +25,6 @@ import org.eclipse.core.runtime.*;
 
 public class ProjectDescription extends ModelObject implements IProjectDescription {
 	// constants
-	private static final IBuildConfiguration[] EMPTY_BUILD_CONFIGS = new BuildConfiguration[0];
 	private static final IBuildConfiguration[] EMPTY_BUILD_CONFIG_REFERENCE_ARRAY = new IBuildConfiguration[0];
 	private static final ICommand[] EMPTY_COMMAND_ARRAY = new ICommand[0];
 	private static final IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];
@@ -58,7 +57,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected HashMap<String, IBuildConfiguration[]> dynamicConfigRefs = new HashMap<String, IBuildConfiguration[]>(1);
 
 	// Cache of the build configurations
-	protected volatile IBuildConfiguration[] cachedBuildConfigs = EMPTY_BUILD_CONFIGS;
+	protected volatile IBuildConfiguration[] cachedBuildConfigs;
 	// Cached build configuration references. Not persisted.
 	protected Map<String, IBuildConfiguration[]> cachedConfigRefs = Collections.synchronizedMap(new HashMap<String, IBuildConfiguration[]>(1));
 	// Cached project level references.
