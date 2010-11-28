@@ -426,7 +426,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <p>
 	 * If at any point the active configuration is removed from the project, for example
 	 * when updating the list of build configurations, the active build configuration will be set to
-	 * the first build configuration specified by {@link IProjectDescription#setBuildConfigurations(IBuildConfiguration[])}.
+	 * the first build configuration specified by {@link IProjectDescription#setBuildConfigs(String[])}.
 	 * <p>
 	 * If all of the build configurations are removed, the active build configuration will be set to the
 	 * default configuration.
@@ -439,11 +439,11 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @since 3.7
 	 */
-	public IBuildConfiguration getActiveBuildConfiguration() throws CoreException;
+	public IBuildConfiguration getActiveBuildConfig() throws CoreException;
 
 	/**
-	 * Returns the project build configuration with the given id for this project.
-	 * @param configurationId the id of the configuration to get
+	 * Returns the project {@link IBuildConfiguration} with the given name for this project.
+	 * @param configurationName the id of the configuration to get
 	 * @return a project configuration
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
@@ -454,7 +454,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @see #getBuildConfigurations()
 	 * @since 3.7
 	 */
-	public IBuildConfiguration getBuildConfiguration(String configurationId) throws CoreException;
+	public IBuildConfiguration getBuildConfig(String configurationName) throws CoreException;
 
 	/**
 	 * Returns the build configurations for this project. A project always has at
@@ -606,7 +606,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * <li> This project does not exist.</li>
 	 * <li> This project is not open.</li>
 	 * </ul>
-	 * @see #getReferencedBuildConfigurations(IBuildConfiguration, boolean)
+	 * @see #getReferencedBuildConfigs(String, boolean)
 	 * @see IProjectDescription#getReferencedProjects()
 	 * @see IProjectDescription#getDynamicReferences()
 	 */
@@ -654,7 +654,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * @see IProjectDescription#getBuildConfigReferences(String)
 	 * @since 3.7
 	 */
-	public IBuildConfiguration[] getReferencedBuildConfigurations(IBuildConfiguration config, boolean includeMissing) throws CoreException;
+	public IBuildConfiguration[] getReferencedBuildConfigs(String config, boolean includeMissing) throws CoreException;
 
 	/**
 	 * Checks whether the project has the specified build configuration.
@@ -668,7 +668,7 @@ public interface IProject extends IContainer, IAdaptable {
 	 * </ul>
 	 * @since 3.7
 	 */
-	public boolean hasBuildConfiguration(IBuildConfiguration config) throws CoreException;
+	public boolean hasBuildConfig(String config) throws CoreException;
 
 	/** 
 	 * Returns whether the project nature specified by the given
