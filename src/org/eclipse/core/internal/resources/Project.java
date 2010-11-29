@@ -611,7 +611,6 @@ public class Project extends Container implements IProject {
 					} finally {
 						workspace.endOperation(rule, false, innerMonitor);
 					}
-					workspace.getBuildManager().setBuildOrder(new IBuildConfiguration[]{config});
 					final ISchedulingRule buildRule = workspace.getBuildManager().getRule(config, trigger, builderName, args);
 					try {
 						IStatus result;
