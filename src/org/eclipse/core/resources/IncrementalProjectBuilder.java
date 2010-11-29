@@ -459,8 +459,17 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * in the context of a call to
 	 * {@link #build(int, Map, IProgressMonitor)}
 	 *
-	 *  This can be used to discover which build configurations are being built before
-	 *  and after this build configuration.
+	 * <p>
+	 * This can be used to discover which build configurations are being built before
+	 * and after this build configuration.
+	 * </p>
+	 * 
+	 * <p>
+	 * <strong>EXPERIMENTAL</strong>. This interface has been added as
+	 * part of a work in progress. There is no guarantee that this API will
+	 * work or that it will remain the same. Please do not use this API without
+	 * consulting with the Platform Workspace team.
+	 * </p>
 	 *
 	 * @return the context for the most recent invocation of the builder
 	 * @since 3.7

@@ -10,30 +10,28 @@
  *******************************************************************************/
 package org.eclipse.core.resources;
 
-
 /**
  * Stores information about the context in which a builder was called.
+ * 
  * <p>
  * This can be interrogated by a builder to determine what's been built
  * before, and what's being built after it, for this particular build
  * invocation.
  * </p>
- *
+ * 
+ * <p>
+ * <strong>EXPERIMENTAL</strong>. This interface has been added as
+ * part of a work in progress. There is no guarantee that this API will
+ * work or that it will remain the same. Please do not use this API without
+ * consulting with the Platform Workspace team.
+ * </p>
+ * 
  * @noimplement This interface is not intended to be implemented by clients.
  * @noextend This interface is not intended to be extended by clients.
  *
  * @since 3.7
  */
 public interface IBuildContext {
-
-	/**
-	 * Gets a array of projects that were built before this one,
-	 * as part of the current top-level build invocation.
-	 *
-	 * @return an array of all referenced projects that have been built
-	 * in the current build; never null.
-	 */
-	public IProject[] getAllReferencedProjects();
 
 	/**
 	 * Gets a array of build configurations that were built before this build configuration,
@@ -43,18 +41,6 @@ public interface IBuildContext {
 	 * in the current build; never null.
 	 */
 	public IBuildConfiguration[] getAllReferencedBuildConfigs();
-
-	/**
-	 * Gets a array of projects that will be built after this one,
-	 * as part of the current top-level build invocation.
-	 * <p>
-	 * If the array is empty, then this project is the last in the build chain.
-	 * </p>
-	 *
-	 * @return an array of all referencing projects that will be built
-	 * in the current build; never null.
-	 */
-	public IProject[] getAllReferencingProjects();
 
 	/**
 	 * Gets a array of build configurations that will be built after this build configuration,

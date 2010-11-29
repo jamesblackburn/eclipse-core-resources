@@ -26,10 +26,6 @@ public class BuildContext implements IBuildContext {
 	/** The configurations built as part of this build invocations*/
 	private final IBuildConfiguration[] buildOrder;
 
-	/** Cached lists of referenced and referencing projects and project configurations */
-	private IProject[] cachedReferencedProjects;
-	private IProject[] cachedReferencingProjects;
-
 	/**
 	 * Create an empty build context for the given project configuration.
 	 * @param buildConfiguration the project configuration being built, that we need the context for
@@ -70,16 +66,6 @@ public class BuildContext implements IBuildContext {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedProjects()
-	 */
-	public IProject[] getAllReferencedProjects() {
-		if (cachedReferencedProjects == null)
-			cachedReferencedProjects = projectConfigurationsToProjects(getAllReferencedBuildConfigs());
-		return (IProject[]) cachedReferencedProjects.clone();
-	}
-
-	/*
-	 * (non-Javadoc)
 	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedBuildConfigurations()
 	 */
 	public IBuildConfiguration[] getAllReferencedBuildConfigs() {
@@ -91,16 +77,6 @@ public class BuildContext implements IBuildContext {
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencingProjects()
-	 */
-	public IProject[] getAllReferencingProjects() {
-		if (cachedReferencingProjects == null)
-			cachedReferencingProjects = projectConfigurationsToProjects(getAllReferencingBuildConfigs());
-		return (IProject[]) cachedReferencingProjects.clone();
-	}
-
-	/*
-	 * (non-Javadoc)
 	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencingBuildConfigurations()
 	 */
 	public IBuildConfiguration[] getAllReferencingBuildConfigs() {
@@ -108,16 +84,6 @@ public class BuildContext implements IBuildContext {
 		IBuildConfiguration[] builtAfter = new IBuildConfiguration[buildOrder.length - position - 1];
 		System.arraycopy(buildOrder, position + 1, builtAfter, 0, builtAfter.length);
 		return builtAfter;
-	}
-
-	/**
-	 * Convert a list of project configurations to projects, while removing duplicates.
-	 */
-	private IProject[] projectConfigurationsToProjects(IBuildConfiguration[] configs) {
-		Set set = new LinkedHashSet();
-		for (int i = 0; i < configs.length; i++)
-			set.add(configs[i].getProject());
-		return (IProject[]) set.toArray(new IProject[set.size()]);
 	}
 
 	private static final int hashCode(IBuildConfiguration[] array) {

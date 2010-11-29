@@ -100,10 +100,6 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	private boolean building = false;
 	private final Set builtProjects = new HashSet();
 
-	//the build order for a subsequent call to #build(). Allows context information to be available
-	//before build is run during #getRule
-	private IBuildConfiguration[] buildOrder = new IBuildConfiguration[0];
-
 	//the following four fields only apply for the lifetime of a single builder invocation.
 	protected InternalBuilder currentBuilder;
 	private DeltaDataTree currentDelta;
@@ -1083,19 +1079,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 	}
 
 	/**
-	 * Set the build order that is going to be built. This ensures that context information
-	 * retrieved when overloading {@link #getRule(IBuildConfiguration, int, String, Map)}
-	 * is available.
-	 * @param buildOrder
-	 */
-	public void setBuildOrder(IBuildConfiguration[] buildOrder) {
-		this.buildOrder = buildOrder;
-	}
-
-	/**
 	 * Returns the scheduling rule that is required for building the project.
-	 * {@link #setBuildOrder(IBuildConfiguration[])} should be called before this method
-	 * is called so that build context information is available.
 	 */
 	public ISchedulingRule getRule(IBuildConfiguration buildConfiguration, int trigger, String builderName, Map args) {
 		IProject project = buildConfiguration.getProject();
@@ -1106,7 +1090,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 				Set rules = new HashSet();
 				commands = ((Project) project).internalGetDescription().getBuildSpec(false);
 				boolean hasNullBuildRule = false;
-				BuildContext context = new BuildContext(buildConfiguration, buildOrder, buildOrder);
+				BuildContext context = new BuildContext(buildConfiguration);
 				for (int i = 0; i < commands.length; i++) {
 					BuildCommand command = (BuildCommand) commands[i];
 					try {
