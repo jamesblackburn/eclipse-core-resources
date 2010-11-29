@@ -368,6 +368,9 @@ public class Project extends Container implements IProject {
 		ProjectPreferences.deleted(this);
 	}
 
+	/* (non-Javadoc)
+	 * @see org.eclipse.core.resources.IProject#getActiveBuildConfig()
+	 */
 	public IBuildConfiguration getActiveBuildConfig() throws CoreException {
 		ResourceInfo info = getResourceInfo(false, false);
 		int flags = getFlags(info);
@@ -375,21 +378,27 @@ public class Project extends Container implements IProject {
 		return internalGetActiveBuildConfig();
 	}
 
-	public IBuildConfiguration getBuildConfig(String id) throws CoreException {
-		if (id == null)
+	/* (non-Javadoc)
+	 * @see org.eclipse.core.resources.IProject#getBuildConfig(java.lang.String)
+	 */
+	public IBuildConfiguration getBuildConfig(String configName) throws CoreException {
+		if (configName == null)
 			return getActiveBuildConfig();
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		IBuildConfiguration[] configs = internalGetBuildConfigs(false);
 		for (int i = 0; i < configs.length; i++) {
-			if (configs[i].getName().equals(id)) {
+			if (configs[i].getName().equals(configName)) {
 				return configs[i];
 			}
 		}
 		throw new ResourceException(IResourceStatus.BUILD_CONFIGURATION_NOT_FOUND, getFullPath(), null, null);
 	}
 
-	public IBuildConfiguration[] getBuildConfigurations() throws CoreException {
+	/* (non-Javadoc)
+	 * @see org.eclipse.core.resources.IProject#getBuildConfigs()
+	 */
+	public IBuildConfiguration[] getBuildConfigs() throws CoreException {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		return internalGetBuildConfigs(true);
@@ -491,16 +500,19 @@ public class Project extends Container implements IProject {
 		return description == null ? null : description.getLocationURI();
 	}
 
-	public IBuildConfiguration[] getReferencedBuildConfigs(String config, boolean includeMissing) throws CoreException {
+	/* (non-Javadoc)
+	 * @see org.eclipse.core.resources.IProject#getReferencedBuildConfigs(java.lang.String, boolean)
+	 */
+	public IBuildConfiguration[] getReferencedBuildConfigs(String configName, boolean includeMissing) throws CoreException {
 		ResourceInfo info = getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
 		ProjectDescription description = ((ProjectInfo) info).getDescription();
 		//if the project is currently in the middle of being created, the description might not be available yet
 		if (description == null)
 			checkAccessible(NULL_FLAG);
-		if (!hasBuildConfig(config))
+		if (!hasBuildConfig(configName))
 			throw new ResourceException(IResourceStatus.BUILD_CONFIGURATION_NOT_FOUND, getFullPath(), null, null);
-		return internalGetReferencedBuildConfigurations(config, includeMissing);
+		return internalGetReferencedBuildConfigs(configName, includeMissing);
 	}
 
 	/* (non-Javadoc)
@@ -558,10 +570,13 @@ public class Project extends Container implements IProject {
 		return result;
 	}
 
-	public boolean hasBuildConfig(String config) throws CoreException {
+	/* (non-Javadoc)
+	 * @see org.eclipse.core.resources.IProject#hasBuildConfig(java.lang.String)
+	 */
+	public boolean hasBuildConfig(String configName) throws CoreException {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, false);
 		checkAccessible(getFlags(info));
-		return internalHasBuildConfig(config);
+		return internalHasBuildConfig(configName);
 	}
 
 	/* (non-Javadoc)
@@ -814,12 +829,12 @@ public class Project extends Container implements IProject {
 
 	/**
 	 * Returns the IBuildConfigurations referenced by the passed in build configuration
-	 * @param config to find references for
+	 * @param configName to find references for
 	 * @return IBuildConfiguration[] of referenced configurations; never null.
 	 */
-	public IBuildConfiguration[] internalGetReferencedBuildConfigurations(String config, boolean includeMissing) {
+	public IBuildConfiguration[] internalGetReferencedBuildConfigs(String configName, boolean includeMissing) {
 		ProjectDescription description = internalGetDescription();
-		IBuildConfiguration[] refs = description.getAllBuildConfigReferences(config, false);
+		IBuildConfiguration[] refs = description.getAllBuildConfigReferences(configName, false);
 		Collection configs = new LinkedHashSet(refs.length);
 		for (int i = 0; i < refs.length; i++) {
 			try {
@@ -835,8 +850,8 @@ public class Project extends Container implements IProject {
 		return (IBuildConfiguration[])configs.toArray(new IBuildConfiguration[configs.size()]);
 	}
 
-	boolean internalHasBuildConfig(String config) {
-		return internalGetDescription().hasBuildConfig(config);
+	boolean internalHasBuildConfig(String configName) {
+		return internalGetDescription().hasBuildConfig(configName);
 	}
 
 	/**
