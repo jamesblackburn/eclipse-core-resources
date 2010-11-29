@@ -42,7 +42,7 @@ public interface IBuildContext {
 	 * @return an array of all referenced build configurations that have been built
 	 * in the current build; never null.
 	 */
-	public IBuildConfiguration[] getAllReferencedBuildConfigurations();
+	public IBuildConfiguration[] getAllReferencedBuildConfigs();
 
 	/**
 	 * Gets a array of projects that will be built after this one,
@@ -66,15 +66,15 @@ public interface IBuildContext {
 	 * @return an array of all referencing build configurations that will be built
 	 * in the current build; never null.
 	 */
-	public IBuildConfiguration[] getAllReferencingBuildConfigurations();
+	public IBuildConfiguration[] getAllReferencingBuildConfigs();
 
 	/**
 	 * Returns the full array of configurations that were requested to be built
 	 * by the API user.  These configurations may be anywhere in the build
 	 * order (depending on how the build graph has been flattened).
  	 * <p>
-	 * This does no include build configurations being built by virtue of
-	 * being referenced from a build configuration that was requested built.
+ 	 * This array won't include any build configurations being built by virtue 
+ 	 * of being referenced from a requested build configuration.
 	 * </p>
 	 * May return the empty array if this is a top-level workspace build.
 	 *

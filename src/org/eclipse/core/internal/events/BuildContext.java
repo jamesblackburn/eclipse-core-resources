@@ -74,7 +74,7 @@ public class BuildContext implements IBuildContext {
 	 */
 	public IProject[] getAllReferencedProjects() {
 		if (cachedReferencedProjects == null)
-			cachedReferencedProjects = projectConfigurationsToProjects(getAllReferencedBuildConfigurations());
+			cachedReferencedProjects = projectConfigurationsToProjects(getAllReferencedBuildConfigs());
 		return (IProject[]) cachedReferencedProjects.clone();
 	}
 
@@ -82,7 +82,7 @@ public class BuildContext implements IBuildContext {
 	 * (non-Javadoc)
 	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencedBuildConfigurations()
 	 */
-	public IBuildConfiguration[] getAllReferencedBuildConfigurations() {
+	public IBuildConfiguration[] getAllReferencedBuildConfigs() {
 		int position = findBuildConfigurationIndex();
 		IBuildConfiguration[] builtBefore = new IBuildConfiguration[position];
 		System.arraycopy(buildOrder, 0, builtBefore, 0, builtBefore.length);
@@ -95,7 +95,7 @@ public class BuildContext implements IBuildContext {
 	 */
 	public IProject[] getAllReferencingProjects() {
 		if (cachedReferencingProjects == null)
-			cachedReferencingProjects = projectConfigurationsToProjects(getAllReferencingBuildConfigurations());
+			cachedReferencingProjects = projectConfigurationsToProjects(getAllReferencingBuildConfigs());
 		return (IProject[]) cachedReferencingProjects.clone();
 	}
 
@@ -103,7 +103,7 @@ public class BuildContext implements IBuildContext {
 	 * (non-Javadoc)
 	 * @see org.eclipse.core.resources.IBuildContext#getAllReferencingBuildConfigurations()
 	 */
-	public IBuildConfiguration[] getAllReferencingBuildConfigurations() {
+	public IBuildConfiguration[] getAllReferencingBuildConfigs() {
 		int position = findBuildConfigurationIndex();
 		IBuildConfiguration[] builtAfter = new IBuildConfiguration[buildOrder.length - position - 1];
 		System.arraycopy(buildOrder, position + 1, builtAfter, 0, builtAfter.length);
