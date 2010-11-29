@@ -124,7 +124,7 @@ public class WorkspaceTreeReader_2 extends WorkspaceTreeReader_1 {
 				linkBuildersToTrees(buildersToBeLinked, trees, 0, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 
 				for (Iterator it = builderInfos.iterator(); it.hasNext();)
-					((BuilderPersistentInfo) it.next()).setConfigurationId(input.readUTF());
+					((BuilderPersistentInfo) it.next()).setConfigName(input.readUTF());
 			}
 
 			// Set the builder infos on the projects
@@ -176,7 +176,7 @@ public class WorkspaceTreeReader_2 extends WorkspaceTreeReader_1 {
 				linkBuildersToTrees(infos, trees, 0, Policy.subMonitorFor(monitor, 1));
 
 				for (Iterator it = builderInfos.iterator(); it.hasNext();)
-					((BuilderPersistentInfo) it.next()).setConfigurationId(input.readUTF());
+					((BuilderPersistentInfo) it.next()).setConfigName(input.readUTF());
 			}
 
 			// Set the builder info on the projects
