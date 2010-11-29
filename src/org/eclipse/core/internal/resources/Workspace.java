@@ -464,7 +464,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 							IProject[] prjs = getRoot().getProjects();
 							for (int i = 0; i < prjs.length; i++)
 								if (prjs[i].isAccessible())
-									configArr.addAll(Arrays.asList(prjs[i].getBuildConfigurations()));
+									configArr.addAll(Arrays.asList(prjs[i].getBuildConfigs()));
 							configs = (IBuildConfiguration[])configArr.toArray(new IBuildConfiguration[configArr.size()]);										
 						}
 					} else {
@@ -716,7 +716,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					// Add all referenced buildConfigs from the current configuration
 					// (it is guaranteed to be accessible as it was pushed onto the stack)
 					Project subProject = (Project) buildConfiguration.getProject();
-					IBuildConfiguration[] refs = subProject.internalGetReferencedBuildConfigurations(buildConfiguration.getName(), false);
+					IBuildConfiguration[] refs = subProject.internalGetReferencedBuildConfigs(buildConfiguration.getName(), false);
 					for (int j = 0; j < refs.length; j++) {
 						IBuildConfiguration ref = refs[j];
 
@@ -783,7 +783,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			for (int j = 0; j < configs.length; j++) {
 				IBuildConfiguration config = configs[j];
 				allAccessibleBuildConfigurations.add(config);
-				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigurations(config.getName(), false);
+				IBuildConfiguration[] refs = project.internalGetReferencedBuildConfigs(config.getName(), false);
 				for (int k = 0; k < refs.length; k++) {
 					IBuildConfiguration ref = refs[k];
 
@@ -2108,9 +2108,8 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		return result;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.eclipse.core.resources.IWorkspace#newBuildConfiguration(java.lang.String, java.lang.String)
+	/* (non-Javadoc)
+	 * @see org.eclipse.core.resources.IWorkspace#newBuildConfig(java.lang.String, java.lang.String)
 	 */
 	public IBuildConfiguration newBuildConfig(String projectName, String configurationId) {
 		return new BuildConfiguration(getRoot().getProject(projectName), configurationId);
