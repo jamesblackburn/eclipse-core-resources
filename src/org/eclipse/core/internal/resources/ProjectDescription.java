@@ -209,7 +209,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * project level references as well as build configuration references for the configuration
 	 * with the given id. 
 	 * Duplicates are omitted.  The calculation is optimized by caching the result.
-	 * Note that these BuildConfiguration references may have <code>null</code> id.  They must
+	 * Note that these BuildConfiguration references may have <code>null</code> name.  They must
 	 * be resolved using {@link BuildConfiguration#getBuildConfig()} before use.
 	 * Returns an empty array if the given configName does not exist in the description.
 	 */
