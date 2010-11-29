@@ -964,7 +964,7 @@ public interface IWorkspace extends IAdaptable {
 
 	/**
 	 * Returns a new build configuration for the project, with the given name.  
-	 * The name is an human readable unique name for the build configuration in the
+	 * The name is a human readable unique name for the build configuration in the
 	 * project.  The project need not exist.
 	 *<p>
 	 * This API can be used to create {@link IBuildConfiguration}s that will be used as references

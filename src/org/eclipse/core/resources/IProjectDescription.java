@@ -203,7 +203,7 @@ public interface IProjectDescription {
 	 *
 	 * @param configNames the configurations to set for the described project
 	 * @see IProject#getActiveBuildConfig()
-	 * @see IProject#getBuildConfigurations()
+	 * @see IProject#getBuildConfigs()
 	 * @see IProjectDescription#setActiveBuildConfig(String)
 	 * @since 3.7
 	 */

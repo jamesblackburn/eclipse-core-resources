@@ -432,7 +432,7 @@ public class BuildManager implements ICoreConstants, IManager, ILifecycleListene
 		ICommand[] commands = desc.getBuildSpec(false);
 		if (commands.length == 0)
 			return null;
-		IBuildConfiguration[] configs = project.getBuildConfigurations();
+		IBuildConfiguration[] configs = project.getBuildConfigs();
 
 		/* build the new list */
 		ArrayList newInfos = new ArrayList(commands.length * configs.length);

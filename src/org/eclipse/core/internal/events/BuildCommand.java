@@ -66,7 +66,6 @@ public class BuildCommand extends ModelObject implements ICommand {
 	 */
 	private HashMap<IBuildConfiguration, IncrementalProjectBuilder> builders;
 
-
 	/**
 	 * The triggers that this builder will respond to.  Since build triggers are not 
 	 * bit-maskable, we use internal bit masks to represent each 

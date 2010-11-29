@@ -52,7 +52,7 @@ public class BuildConfiguration implements IBuildConfiguration {
 
 	/*
 	 * (non-Javadoc)
-	 * @see IBuildConfiguration#getConfigurationId()
+	 * @see IBuildConfiguration#getName()
 	 */
 	public String getName() {
 		return name;
