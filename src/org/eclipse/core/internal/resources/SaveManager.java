@@ -1873,7 +1873,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				}
 				monitor.worked(Policy.totalWork * 10 / 100);
 
-				// Get the the builder info and configuration ids, and add all the associated workspace trees in the correct order
+				// Get the the builder info and configuration names, and add all the associated workspace trees in the correct order
 				IProject[] projects = workspace.getRoot().getProjects(IContainer.INCLUDE_HIDDEN);
 				List builderInfos = new ArrayList(projects.length * 2);
 				List configNames = new ArrayList(projects.length);
