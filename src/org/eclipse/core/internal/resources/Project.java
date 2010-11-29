@@ -795,10 +795,10 @@ public class Project extends Container implements IProject {
 	 * @see #getActiveBuildConfig()
 	 */
 	IBuildConfiguration internalGetActiveBuildConfig() {
-		String configId = internalGetDescription().activeConfiguration;
+		String configName = internalGetDescription().activeConfiguration;
 		try {
-			if (configId != null)
-				return getBuildConfig(configId);
+			if (configName != null)
+				return getBuildConfig(configName);
 		} catch (CoreException e) {
 			// Build configuration doesn't exist; treat the first as active.
 		}
@@ -812,7 +812,7 @@ public class Project extends Container implements IProject {
 		ProjectDescription desc = internalGetDescription();
 		if (desc == null)
 			return new IBuildConfiguration[] {new BuildConfiguration(this, IBuildConfiguration.DEFAULT_CONFIG_NAME)};
-		return desc.getBuildConfigurations(this, makeCopy);
+		return desc.getBuildConfigs(this, makeCopy);
 	}
 
 	/**
@@ -839,7 +839,7 @@ public class Project extends Container implements IProject {
 		Collection configs = new LinkedHashSet(refs.length);
 		for (int i = 0; i < refs.length; i++) {
 			try {
-				configs.add((((BuildConfiguration)refs[i]).getBuildConfiguration()));
+				configs.add((((BuildConfiguration)refs[i]).getBuildConfig()));
 			} catch (CoreException e) {
 				// The project isn't accessible, or the build configuration doesn't exist
 				// on the project.  If requested return the full set of build references which may
