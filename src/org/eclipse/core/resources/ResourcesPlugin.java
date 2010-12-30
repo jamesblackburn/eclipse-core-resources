@@ -1,5 +1,5 @@
 /*******************************************************************************
- *  Copyright (c) 2000, 2009 IBM Corporation and others.
+ *  Copyright (c) 2000, 2010 IBM Corporation and others.
  *  All rights reserved. This program and the accompanying materials
  *  are made available under the terms of the Eclipse Public License v1.0
  *  which accompanies this distribution, and is available at
@@ -283,6 +283,15 @@ public final class ResourcesPlugin extends Plugin {
 	public static final String PREF_AUTO_REFRESH = "refresh.enabled"; //$NON-NLS-1$
 
 	/**
+	 * Name of a preference for configuring whether encodings for derived
+	 * resources within the project should be stored in a separate derived
+	 * preference file.
+	 * 
+	 * @since 3.7
+	 */
+	public static final String PREF_SEPARATE_DERIVED_ENCODINGS = "separateDerivedEncodings"; //$NON-NLS-1$
+
+	/**
 	 * The single instance of this plug-in runtime class.
 	 */
 	private static ResourcesPlugin plugin;
@@ -293,7 +302,7 @@ public final class ResourcesPlugin extends Plugin {
 	 */
 	private static Workspace workspace = null;
 
-	private ServiceRegistration workspaceRegistration;
+	private ServiceRegistration<IWorkspace> workspaceRegistration;
 
 	/** 
 	 * Constructs an instance of this plug-in runtime class.
@@ -406,6 +415,6 @@ public final class ResourcesPlugin extends Plugin {
 		IStatus result = workspace.open(null);
 		if (!result.isOK())
 			getLog().log(result);
-		workspaceRegistration = context.registerService(IWorkspace.SERVICE_NAME, workspace, null);
+		workspaceRegistration = context.registerService(IWorkspace.class, workspace, null);
 	}
 }

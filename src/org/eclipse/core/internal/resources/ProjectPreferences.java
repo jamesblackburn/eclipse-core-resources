@@ -65,6 +65,8 @@ public class ProjectPreferences extends EclipsePreferences {
 		}
 	}
 
+	static final String PREFS_REGULAR_QUALIFIER = ResourcesPlugin.PI_RESOURCES;
+	static final String PREFS_DERIVED_QUALIFIER = PREFS_REGULAR_QUALIFIER + ".derived"; //$NON-NLS-1$
 	/**
 	 * Cache which nodes have been loaded from disk
 	 */
@@ -112,7 +114,7 @@ public class ProjectPreferences extends EclipsePreferences {
 		clearNode(projectNode.node(qualifier));
 
 		// notifies the CharsetManager if needed
-		if (qualifier.equals(ResourcesPlugin.PI_RESOURCES))
+		if (qualifier.equals(PREFS_REGULAR_QUALIFIER) || qualifier.equals(PREFS_DERIVED_QUALIFIER))
 			preferencesChanged(file.getProject());
 	}
 
@@ -130,7 +132,7 @@ public class ProjectPreferences extends EclipsePreferences {
 		String project = path.segment(0);
 		Preferences projectNode = root.node(ProjectScope.SCOPE).node(project);
 		// check if we need to notify the charset manager
-		boolean hasResourcesSettings = getFile(folder, ResourcesPlugin.PI_RESOURCES).exists();
+		boolean hasResourcesSettings = getFile(folder, PREFS_REGULAR_QUALIFIER).exists() || getFile(folder, PREFS_DERIVED_QUALIFIER).exists();
 		// remove the preferences
 		removeNode(projectNode);
 		// notifies the CharsetManager 		
@@ -149,7 +151,7 @@ public class ProjectPreferences extends EclipsePreferences {
 		Preferences root = Platform.getPreferencesService().getRootNode();
 		Preferences projectNode = root.node(ProjectScope.SCOPE).node(project.getName());
 		// check if we need to notify the charset manager
-		boolean hasResourcesSettings = getFile(project, ResourcesPlugin.PI_RESOURCES).exists();
+		boolean hasResourcesSettings = getFile(project, PREFS_REGULAR_QUALIFIER).exists() || getFile(project, PREFS_DERIVED_QUALIFIER).exists();
 		// remove the preferences
 		removeNode(projectNode);
 		// notifies the CharsetManager 		
@@ -303,11 +305,11 @@ public class ProjectPreferences extends EclipsePreferences {
 			// Bug 108066: In case the node had existed before it was updated from
 			// file, the read() operation marks it dirty. Override the dirty flag
 			// since we know that the node is expected to be in sync with the file.
-			projectPrefs.dirty= false;
+			projectPrefs.dirty = false;
 
 			// make sure that we generate the appropriate resource change events
 			// if encoding settings have changed
-			if (ResourcesPlugin.PI_RESOURCES.equals(qualifier))
+			if (PREFS_REGULAR_QUALIFIER.equals(qualifier) || PREFS_DERIVED_QUALIFIER.equals(qualifier))
 				preferencesChanged(file.getProject());
 		} catch (BackingStoreException e) {
 			IStatus status = new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, e);
@@ -391,6 +393,30 @@ public class ProjectPreferences extends EclipsePreferences {
 			super.flush();
 		} finally {
 			isWriting = false;
+			if ((segmentCount == 3) && (PREFS_DERIVED_QUALIFIER.equals(qualifier))) {
+				final IFile fileInWorkspace = getFile();
+				if (fileInWorkspace != null) {
+					IWorkspaceRunnable operation = new IWorkspaceRunnable() {
+						public void run(IProgressMonitor monitor) throws CoreException {
+							if (fileInWorkspace.exists())
+								fileInWorkspace.setDerived(true, monitor);
+						}
+					};
+					Workspace workspace = ((Workspace) ResourcesPlugin.getWorkspace());
+					try {
+						if (workspace.getWorkManager().isLockAlreadyAcquired())
+							operation.run(null);
+						else
+							workspace.run(operation, workspace.getRuleFactory().derivedRule(fileInWorkspace), IResource.NONE, null);
+					} catch (OperationCanceledException e) {
+						throw new BackingStoreException(Messages.preferences_operationCanceled);
+					} catch (CoreException e) {
+						String message = NLS.bind(Messages.preferences_setDerivedException, fileInWorkspace.getFullPath());
+						log(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, e));
+						throw new BackingStoreException(message);
+					}
+				}
+			}
 		}
 	}
 
@@ -438,6 +464,19 @@ public class ProjectPreferences extends EclipsePreferences {
 
 	protected EclipsePreferences internalCreate(EclipsePreferences nodeParent, String nodeName, Object context) {
 		return new ProjectPreferences(nodeParent, nodeName);
+	}
+
+	protected String internalPut(String key, String newValue) {
+		if ((segmentCount == 3) && PREFS_REGULAR_QUALIFIER.equals(qualifier) && (project != null)) {
+			if (ResourcesPlugin.PREF_SEPARATE_DERIVED_ENCODINGS.equals(key)) {
+				Workspace workspace = ((Workspace) ResourcesPlugin.getWorkspace());
+				if (Boolean.parseBoolean(newValue))
+					workspace.getCharsetManager().splitEncodingPreferences(project);
+				else
+					workspace.getCharsetManager().mergeEncodingPreferences(project);
+			}
+		}
+		return super.internalPut(key, newValue);
 	}
 
 	protected boolean isAlreadyLoaded(IEclipsePreferences node) {
@@ -499,6 +538,16 @@ public class ProjectPreferences extends EclipsePreferences {
 		// if we are checking existance of a single segment child of /project, base the answer on
 		// whether or not it exists in the workspace.
 		return ResourcesPlugin.getWorkspace().getRoot().getProject(path).exists() || super.nodeExists(path);
+	}
+
+	public void remove(String key) {
+		super.remove(key);
+		if ((segmentCount == 3) && PREFS_REGULAR_QUALIFIER.equals(qualifier) && (project != null)) {
+			if (ResourcesPlugin.PREF_SEPARATE_DERIVED_ENCODINGS.equals(key)) {
+				Workspace workspace = ((Workspace) ResourcesPlugin.getWorkspace());
+				workspace.getCharsetManager().mergeEncodingPreferences(project);
+			}
+		}
 	}
 
 	protected void save() throws BackingStoreException {
