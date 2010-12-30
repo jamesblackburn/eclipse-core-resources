@@ -141,7 +141,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * @exception CoreException if this build fails.
 	 * @see IProject#build(int, String, Map, IProgressMonitor)
 	 */
-	protected abstract IProject[] build(int kind, Map args, IProgressMonitor monitor) throws CoreException;
+	protected abstract IProject[] build(int kind, Map<String,String> args, IProgressMonitor monitor) throws CoreException;
 
 	/**
 	 * Clean is an opportunity for a builder to discard any additional state that has 
@@ -450,7 +450,7 @@ public abstract class IncrementalProjectBuilder extends InternalBuilder implemen
 	 * 
 	 * @since 3.6
 	 */
-	public ISchedulingRule getRule(int kind, Map args) {
+	public ISchedulingRule getRule(int kind, Map<String,String> args) {
 		return getRule();
 	}
 
