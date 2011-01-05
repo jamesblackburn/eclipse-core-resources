@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2004, 2010 IBM Corporation and others.
+ * Copyright (c) 2004, 2011 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -36,32 +36,32 @@ public class ProjectPreferences extends EclipsePreferences {
 
 	class SortedProperties extends Properties {
 
-		class IteratorWrapper implements Enumeration {
-			Iterator iterator;
-
-			public IteratorWrapper(Iterator iterator) {
-				this.iterator = iterator;
-			}
-
-			public boolean hasMoreElements() {
-				return iterator.hasNext();
-			}
-
-			public Object nextElement() {
-				return iterator.next();
-			}
-		}
-
 		private static final long serialVersionUID = 1L;
 
 		/* (non-Javadoc)
 		 * @see java.util.Hashtable#keys()
 		 */
-		public synchronized Enumeration keys() {
-			TreeSet set = new TreeSet();
-			for (Enumeration e = super.keys(); e.hasMoreElements();)
+		public synchronized Enumeration<Object> keys() {
+			TreeSet<Object> set = new TreeSet<Object>();
+			for (Enumeration<Object> e = super.keys(); e.hasMoreElements();)
 				set.add(e.nextElement());
-			return new IteratorWrapper(set.iterator());
+			return Collections.enumeration(set);
+		}
+
+		/* (non-Javadoc)
+		 * @see java.util.Hashtable#entrySet()
+		 */
+		public Set<Map.Entry<Object, Object>> entrySet() {
+			TreeSet<Map.Entry<Object, Object>> set = new TreeSet<Map.Entry<Object, Object>>(new Comparator<Map.Entry<Object, Object>>() {
+				public int compare(Map.Entry<Object, Object> e1, Map.Entry<Object, Object> e2) {
+					String s1 = (String) e1.getKey();
+					String s2 = (String) e2.getKey();
+					return s1.compareTo(s2);
+				}
+			});
+			for (Iterator<Map.Entry<Object, Object>> i = super.entrySet().iterator(); i.hasNext();)
+				set.add(i.next());
+			return set;
 		}
 	}
 
@@ -70,7 +70,7 @@ public class ProjectPreferences extends EclipsePreferences {
 	/**
 	 * Cache which nodes have been loaded from disk
 	 */
-	protected static Set loadedNodes = Collections.synchronizedSet(new HashSet());
+	protected static Set<String> loadedNodes = Collections.synchronizedSet(new HashSet<String>());
 	private IFile file;
 	private boolean initialized = false;
 	/**
@@ -274,8 +274,8 @@ public class ProjectPreferences extends EclipsePreferences {
 	private static void removeLoadedNodes(Preferences node) {
 		String path = node.absolutePath();
 		synchronized (loadedNodes) {
-			for (Iterator i = loadedNodes.iterator(); i.hasNext();) {
-				String key = (String) i.next();
+			for (Iterator<String> i = loadedNodes.iterator(); i.hasNext();) {
+				String key = i.next();
 				if (key.startsWith(path))
 					i.remove();
 			}
@@ -376,13 +376,13 @@ public class ProjectPreferences extends EclipsePreferences {
 		} catch (CoreException e) {
 			return EMPTY_STRING_ARRAY;
 		}
-		ArrayList result = new ArrayList();
+		ArrayList<String> result = new ArrayList<String>();
 		for (int i = 0; i < members.length; i++) {
 			IResource resource = members[i];
 			if (resource.getType() == IResource.FILE && PREFS_FILE_EXTENSION.equals(resource.getFullPath().getFileExtension()))
 				result.add(resource.getFullPath().removeFileExtension().lastSegment());
 		}
-		return (String[]) result.toArray(EMPTY_STRING_ARRAY);
+		return result.toArray(EMPTY_STRING_ARRAY);
 	}
 
 	public void flush() throws BackingStoreException {
