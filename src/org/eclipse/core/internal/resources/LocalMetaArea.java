@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import org.eclipse.core.internal.utils.FileUtil;
+
 import java.io.*;
 import java.net.URI;
 import java.util.HashMap;
@@ -480,8 +482,9 @@ public class LocalMetaArea implements ICoreConstants {
 					}
 				}
 				output.succeed();
-			} finally {
 				dataOut.close();
+			} finally {
+				FileUtil.safeClose(dataOut);
 			}
 		} catch (IOException e) {
 			String message = NLS.bind(Messages.resources_exSaveProjectLocation, target.getName());

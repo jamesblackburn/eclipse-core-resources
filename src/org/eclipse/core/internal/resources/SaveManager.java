@@ -1201,8 +1201,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			try {
 				masterTable.store(output, "master table"); //$NON-NLS-1$
 				output.succeed();
-			} finally {
 				output.close();
+			} finally {
+				FileUtil.safeClose(output);
 			}
 		} catch (IOException e) {
 			throw new ResourceException(IResourceStatus.INTERNAL_ERROR, null, NLS.bind(Messages.resources_exSaveMaster, location.toOSString()), e);
@@ -1969,9 +1970,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 					output.writeUTF((String) it.next());
 				for (Iterator it = additionalConfigNames.iterator(); it.hasNext();)
 					output.writeUTF((String) it.next());
+				output.close();
 			} finally {
-				if (output != null)
-					output.close();
+				FileUtil.safeClose(output);
 				if (!wasImmutable)
 					workspace.newWorkingTree();
 			}

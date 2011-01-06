@@ -1091,17 +1091,12 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		try {
 			out = fileStore.openOutputStream(EFS.NONE, null);
 			new ModelObjectWriter().write(desc, out);
+			out.close();
 		} catch (IOException e) {
 			String msg = NLS.bind(Messages.resources_writeMeta, target.getFullPath());
 			throw new ResourceException(IResourceStatus.FAILED_WRITE_METADATA, target.getFullPath(), msg, e);
 		} finally {
-			if (out != null) {
-				try {
-					out.close();
-				} catch (IOException e) {
-					// ignore failure to close stream
-				}
-			}
+			FileUtil.safeClose(out);
 		}
 		//for backwards compatibility, ensure the old .prj file is deleted
 		getWorkspace().getMetaArea().clearOldDescription(target);

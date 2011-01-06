@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import org.eclipse.core.internal.utils.FileUtil;
+
 import java.io.*;
 import java.util.Properties;
 import java.util.Set;
@@ -80,8 +82,9 @@ public class SafeFileTable {
 			FileOutputStream output = new FileOutputStream(target);
 			try {
 				table.store(output, "safe table"); //$NON-NLS-1$
-			} finally {
 				output.close();
+			} finally {
+				FileUtil.safeClose(output);
 			}
 		} catch (IOException e) {
 			String message = Messages.resources_exSafeSave;

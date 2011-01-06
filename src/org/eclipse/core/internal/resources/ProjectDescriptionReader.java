@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import org.eclipse.core.internal.utils.FileUtil;
+
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -946,8 +948,7 @@ public class ProjectDescriptionReader extends DefaultHandler implements IModelOb
 			file = new BufferedInputStream(new FileInputStream(location.toFile()));
 			return read(new InputSource(file));
 		} finally {
-			if (file != null)
-				file.close();
+			FileUtil.safeClose(file);
 		}
 	}
 
