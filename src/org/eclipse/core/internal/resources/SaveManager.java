@@ -1201,8 +1201,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			try {
 				masterTable.store(output, "master table"); //$NON-NLS-1$
 				output.succeed();
-			} finally {
 				output.close();
+			} finally {
+				FileUtil.safeClose(output);
 			}
 		} catch (IOException e) {
 			throw new ResourceException(IResourceStatus.INTERNAL_ERROR, null, NLS.bind(Messages.resources_exSaveMaster, location.toOSString()), e);
@@ -1278,8 +1279,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			try {
 				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
 				writeTree(project, output, monitor);
-			} finally {
 				output.close();
+			} finally {
+				FileUtil.safeClose(output);
 			}
 			OutputStream snapOut = store.openOutputStream(EFS.NONE, monitor);
 			out = new ZipOutputStream(snapOut);
@@ -1295,14 +1297,13 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				}
 				out.closeEntry();
 			} finally {
-				in.close();
+				FileUtil.safeClose(in);
 			}
+			out.close();
 		} catch (IOException e) {
 			throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, snapshotPath, Messages.resources_copyProblem, e);
 		} finally {
-			if (out!=null) {
-				try { out.close(); } catch (IOException e) { /*ignore*/ }
-			}
+			FileUtil.safeClose(out);
 			if (tmpTree!=null) tmpTree.delete();
 		}
 	}
@@ -1322,8 +1323,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			try {
 				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
 				writeTree(computeStatesToSave(contexts, workspace.getElementTree()), output, monitor);
-			} finally {
 				output.close();
+			} finally {
+				FileUtil.safeClose(output);
 			}
 		} catch (Exception e) {
 			String msg = NLS.bind(Messages.resources_writeWorkspaceMeta, treeLocation);
@@ -1549,12 +1551,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			if (root.getType() != IResource.ROOT)
 				o2 = new DataOutputStream(new SafeFileOutputStream(syncInfoLocation.toOSString(), syncInfoTempLocation.toOSString()));
 		} catch (IOException e) {
-			if (o1 != null)
-				try {
-					o1.close();
-				} catch (IOException e2) {
-					// ignore
-				}
+			FileUtil.safeClose(o1);
 			message = NLS.bind(Messages.resources_writeMeta, root.getFullPath());
 			throw new ResourceException(IResourceStatus.FAILED_WRITE_METADATA, root.getFullPath(), message, e);
 		}
@@ -1610,8 +1607,11 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			removeGarbage(markersOutput, markersLocation, markersTempLocation);
 			// if we have the workspace root the output stream will be null and we
 			// don't have to perform cleanup code
-			if (syncInfoOutput != null)
+			if (syncInfoOutput != null) {
 				removeGarbage(syncInfoOutput, syncInfoLocation, syncInfoTempLocation);
+				syncInfoOutput.close();
+			}
+			markersOutput.close();
 		} catch (IOException e) {
 			message = NLS.bind(Messages.resources_writeMeta, root.getFullPath());
 			throw new ResourceException(IResourceStatus.FAILED_WRITE_METADATA, root.getFullPath(), message, e);
@@ -1719,8 +1719,11 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				System.out.println("Snap SyncInfo for " + root.getFullPath() + ": " + snapTimes[1] + "ms"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			if (markerFileSize != markersOutput.size())
 				safeMarkerStream.succeed();
-			if (safeSyncInfoStream != null && syncInfoFileSize != syncInfoOutput.size())
+			if (safeSyncInfoStream != null && syncInfoFileSize != syncInfoOutput.size()) {
 				safeSyncInfoStream.succeed();
+				syncInfoOutput.close();
+			}
+			markersOutput.close();
 		} catch (IOException e) {
 			message = NLS.bind(Messages.resources_writeMeta, root.getFullPath());
 			throw new ResourceException(IResourceStatus.FAILED_WRITE_METADATA, root.getFullPath(), message, e);
@@ -1969,9 +1972,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 					output.writeUTF((String) it.next());
 				for (Iterator it = additionalConfigNames.iterator(); it.hasNext();)
 					output.writeUTF((String) it.next());
+				output.close();
 			} finally {
-				if (output != null)
-					output.close();
+				FileUtil.safeClose(output);
 				if (!wasImmutable)
 					workspace.newWorkingTree();
 			}
@@ -1990,8 +1993,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				DataOutputStream output = new DataOutputStream(safe);
 				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
 				writeTree(project, output, null);
-			} finally {
 				safe.close();
+			} finally {
+				FileUtil.safeClose(safe);
 			}
 		} catch (IOException e) {
 			String msg = NLS.bind(Messages.resources_writeMeta, project.getFullPath());

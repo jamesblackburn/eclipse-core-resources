@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.localstore;
 
+import org.eclipse.core.internal.utils.FileUtil;
+
 import java.io.*;
 
 /**
@@ -63,9 +65,10 @@ public class SafeChunkyOutputStream extends FilterOutputStream {
 	public void succeed() throws IOException {
 		try {
 			endChunk();
+			close();
 		} finally {
 			isOpen = false;
-			close();
+			FileUtil.safeClose(this);
 		}
 	}
 

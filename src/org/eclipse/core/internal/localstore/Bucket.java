@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.localstore;
 
+import org.eclipse.core.internal.utils.FileUtil;
+
 import java.io.*;
 import java.util.*;
 import org.eclipse.core.internal.resources.ResourceException;
@@ -350,8 +352,9 @@ public abstract class Bucket {
 					writeEntryKey(destination, entry.getKey());
 					writeEntryValue(destination, entry.getValue());
 				}
-			} finally {
 				destination.close();
+			} finally {
+				FileUtil.safeClose(destination);
 			}
 			needSaving = false;
 		} catch (IOException ioe) {

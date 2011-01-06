@@ -155,9 +155,9 @@ public class ModelObjectWriter implements IModelObjectConstants {
 		try {
 			file = new SafeFileOutputStream(location.toOSString(), tempPath);
 			write(object, file);
+			file.close();
 		} finally {
-			if (file != null)
-				file.close();
+			FileUtil.safeClose(file);
 		}
 	}
 
@@ -170,8 +170,10 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			write(object, writer);
 			writer.flush();
 			writer.close();
+			if (writer.checkError())
+				throw new IOException();
 		} finally {
-			output.close();
+			FileUtil.safeClose(output);
 		}
 	}
 

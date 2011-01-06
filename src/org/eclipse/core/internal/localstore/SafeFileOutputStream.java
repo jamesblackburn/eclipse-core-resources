@@ -86,6 +86,7 @@ public class SafeFileOutputStream extends OutputStream {
 			source = new BufferedInputStream(new FileInputStream(sourceFile));
 			destination = new BufferedOutputStream(new FileOutputStream(destinationFile));
 			transferStreams(source, destination);
+			destination.close();
 		} finally {
 			FileUtil.safeClose(source);
 			FileUtil.safeClose(destination);
