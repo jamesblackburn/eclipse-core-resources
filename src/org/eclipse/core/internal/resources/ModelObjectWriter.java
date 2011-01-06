@@ -170,7 +170,8 @@ public class ModelObjectWriter implements IModelObjectConstants {
 			write(object, writer);
 			writer.flush();
 			writer.close();
-			output.close();
+			if (writer.checkError())
+				throw new IOException();
 		} finally {
 			FileUtil.safeClose(output);
 		}

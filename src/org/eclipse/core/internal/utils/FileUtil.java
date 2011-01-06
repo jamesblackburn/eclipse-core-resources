@@ -181,7 +181,7 @@ public class FileUtil {
 	 * If the API contract requires notifying clients of I/O problems, then you <strong>must</strong>
 	 * explicitly close() output streams outside of safeClose().
 	 * Some OutputStreams will defer an IOException from write() to close().  So
-	 * while the writes may succeed, ignoring the IOExcpetion will result in silent
+	 * while the writes may 'succeed', ignoring the IOExcpetion will result in silent
 	 * data loss.
 	 * </p>
 	 * <p>
