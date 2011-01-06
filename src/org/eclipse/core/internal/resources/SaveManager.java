@@ -1279,8 +1279,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			try {
 				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
 				writeTree(project, output, monitor);
-			} finally {
 				output.close();
+			} finally {
+				FileUtil.safeClose(output);
 			}
 			OutputStream snapOut = store.openOutputStream(EFS.NONE, monitor);
 			out = new ZipOutputStream(snapOut);
@@ -1322,8 +1323,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			try {
 				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
 				writeTree(computeStatesToSave(contexts, workspace.getElementTree()), output, monitor);
-			} finally {
 				output.close();
+			} finally {
+				FileUtil.safeClose(output);
 			}
 		} catch (Exception e) {
 			String msg = NLS.bind(Messages.resources_writeWorkspaceMeta, treeLocation);
@@ -1991,8 +1993,9 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				DataOutputStream output = new DataOutputStream(safe);
 				output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
 				writeTree(project, output, null);
-			} finally {
 				safe.close();
+			} finally {
+				FileUtil.safeClose(safe);
 			}
 		} catch (IOException e) {
 			String msg = NLS.bind(Messages.resources_writeMeta, project.getFullPath());
