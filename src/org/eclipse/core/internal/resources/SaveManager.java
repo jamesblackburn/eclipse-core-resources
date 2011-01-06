@@ -1721,7 +1721,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 				safeSyncInfoStream.succeed();
 				syncInfoOutput.close();
 			}
-			safeMarkerStream.close();
+			markersOutput.close();
 		} catch (IOException e) {
 			message = NLS.bind(Messages.resources_writeMeta, root.getFullPath());
 			throw new ResourceException(IResourceStatus.FAILED_WRITE_METADATA, root.getFullPath(), message, e);
