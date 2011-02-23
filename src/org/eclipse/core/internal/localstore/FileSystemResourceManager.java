@@ -620,10 +620,12 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		return projectInfo.getLocalSyncInfo() == getStore(descriptionFile).fetchInfo().getLastModified();
 	}
 
-	/* (non-Javadoc)
+	/**
 	 * Returns true if the given resource is synchronized with the file system
 	 * to the given depth.  Returns false otherwise.
 	 * 
+	 * Any discovered out-of-sync resources are scheduled to be brought back in sync.
+	 *
 	 * @see IResource#isSynchronized(int)
 	 */
 	public boolean isSynchronized(IResource target, int depth) {
@@ -660,6 +662,8 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 			Policy.log(e);
 			return false;
 		} catch (IsSynchronizedVisitor.ResourceChangedException e) {
+			// Ask refresh manager to bring out-of-sync resource back into sync when convenient
+			workspace.getRefreshManager().refresh(e.target);
 			//visitor throws an exception if out of sync
 			return false;
 		}
@@ -717,16 +721,20 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 
 	public InputStream read(IFile target, boolean force, IProgressMonitor monitor) throws CoreException {
 		IFileStore store = getStore(target);
-		if (!force) {
-			final IFileInfo fileInfo = store.fetchInfo();
-			if (!fileInfo.exists()) {
+		final IFileInfo fileInfo = store.fetchInfo();
+		if (!fileInfo.exists()) {
+			workspace.getRefreshManager().refresh(target);
+			if (!force) {
 				String message = NLS.bind(Messages.localstore_fileNotFound, store.toString());
 				throw new ResourceException(IResourceStatus.FAILED_READ_LOCAL, target.getFullPath(), message, null);
 			}
-			ResourceInfo info = ((Resource) target).getResourceInfo(true, false);
-			int flags = ((Resource) target).getFlags(info);
-			((Resource) target).checkExists(flags, true);
-			if (fileInfo.getLastModified() != info.getLocalSyncInfo()) {
+		}
+		ResourceInfo info = ((Resource) target).getResourceInfo(true, false);
+		int flags = ((Resource) target).getFlags(info);
+		((Resource) target).checkExists(flags, true);
+		if (fileInfo.getLastModified() != info.getLocalSyncInfo()) {
+			workspace.getRefreshManager().refresh(target);
+			if (!force) {
 				String message = NLS.bind(Messages.localstore_resourceIsOutOfSync, target.getFullPath());
 				throw new ResourceException(IResourceStatus.OUT_OF_SYNC_LOCAL, target.getFullPath(), message, null);
 			}
@@ -1005,10 +1013,12 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 					ResourceInfo info = ((Resource) target).getResourceInfo(true, false);
 					// test if timestamp is the same since last synchronization
 					if (lastModified != info.getLocalSyncInfo()) {
+						workspace.getRefreshManager().refresh(target);
 						String message = NLS.bind(Messages.localstore_resourceIsOutOfSync, target.getFullPath());
 						throw new ResourceException(IResourceStatus.OUT_OF_SYNC_LOCAL, target.getFullPath(), message, null);
 					}
 					if (!fileInfo.exists()) {
+						workspace.getRefreshManager().refresh(target);
 						String message = NLS.bind(Messages.localstore_resourceDoesNotExist, target.getFullPath());
 						throw new ResourceException(IResourceStatus.NOT_FOUND_LOCAL, target.getFullPath(), message, null);
 					}

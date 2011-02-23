@@ -94,16 +94,6 @@ public class File extends Resource implements IFile {
 		return result;
 	}
 
-	/**
-	 * Checks that this resource is synchronized with the local file system.
-	 */
-	private void checkSynchronized() throws CoreException {
-		if (!isSynchronized(IResource.DEPTH_ZERO)) {
-			String message = NLS.bind(Messages.localstore_resourceIsOutOfSync, getFullPath());
-			throw new ResourceException(IResourceStatus.OUT_OF_SYNC_LOCAL, getFullPath(), message, null);
-		}
-	}
-
 	/* (non-Javadoc)
 	 * @see IFile#create(InputStream, int, IProgressMonitor)
 	 */
@@ -252,7 +242,7 @@ public class File extends Resource implements IFile {
 		if (charset != null || !checkImplicit)
 			return charset;
 		// tries to obtain a description for the file contents
-		IContentDescription description = workspace.getContentDescriptionManager().getDescriptionFor(this, info);
+		IContentDescription description = workspace.getContentDescriptionManager().getDescriptionFor(this, info, true);
 		if (description != null) {
 			String contentCharset = description.getCharset();
 			if (contentCharset != null)
@@ -270,16 +260,15 @@ public class File extends Resource implements IFile {
 		ResourceInfo info = getResourceInfo(false, false);
 		int flags = getFlags(info);
 		checkAccessible(flags);
-		checkSynchronized();
 		checkLocal(flags, DEPTH_ZERO);
-		return workspace.getContentDescriptionManager().getDescriptionFor(this, info);
+		return workspace.getContentDescriptionManager().getDescriptionFor(this, info, isSynchronized(IResource.DEPTH_ZERO));
 	}
 
 	/* (non-Javadoc)
 	 * @see IFile#getContents()
 	 */
 	public InputStream getContents() throws CoreException {
-		return getContents(false);
+		return getContents(true);
 	}
 
 	/* (non-Javadoc)

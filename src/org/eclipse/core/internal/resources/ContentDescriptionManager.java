@@ -301,7 +301,15 @@ public class ContentDescriptionManager implements IManager, IRegistryChangeListe
 		return projectContentTypes.getMatcherFor(project);
 	}
 
-	public IContentDescription getDescriptionFor(File file, ResourceInfo info) throws CoreException {
+	/**
+	 * Discovers, and caches, the content description of the requested File.
+	 * @param file to discover the content description for; result cached
+	 * @param info ResourceInfo for the passed in file
+	 * @param in_sync boolean flag which indicates if cache can be trusted. If false false don't trust the cache
+	 * @return IContentDescription for the file
+	 * @throws CoreException
+	 */
+	public IContentDescription getDescriptionFor(File file, ResourceInfo info, boolean in_sync) throws CoreException {
 		if (ProjectContentTypes.usesContentTypePreferences(file.getFullPath().segment(0)))
 			// caching for project containing project specific settings is not supported
 			return readDescription(file);
@@ -312,7 +320,7 @@ public class ContentDescriptionManager implements IManager, IRegistryChangeListe
 			// the cache is not good, flush it
 			flushJob.schedule(1000);
 		}
-		if (getCacheState() != ABOUT_TO_FLUSH) {
+		if (in_sync && getCacheState() != ABOUT_TO_FLUSH) {
 			// first look for the flags in the resource info to avoid looking in the cache
 			// don't need to copy the info because the modified bits are not in the deltas
 			if (info == null)
@@ -333,12 +341,14 @@ public class ContentDescriptionManager implements IManager, IRegistryChangeListe
 				info.clear(ICoreConstants.M_CONTENT_CACHE);
 			}
 		}
-		synchronized (this) {
+		if (in_sync) {
 			// tries to get a description from the cache	
-			Cache.Entry entry = cache.getEntry(file.getFullPath());
-			if (entry != null && entry.getTimestamp() == getTimestamp(info))
-				// there was a description in the cache, and it was up to date
-				return (IContentDescription) entry.getCached();
+			synchronized (this) {
+				Cache.Entry entry = cache.getEntry(file.getFullPath());
+				if (entry != null && entry.getTimestamp() == getTimestamp(info))
+					// there was a description in the cache, and it was up to date
+					return (IContentDescription) entry.getCached();
+			}
 		}
 			
 			// either we didn't find a description in the cache, or it was not up-to-date - has to be read again
@@ -348,7 +358,7 @@ public class ContentDescriptionManager implements IManager, IRegistryChangeListe
 		synchronized (this) {
 			// tries to get a description from the cache
 			Cache.Entry entry = cache.getEntry(file.getFullPath());
-			if (entry != null && entry.getTimestamp() == getTimestamp(info))
+			if (entry != null && in_sync && entry.getTimestamp() == getTimestamp(info))
 				// there was a description in the cache, and it was up to date
 				return (IContentDescription) entry.getCached();
 			
@@ -376,7 +386,7 @@ public class ContentDescriptionManager implements IManager, IRegistryChangeListe
 				entry = cache.addEntry(file.getFullPath(), newDescription, getTimestamp(info));
 			else {
 				// just update the existing entry
-				entry.setTimestamp(info.getContentId());
+				entry.setTimestamp(getTimestamp(info));
 				entry.setCached(newDescription);
 			}
 			return newDescription;
