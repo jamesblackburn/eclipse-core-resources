@@ -458,19 +458,20 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 
 		// PRE + POST_BUILD, and the build itself are allowed to modify resources, so require the current thread's scheduling rule
 		// to either contain the WR or be null. Therefore, if not null, ensure it contains the WR rule...
-		final ISchedulingRule rule = relaxed ? null : getRuleFactory().buildRule();
+		final ISchedulingRule buildRule = getRuleFactory().buildRule();
+		final ISchedulingRule rule = relaxed ? null : buildRule;
 		try {
 			monitor.beginTask("", Policy.opWork); //$NON-NLS-1$
 			try {
 				try {
 					// Must run the PRE_BUILD with the WRule held before acquiring WS lock
 					// Can remove this if we run notifications without the WS lock held: bug 249951
-					prepareOperation(rule == null ? getRuleFactory().buildRule() : rule, monitor);
+					prepareOperation(rule == null ? buildRule : rule, monitor);
 					beginOperation(true);
 					aboutToBuild(this, trigger);
 				} finally {
 					if (rule == null) {
-						endOperation(getRuleFactory().buildRule(), false, monitor);
+						endOperation(buildRule, false, monitor);
 						prepareOperation(rule, monitor);
 						beginOperation(false);
 					}
@@ -486,16 +487,16 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 							configs = getBuildOrder();
 						else {
 							// clean all accessible configurations
-							List configArr = new ArrayList();
+							List<IBuildConfiguration> configArr = new ArrayList<IBuildConfiguration>();
 							IProject[] prjs = getRoot().getProjects();
 							for (int i = 0; i < prjs.length; i++)
 								if (prjs[i].isAccessible())
 									configArr.addAll(Arrays.asList(prjs[i].getBuildConfigs()));
-							configs = (IBuildConfiguration[])configArr.toArray(new IBuildConfiguration[configArr.size()]);										
+							configs = configArr.toArray(new IBuildConfiguration[configArr.size()]);										
 						}
 					} else {
 						// Order the passed in build configurations + resolve references if requested
-						Set refsList = new HashSet();
+						Set<IBuildConfiguration> refsList = new HashSet<IBuildConfiguration>();
 						for (int i = 0 ; i < configs.length ; i++) {
 							// Check project + build configuration are accessible.
 							if (!configs[i].getProject().isAccessible() || !configs[i].getProject().hasBuildConfig(configs[i].getName()))
@@ -507,7 +508,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 						}
 
 						// Order the referenced project buildConfigs
-						ProjectBuildConfigOrder order = computeProjectBuildConfigOrder((IBuildConfiguration[]) refsList.toArray(new IBuildConfiguration[refsList.size()]));
+						ProjectBuildConfigOrder order = computeProjectBuildConfigOrder(refsList.toArray(new IBuildConfiguration[refsList.size()]));
 						configs = order.buildConfigurations;
 					}
 
@@ -516,7 +517,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 					// Run the POST_BUILD with the WRule held
 					if (rule == null) {
 						endOperation(rule, false, monitor);
-						prepareOperation(getRuleFactory().buildRule(), monitor);
+						prepareOperation(buildRule, monitor);
 						beginOperation(false);							
 					}
 					//must fire POST_BUILD if PRE_BUILD has occurred
@@ -529,7 +530,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 				if (tree.isImmutable())
 					newWorkingTree();
 				// Rule will be the build-rule from the POST_BUILD refresh
-				endOperation(getRuleFactory().buildRule(), false, Policy.subMonitorFor(monitor, Policy.endOpWork));
+				endOperation(buildRule, false, Policy.subMonitorFor(monitor, Policy.endOpWork));
 			}
 		} finally {
 			monitor.done();
